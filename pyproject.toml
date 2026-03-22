@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "r6-tactics-board"
+version = "0.1.0"
+description = "A Rainbow Six Siege tactics board built with PyQt6 and PyQt6-Fluent-Widgets."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "PyQt6",
+    "PyQt6-Frameless-Window",
+    "PyQt6-Fluent-Widgets",
+]
+
+[project.optional-dependencies]
+build = [
+    "pyinstaller>=6.0",
+]
+
+[project.scripts]
+r6-tactics-board = "r6_tactics_board.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
