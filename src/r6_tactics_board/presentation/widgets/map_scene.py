@@ -1,12 +1,16 @@
+from copy import deepcopy
+from math import atan2, degrees
+
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap
-from PyQt6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene
+from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QTransform
+from PyQt6.QtWidgets import QGraphicsLineItem, QGraphicsPixmapItem, QGraphicsScene
 
 from r6_tactics_board.domain.models import OperatorDisplayMode, OperatorState, Point2D, TeamSide
 from r6_tactics_board.presentation.widgets.operator_item import OperatorItem
 
 
 class MapScene(QGraphicsScene):
+    operator_transform_started = pyqtSignal()
     operator_move_finished = pyqtSignal(str)
 
     def __init__(self) -> None:
@@ -14,6 +18,11 @@ class MapScene(QGraphicsScene):
         self._map_item: QGraphicsPixmapItem | None = None
         self._operator_count = 0
         self.current_map_path = ""
+        self._placement_state: OperatorState | None = None
+        self._is_placing = False
+        self._placement_operator_id = ""
+        self._placement_anchor = QPointF()
+        self._path_items: dict[str, QGraphicsLineItem] = {}
 
         self.setSceneRect(QRectF(0, 0, 4000, 4000))
         self.setBackgroundBrush(QBrush(QColor("#202020")))
@@ -54,6 +63,23 @@ class MapScene(QGraphicsScene):
         self.addItem(operator)
         self.select_operator(operator)
         return operator
+
+    def set_placement_state(self, state: OperatorState | None) -> None:
+        self._placement_state = deepcopy(state) if state is not None else None
+
+    def set_preview_paths(self, paths: dict[str, tuple[QPointF, QPointF]]) -> None:
+        for item in self._path_items.values():
+            self.removeItem(item)
+        self._path_items.clear()
+
+        dash_pen = QPen(QColor(255, 255, 255, 150))
+        dash_pen.setStyle(Qt.PenStyle.DashLine)
+        dash_pen.setWidth(2)
+
+        for operator_id, (start, end) in paths.items():
+            line_item = self.addLine(start.x(), start.y(), end.x(), end.y(), dash_pen)
+            line_item.setZValue(4)
+            self._path_items[operator_id] = line_item
 
     def selected_operator(self) -> OperatorItem | None:
         for item in self.selectedItems():
@@ -152,11 +178,48 @@ class MapScene(QGraphicsScene):
         return None
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton and self._is_placing:
+            self._update_placement_operator(event.scenePos())
+            operator_id = self._placement_operator_id
+            self._is_placing = False
+            self._placement_operator_id = ""
+            event.accept()
+            if operator_id:
+                self.operator_move_finished.emit(operator_id)
+            return
+
         super().mouseReleaseEvent(event)
         if event.button() == Qt.MouseButton.LeftButton:
             operator = self.selected_operator()
             if operator is not None:
                 self.operator_move_finished.emit(operator.operator_id)
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton and self._placement_state is not None:
+            self.operator_transform_started.emit()
+            self._is_placing = True
+            self._placement_anchor = event.scenePos()
+            operator = self._ensure_operator_from_placement_state()
+            self._placement_operator_id = operator.operator_id
+            self.select_operator(operator)
+            self._update_placement_operator(event.scenePos())
+            event.accept()
+            return
+
+        if event.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(event.scenePos(), QTransform())
+            if isinstance(item, OperatorItem):
+                self.operator_transform_started.emit()
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        if self._is_placing:
+            self._update_placement_operator(event.scenePos())
+            event.accept()
+            return
+
+        super().mouseMoveEvent(event)
 
     def _reset_scene(self, width: int, height: int) -> None:
         operators = [item for item in self.items() if isinstance(item, OperatorItem)]
@@ -177,6 +240,7 @@ class MapScene(QGraphicsScene):
         self.clear()
         self._map_item = None
         self.current_map_path = ""
+        self._path_items = {}
         self.setSceneRect(QRectF(0, 0, width, height))
         self.setBackgroundBrush(QBrush(QColor("#202020")))
         self._add_grid(width, height)
@@ -209,3 +273,34 @@ class MapScene(QGraphicsScene):
             return int(operator_id)
         except ValueError:
             return 0
+
+    def _ensure_operator_from_placement_state(self) -> OperatorItem:
+        assert self._placement_state is not None
+
+        operator = self.find_operator(self._placement_state.id)
+        if operator is None:
+            operator = OperatorItem(self._placement_state.id, self._placement_state.custom_name)
+            operator.setZValue(10)
+            self.addItem(operator)
+
+        operator.set_custom_name(self._placement_state.custom_name)
+        operator.set_side(self._placement_state.side.value)
+        operator.set_operator_key(self._placement_state.operator_key)
+        operator.set_display_mode(self._placement_state.display_mode.value)
+        operator.setPos(self._placement_anchor)
+        operator.setRotation(self._placement_state.rotation)
+        self._operator_count = max(self._operator_count, self._operator_sort_key(operator.operator_id))
+        return operator
+
+    def _update_placement_operator(self, scene_pos: QPointF) -> None:
+        if not self._placement_operator_id:
+            return
+
+        operator = self.find_operator(self._placement_operator_id)
+        if operator is None:
+            return
+
+        operator.setPos(self._placement_anchor)
+        delta = scene_pos - self._placement_anchor
+        if delta.manhattanLength() >= 1:
+            operator.setRotation(degrees(atan2(delta.y(), delta.x())) + 90)

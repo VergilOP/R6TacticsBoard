@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QBrush
-from PyQt6.QtWidgets import QHBoxLayout, QSlider, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QHeaderView, QHBoxLayout, QSlider, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, PushButton
 
 
@@ -18,6 +18,8 @@ class TimelineWidget(QWidget):
     pause_requested = pyqtSignal()
     duration_changed = pyqtSignal(int)
     cell_selected = pyqtSignal(int, int)
+    keyframe_column_moved = pyqtSignal(int, int)
+    operator_row_moved = pyqtSignal(int, int)
 
     def __init__(self) -> None:
         super().__init__()
@@ -87,6 +89,12 @@ class TimelineWidget(QWidget):
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectItems)
         self.table.verticalHeader().setDefaultSectionSize(34)
+        self.table.horizontalHeader().setSectionsMovable(True)
+        self.table.verticalHeader().setSectionsMovable(True)
+        self.table.horizontalHeader().setHighlightSections(True)
+        self.table.verticalHeader().setHighlightSections(True)
+        self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.table.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout.addLayout(toolbar)
         layout.addWidget(self.table)
@@ -105,22 +113,29 @@ class TimelineWidget(QWidget):
         self.pause_button.clicked.connect(self.pause_requested.emit)
         self.duration_slider.valueChanged.connect(self._on_duration_changed)
         self.table.currentCellChanged.connect(self._on_current_cell_changed)
+        self.table.horizontalHeader().sectionMoved.connect(self._on_column_section_moved)
+        self.table.verticalHeader().sectionMoved.connect(self._on_row_section_moved)
 
     def set_grid(
         self,
         operator_labels: list[str],
         keyframe_labels: list[str],
+        keyframe_notes: list[str],
         explicit_cells: set[tuple[int, int]],
         current_row: int = -1,
         current_column: int = -1,
         is_playing: bool = False,
     ) -> None:
         self.table.blockSignals(True)
+        self.table.horizontalHeader().blockSignals(True)
+        self.table.verticalHeader().blockSignals(True)
         self.table.clear()
         self.table.setRowCount(len(operator_labels))
         self.table.setColumnCount(len(keyframe_labels))
         self.table.setVerticalHeaderLabels(operator_labels)
         self.table.setHorizontalHeaderLabels(keyframe_labels)
+        self._reset_header_order(self.table.horizontalHeader())
+        self._reset_header_order(self.table.verticalHeader())
 
         for row in range(len(operator_labels)):
             for column in range(len(keyframe_labels)):
@@ -132,12 +147,19 @@ class TimelineWidget(QWidget):
                     item.setBackground(QBrush(QColor("#2D4F6C")))
                 self.table.setItem(row, column, item)
 
+        for column, note in enumerate(keyframe_notes):
+            header_item = self.table.horizontalHeaderItem(column)
+            if header_item is not None:
+                header_item.setToolTip(note or keyframe_labels[column])
+
         if 0 <= current_row < len(operator_labels) and 0 <= current_column < len(keyframe_labels):
             self.table.setCurrentCell(current_row, current_column)
         elif len(operator_labels) > 0 and len(keyframe_labels) > 0 and current_column >= 0:
             self.table.setCurrentCell(0, min(current_column, len(keyframe_labels) - 1))
 
         self.table.blockSignals(False)
+        self.table.horizontalHeader().blockSignals(False)
+        self.table.verticalHeader().blockSignals(False)
 
         has_columns = len(keyframe_labels) > 0
         self.delete_button.setEnabled(has_columns and current_column >= 0)
@@ -162,3 +184,18 @@ class TimelineWidget(QWidget):
     def _on_duration_changed(self, value: int) -> None:
         self.duration_label.setText(f"过渡 {value} ms")
         self.duration_changed.emit(value)
+
+    def _on_column_section_moved(self, logical_index: int, old_visual_index: int, new_visual_index: int) -> None:
+        if old_visual_index != new_visual_index:
+            self.keyframe_column_moved.emit(old_visual_index, new_visual_index)
+
+    def _on_row_section_moved(self, logical_index: int, old_visual_index: int, new_visual_index: int) -> None:
+        if old_visual_index != new_visual_index:
+            self.operator_row_moved.emit(old_visual_index, new_visual_index)
+
+    @staticmethod
+    def _reset_header_order(header: QHeaderView) -> None:
+        for logical_index in range(header.count()):
+            current_visual_index = header.visualIndex(logical_index)
+            if current_visual_index != logical_index:
+                header.moveSection(current_visual_index, logical_index)

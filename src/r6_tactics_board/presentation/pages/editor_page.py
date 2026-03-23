@@ -2,7 +2,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import QPointF, Qt, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QMessageBox, QVBoxLayout, QWidget
 from qfluentwidgets import (
@@ -16,7 +16,19 @@ from qfluentwidgets import (
     SubtitleLabel,
 )
 
-from r6_tactics_board.domain.models import Keyframe, MapInfo, OperatorState, Point2D, TacticProject, Timeline
+from r6_tactics_board.domain.models import (
+    Keyframe,
+    MapInfo,
+    OperatorDefinition,
+    OperatorDisplayMode,
+    OperatorFrameState,
+    OperatorState,
+    Point2D,
+    TacticProject,
+    TeamSide,
+    Timeline,
+    resolve_operator_state,
+)
 from r6_tactics_board.infrastructure.asset_registry import AssetRegistry
 from r6_tactics_board.infrastructure.project_store import ProjectStore
 from r6_tactics_board.presentation.widgets.map_scene import MapScene
@@ -31,8 +43,10 @@ class EditorHistoryState:
     scene_states: list[OperatorState]
     selected_operator_id: str
     operator_order: list[str]
-    operator_labels: dict[str, str]
-    keyframe_columns: list[dict[str, OperatorState]]
+    operator_definitions: dict[str, OperatorDefinition]
+    keyframe_columns: list[dict[str, OperatorFrameState]]
+    keyframe_names: list[str]
+    keyframe_notes: list[str]
     current_keyframe_index: int
     current_timeline_row: int
     transition_duration_ms: int
@@ -43,10 +57,12 @@ class EditorPage(QWidget):
         super().__init__()
 
         self._syncing_panel = False
+        self._syncing_keyframe_panel = False
         self._applying_timeline = False
         self._is_playing = False
         self._history_lock = False
         self._rotation_history_snapshot: EditorHistoryState | None = None
+        self._operator_transform_history_snapshot: EditorHistoryState | None = None
         self._playback_from_column = -1
         self._playback_to_column = -1
         self._playback_elapsed_ms = 0
@@ -59,8 +75,10 @@ class EditorPage(QWidget):
         self._clean_snapshot: EditorHistoryState | None = None
 
         self.operator_order: list[str] = []
-        self.operator_labels: dict[str, str] = {}
-        self.keyframe_columns: list[dict[str, OperatorState]] = [{}]
+        self.operator_definitions: dict[str, OperatorDefinition] = {}
+        self.keyframe_columns: list[dict[str, OperatorFrameState]] = [{}]
+        self.keyframe_names: list[str] = [""]
+        self.keyframe_notes: list[str] = [""]
         self.current_keyframe_index = 0
         self.current_timeline_row = -1
         self.current_project_path = ""
@@ -82,8 +100,12 @@ class EditorPage(QWidget):
         self.delete_operator_button = PushButton("删除选中干员")
         self.map_status_label = BodyLabel("当前地图：未加载")
         self.property_title = SubtitleLabel("属性面板")
-        self.property_hint = BodyLabel("选中干员后，可在这里编辑名称、阵营、图标、朝向和显示模式。")
+        self.property_hint = BodyLabel("名称、阵营、图标是全局属性；位置、朝向、显示模式跟随当前时间点。")
         self.selection_label = BodyLabel("当前选中：无")
+        self.keyframe_title = SubtitleLabel("关键帧属性")
+        self.keyframe_hint = BodyLabel("关键帧名称和备注只作用于当前关键帧列。")
+        self.keyframe_name_edit = LineEdit()
+        self.keyframe_note_edit = LineEdit()
         self.name_edit = LineEdit()
         self.side_combo = ComboBox()
         self.operator_combo = ComboBox()
@@ -129,8 +151,13 @@ class EditorPage(QWidget):
         property_grid = QGridLayout()
         property_grid.setHorizontalSpacing(12)
         property_grid.setVerticalSpacing(12)
+        keyframe_grid = QGridLayout()
+        keyframe_grid.setHorizontalSpacing(12)
+        keyframe_grid.setVerticalSpacing(12)
 
         self.name_edit.setPlaceholderText("输入自定义名称")
+        self.keyframe_name_edit.setPlaceholderText("例如：开局抢点")
+        self.keyframe_note_edit.setPlaceholderText("例如：30 秒内优先控图")
         self.rotation_slider.setRange(0, 359)
 
         self.side_combo.addItem("进攻")
@@ -156,11 +183,20 @@ class EditorPage(QWidget):
         property_grid.addWidget(BodyLabel("显示模式"), 5, 0)
         property_grid.addWidget(self.display_mode_combo, 5, 1)
 
+        keyframe_grid.addWidget(BodyLabel("名称"), 0, 0)
+        keyframe_grid.addWidget(self.keyframe_name_edit, 0, 1)
+        keyframe_grid.addWidget(BodyLabel("备注"), 1, 0)
+        keyframe_grid.addWidget(self.keyframe_note_edit, 1, 1)
+
         side_panel.addWidget(self.property_title)
         side_panel.addWidget(self.property_hint)
         side_panel.addWidget(self.selection_label)
         side_panel.addLayout(property_grid)
         side_panel.addWidget(self.delete_operator_button)
+        side_panel.addSpacing(12)
+        side_panel.addWidget(self.keyframe_title)
+        side_panel.addWidget(self.keyframe_hint)
+        side_panel.addLayout(keyframe_grid)
         side_panel.addStretch(1)
 
         layout.addLayout(center_layout, 1)
@@ -184,6 +220,12 @@ class EditorPage(QWidget):
         self.rotation_slider.sliderReleased.connect(self._on_rotation_slider_released)
         self.rotation_slider.valueChanged.connect(self._update_selected_rotation)
         self.display_mode_combo.currentIndexChanged.connect(self._update_display_mode)
+        self.keyframe_name_edit.editingFinished.connect(
+            lambda: self._update_current_keyframe_name(self.keyframe_name_edit.text())
+        )
+        self.keyframe_note_edit.editingFinished.connect(
+            lambda: self._update_current_keyframe_note(self.keyframe_note_edit.text())
+        )
 
         self.timeline.add_keyframe_requested.connect(self._add_keyframe_column)
         self.timeline.insert_keyframe_requested.connect(self._insert_keyframe_column)
@@ -198,11 +240,14 @@ class EditorPage(QWidget):
         self.timeline.pause_requested.connect(self._pause_column_playback)
         self.timeline.duration_changed.connect(self._set_transition_duration)
         self.timeline.cell_selected.connect(self._select_timeline_cell)
+        self.timeline.keyframe_column_moved.connect(self._move_keyframe_column)
+        self.timeline.operator_row_moved.connect(self._move_operator_row)
         self.playback_timer.timeout.connect(self._advance_playback)
 
         scene = self._map_scene()
         if scene is not None:
             scene.selectionChanged.connect(self._on_scene_selection_changed)
+            scene.operator_transform_started.connect(self._on_operator_transform_started)
             scene.operator_move_finished.connect(self._on_operator_move_finished)
 
     def _load_map(self) -> None:
@@ -308,25 +353,9 @@ class EditorPage(QWidget):
 
     def _delete_selected_operator(self) -> None:
         operator = self._current_operator()
-        scene = self._map_scene()
-        if scene is None or operator is None:
+        if operator is None:
             return
-
-        dialog = MessageBox("删除干员", f"确定删除干员 {operator.operator_id} 吗？", self)
-        dialog.yesButton.setText("确定")
-        dialog.cancelButton.setText("取消")
-        if not dialog.exec():
-            return
-
-        before = self._capture_history_state()
-        self._pause_column_playback()
-        operator_id = operator.operator_id
-        if scene.delete_selected_operator():
-            self._remove_operator_from_timeline(operator_id)
-            self._sync_operator_registry()
-            self._refresh_property_panel()
-            self._refresh_timeline()
-            self._commit_history(before)
+        self._delete_operator_by_id(operator.operator_id, confirm=True)
 
     def _refresh_property_panel(self) -> None:
         operator = self._current_operator()
@@ -354,6 +383,14 @@ class EditorPage(QWidget):
             self._set_property_enabled(True)
         self._syncing_panel = False
 
+        self._syncing_keyframe_panel = True
+        self.keyframe_name_edit.setText(self._current_keyframe_name())
+        self.keyframe_note_edit.setText(self._current_keyframe_note())
+        has_keyframe = 0 <= self.current_keyframe_index < len(self.keyframe_columns)
+        self.keyframe_name_edit.setEnabled(has_keyframe)
+        self.keyframe_note_edit.setEnabled(has_keyframe)
+        self._syncing_keyframe_panel = False
+
     def _set_property_enabled(self, enabled: bool) -> None:
         self.name_edit.setEnabled(enabled)
         self.side_combo.setEnabled(enabled)
@@ -368,12 +405,12 @@ class EditorPage(QWidget):
         operator = self._current_operator()
         if operator is None:
             return
-        if self.name_edit.text() == operator.custom_name:
+        name = self.name_edit.text().strip() or f"干员 {operator.operator_id}"
+        if name == operator.custom_name:
             return
         before = self._capture_history_state()
-        operator.set_custom_name(self.name_edit.text())
-        self.operator_labels[operator.operator_id] = operator.custom_name
-        self._capture_selected_operator_to_current_cell(refresh_history=False)
+        self._apply_global_operator_metadata(operator.operator_id, custom_name=name)
+        self._refresh_property_panel()
         self._refresh_timeline()
         self._commit_history(before)
 
@@ -389,10 +426,10 @@ class EditorPage(QWidget):
             return
 
         before = self._capture_history_state()
-        operator.set_side(side)
+        self._apply_global_operator_metadata(operator.operator_id, side=side)
         self._refresh_operator_combo(side)
-        self._update_operator_icon(operator)
-        self._capture_selected_operator_to_current_cell(refresh_history=False)
+        self._refresh_property_panel()
+        self._refresh_timeline()
         self._commit_history(before)
 
     def _update_selected_operator_asset(self, index: int) -> None:
@@ -406,9 +443,9 @@ class EditorPage(QWidget):
         if operator_key == operator.operator_key:
             return
         before = self._capture_history_state()
-        operator.set_operator_key(operator_key)
-        self._update_operator_icon(operator)
-        self._capture_selected_operator_to_current_cell(refresh_history=False)
+        self._apply_global_operator_metadata(operator.operator_id, operator_key=operator_key)
+        self._refresh_property_panel()
+        self._refresh_timeline()
         self._commit_history(before)
 
     def _on_rotation_slider_pressed(self) -> None:
@@ -450,6 +487,8 @@ class EditorPage(QWidget):
         before = self._capture_history_state()
         self._pause_column_playback()
         self.keyframe_columns.append({})
+        self.keyframe_names.append("")
+        self.keyframe_notes.append("")
         self.current_keyframe_index = len(self.keyframe_columns) - 1
         self._refresh_timeline()
         self._commit_history(before)
@@ -459,6 +498,8 @@ class EditorPage(QWidget):
         self._pause_column_playback()
         insert_index = min(self.current_keyframe_index + 1, len(self.keyframe_columns))
         self.keyframe_columns.insert(insert_index, {})
+        self.keyframe_names.insert(insert_index, "")
+        self.keyframe_notes.insert(insert_index, "")
         self.current_keyframe_index = insert_index
         self._refresh_timeline()
         self._commit_history(before)
@@ -474,17 +515,25 @@ class EditorPage(QWidget):
         }
         insert_index = self.current_keyframe_index + 1
         self.keyframe_columns.insert(insert_index, duplicate)
+        source_name = self.keyframe_names[self.current_keyframe_index]
+        self.keyframe_names.insert(insert_index, f"{source_name} 副本" if source_name else "")
+        self.keyframe_notes.insert(insert_index, self.keyframe_notes[self.current_keyframe_index])
         self.current_keyframe_index = insert_index
         self._refresh_timeline()
         self._commit_history(before)
 
     def _delete_current_keyframe_column(self) -> None:
+        self._delete_keyframe_column_at(self.current_keyframe_index)
+
+    def _delete_keyframe_column_at(self, column_index: int) -> None:
         before = self._capture_history_state()
         self._pause_column_playback()
-        if not self.keyframe_columns:
+        if not self.keyframe_columns or not (0 <= column_index < len(self.keyframe_columns)):
             return
         if len(self.keyframe_columns) == 1:
             self.keyframe_columns = [{}]
+            self.keyframe_names = [""]
+            self.keyframe_notes = [""]
             self.current_keyframe_index = 0
             self.current_timeline_row = -1
             self._apply_timeline_column(0)
@@ -492,9 +541,10 @@ class EditorPage(QWidget):
             self._commit_history(before)
             return
 
+        keyframe_label = self._keyframe_label(column_index)
         dialog = MessageBox(
             "删除当前列",
-            "确定删除当前关键帧列吗？该列显式记录的内容将被移除。",
+            f"确定删除关键帧列“{keyframe_label}”吗？该列显式记录的内容将被移除。",
             self,
         )
         dialog.yesButton.setText("确定")
@@ -502,7 +552,9 @@ class EditorPage(QWidget):
         if not dialog.exec():
             return
 
-        del self.keyframe_columns[self.current_keyframe_index]
+        del self.keyframe_columns[column_index]
+        del self.keyframe_names[column_index]
+        del self.keyframe_notes[column_index]
         self.current_keyframe_index = min(self.current_keyframe_index, len(self.keyframe_columns) - 1)
         self._apply_timeline_column(self.current_keyframe_index)
         self._refresh_timeline()
@@ -518,7 +570,7 @@ class EditorPage(QWidget):
         self._sync_operator_registry()
         if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
             return
-        state = self._state_from_operator(operator)
+        state = self._frame_state_from_operator(operator)
         if state is None:
             return
         self.keyframe_columns[self.current_keyframe_index][operator.operator_id] = state
@@ -535,22 +587,29 @@ class EditorPage(QWidget):
             return
         before = self._capture_history_state()
         self._sync_operator_registry()
-        for operator_id, state in scene.snapshot_operator_states_dict().items():
-            self.keyframe_columns[self.current_keyframe_index][operator_id] = state
+        for operator in scene.operator_items():
+            state = self._frame_state_from_operator(operator)
+            if state is not None:
+                self.keyframe_columns[self.current_keyframe_index][operator.operator_id] = state
         self._refresh_timeline()
         self._commit_history(before)
 
     def _clear_current_cell(self) -> None:
+        self._delete_timeline_cell_at(self.current_timeline_row, self.current_keyframe_index)
+
+    def _delete_timeline_cell_at(self, row: int, column: int) -> None:
         before = self._capture_history_state()
         self._pause_column_playback()
-        if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+        if not (0 <= column < len(self.keyframe_columns)):
             return
-        if not (0 <= self.current_timeline_row < len(self.operator_order)):
+        if not (0 <= row < len(self.operator_order)):
             return
-        operator_id = self.operator_order[self.current_timeline_row]
-        self.keyframe_columns[self.current_keyframe_index].pop(operator_id, None)
+        operator_id = self.operator_order[row]
+        self.keyframe_columns[column].pop(operator_id, None)
+        self.current_timeline_row = row
+        self.current_keyframe_index = column
         self._refresh_timeline()
-        self._apply_timeline_column(self.current_keyframe_index)
+        self._apply_timeline_column(column)
         self._commit_history(before)
 
     def _select_timeline_cell(self, row: int, column: int) -> None:
@@ -590,12 +649,19 @@ class EditorPage(QWidget):
         self._applying_timeline = False
         self._refresh_timeline()
 
-    def _resolved_state(self, operator_id: str, column: int) -> OperatorState | None:
+    def _resolved_frame_state(self, operator_id: str, column: int) -> OperatorFrameState | None:
         for current in range(column, -1, -1):
             state = self.keyframe_columns[current].get(operator_id)
             if state is not None:
                 return state
         return None
+
+    def _resolved_state(self, operator_id: str, column: int) -> OperatorState | None:
+        definition = self.operator_definitions.get(operator_id)
+        frame = self._resolved_frame_state(operator_id, column)
+        if definition is None or frame is None:
+            return None
+        return resolve_operator_state(definition, frame)
 
     def _resolved_state_map(self, column: int) -> dict[str, OperatorState]:
         result: dict[str, OperatorState] = {}
@@ -607,10 +673,10 @@ class EditorPage(QWidget):
 
     def _refresh_timeline(self) -> None:
         operator_labels = [
-            f"{operator_id} | {self.operator_labels.get(operator_id, f'干员 {operator_id}')}"
+            f"{operator_id} | {self._operator_label(operator_id)}"
             for operator_id in self.operator_order
         ]
-        keyframe_labels = [f"K{index + 1}" for index in range(len(self.keyframe_columns))]
+        keyframe_labels = [self._keyframe_label(index) for index in range(len(self.keyframe_columns))]
         explicit_cells = {
             (row, column)
             for column, frame in enumerate(self.keyframe_columns)
@@ -620,11 +686,14 @@ class EditorPage(QWidget):
         self.timeline.set_grid(
             operator_labels,
             keyframe_labels,
+            list(self.keyframe_notes),
             explicit_cells,
             self.current_timeline_row,
             self.current_keyframe_index,
             self._is_playing,
         )
+        self._sync_scene_placement_target()
+        self._sync_scene_preview_paths()
         self.undo_button.setEnabled(bool(self._undo_stack))
         self.redo_button.setEnabled(bool(self._redo_stack))
         self._update_dirty_state()
@@ -635,9 +704,20 @@ class EditorPage(QWidget):
         self._refresh_property_panel()
         self._refresh_timeline()
 
+    def _on_operator_transform_started(self) -> None:
+        if self._applying_timeline:
+            return
+        self._pause_column_playback()
+        self._operator_transform_history_snapshot = self._capture_history_state()
+
     def _on_operator_move_finished(self, operator_id: str) -> None:
-        before = self._capture_history_state()
+        before = self._operator_transform_history_snapshot or self._capture_history_state()
+        self._operator_transform_history_snapshot = None
         self.current_timeline_row = self._operator_row(operator_id)
+        operator = self._current_operator()
+        if operator is not None:
+            self._update_operator_icon(operator)
+            self._refresh_property_panel()
         self._capture_selected_operator_to_current_cell(refresh_history=False)
         self._commit_history(before)
 
@@ -700,6 +780,7 @@ class EditorPage(QWidget):
             self._pause_column_playback()
         else:
             self._start_transition_to_column(self.current_keyframe_index + 1)
+            self._refresh_timeline()
 
     def _start_transition_to_column(self, target_column: int) -> None:
         if target_column >= len(self.keyframe_columns):
@@ -744,6 +825,174 @@ class EditorPage(QWidget):
     def _set_transition_duration(self, value: int) -> None:
         self._transition_duration_ms = value
 
+    def _update_current_keyframe_name(self, name: str) -> None:
+        if self._syncing_keyframe_panel:
+            return
+        if not (0 <= self.current_keyframe_index < len(self.keyframe_names)):
+            return
+        normalized = name.strip()
+        if normalized == self.keyframe_names[self.current_keyframe_index]:
+            return
+        before = self._capture_history_state()
+        self.keyframe_names[self.current_keyframe_index] = normalized
+        self._refresh_property_panel()
+        self._refresh_timeline()
+        self._commit_history(before)
+
+    def _update_current_keyframe_note(self, note: str) -> None:
+        if self._syncing_keyframe_panel:
+            return
+        if not (0 <= self.current_keyframe_index < len(self.keyframe_notes)):
+            return
+        normalized = note.strip()
+        if normalized == self.keyframe_notes[self.current_keyframe_index]:
+            return
+        before = self._capture_history_state()
+        self.keyframe_notes[self.current_keyframe_index] = normalized
+        self._refresh_property_panel()
+        self._refresh_timeline()
+        self._commit_history(before)
+
+    def _move_keyframe_column(self, from_index: int, to_index: int) -> None:
+        if not (0 <= from_index < len(self.keyframe_columns) and 0 <= to_index < len(self.keyframe_columns)):
+            return
+        if from_index == to_index:
+            return
+        before = self._capture_history_state()
+        self._pause_column_playback()
+        column = self.keyframe_columns.pop(from_index)
+        self.keyframe_columns.insert(to_index, column)
+        keyframe_name = self.keyframe_names.pop(from_index)
+        keyframe_note = self.keyframe_notes.pop(from_index)
+        self.keyframe_names.insert(to_index, keyframe_name)
+        self.keyframe_notes.insert(to_index, keyframe_note)
+        self.current_keyframe_index = self._moved_index(self.current_keyframe_index, from_index, to_index)
+        self._apply_timeline_column(self.current_keyframe_index)
+        self._refresh_timeline()
+        self._commit_history(before)
+
+    def _move_operator_row(self, from_index: int, to_index: int) -> None:
+        if not (0 <= from_index < len(self.operator_order) and 0 <= to_index < len(self.operator_order)):
+            return
+        if from_index == to_index:
+            return
+        before = self._capture_history_state()
+        operator_id = self.operator_order.pop(from_index)
+        self.operator_order.insert(to_index, operator_id)
+        self.current_timeline_row = self._moved_index(self.current_timeline_row, from_index, to_index)
+        self._refresh_timeline()
+        self._commit_history(before)
+
+    def _delete_operator_row(self, row: int) -> None:
+        if not (0 <= row < len(self.operator_order)):
+            return
+        self._delete_operator_by_id(self.operator_order[row], confirm=True)
+
+    def _sync_scene_placement_target(self) -> None:
+        scene = self._map_scene()
+        if scene is None:
+            return
+        scene.set_placement_state(self._current_placement_state())
+
+    def _sync_scene_preview_paths(self) -> None:
+        scene = self._map_scene()
+        if scene is None:
+            return
+
+        preview_paths: dict[str, tuple[QPointF, QPointF]] = {}
+        for operator_id, (start_state, end_state) in self._current_preview_segments().items():
+            if self._same_position(start_state, end_state):
+                continue
+            preview_paths[operator_id] = (
+                QPointF(start_state.position.x, start_state.position.y),
+                QPointF(end_state.position.x, end_state.position.y),
+            )
+
+        scene.set_preview_paths(preview_paths)
+
+    def _current_preview_segments(self) -> dict[str, tuple[OperatorState, OperatorState]]:
+        if self._is_playing and self._playback_from_column >= 0 and self._playback_to_column >= 0:
+            return self._preview_segments_for_columns(self._playback_from_column, self._playback_to_column)
+
+        next_column = self.current_keyframe_index + 1
+        if next_column >= len(self.keyframe_columns):
+            return {}
+        return self._preview_segments_for_columns(self.current_keyframe_index, next_column)
+
+    def _preview_segments_for_columns(
+        self,
+        from_column: int,
+        to_column: int,
+    ) -> dict[str, tuple[OperatorState, OperatorState]]:
+        segments: dict[str, tuple[OperatorState, OperatorState]] = {}
+        for operator_id in self.operator_order:
+            start_state = self._resolved_state(operator_id, from_column)
+            end_state = self._resolved_state(operator_id, to_column)
+            if start_state is None or end_state is None:
+                continue
+            segments[operator_id] = (start_state, end_state)
+        return segments
+
+    def _current_placement_state(self) -> OperatorState | None:
+        if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+            return None
+        if not (0 <= self.current_timeline_row < len(self.operator_order)):
+            return None
+
+        operator_id = self.operator_order[self.current_timeline_row]
+        definition = self.operator_definitions.get(operator_id)
+        frame = self._resolved_frame_state(operator_id, self.current_keyframe_index)
+        if definition is not None and frame is not None:
+            return resolve_operator_state(definition, deepcopy(frame))
+
+        scene = self._map_scene()
+        operator = scene.find_operator(operator_id) if scene is not None else None
+        if operator is not None and definition is not None:
+            current_frame = self._frame_state_from_operator(operator)
+            if current_frame is not None:
+                return resolve_operator_state(definition, current_frame)
+
+        if definition is not None:
+            return resolve_operator_state(
+                definition,
+                OperatorFrameState(
+                    id=operator_id,
+                    position=Point2D(x=0, y=0),
+                    rotation=0,
+                    display_mode=OperatorDisplayMode.ICON,
+                ),
+            )
+
+        return None
+
+    @staticmethod
+    def _same_position(first: OperatorState, second: OperatorState) -> bool:
+        return (
+            abs(first.position.x - second.position.x) < 0.1
+            and abs(first.position.y - second.position.y) < 0.1
+        )
+
+    def _operator_label(self, operator_id: str) -> str:
+        definition = self.operator_definitions.get(operator_id)
+        if definition is None or not definition.custom_name:
+            return f"干员 {operator_id}"
+        return definition.custom_name
+
+    def _keyframe_label(self, index: int) -> str:
+        if 0 <= index < len(self.keyframe_names) and self.keyframe_names[index]:
+            return self.keyframe_names[index]
+        return f"K{index + 1}"
+
+    def _current_keyframe_name(self) -> str:
+        if 0 <= self.current_keyframe_index < len(self.keyframe_names):
+            return self.keyframe_names[self.current_keyframe_index]
+        return ""
+
+    def _current_keyframe_note(self) -> str:
+        if 0 <= self.current_keyframe_index < len(self.keyframe_notes):
+            return self.keyframe_notes[self.current_keyframe_index]
+        return ""
+
     def _refresh_operator_combo(self, side: str, selected_key: str = "") -> None:
         assets = self.asset_registry.list_operator_assets(side)
         self.operator_combo.blockSignals(True)
@@ -771,30 +1020,103 @@ class EditorPage(QWidget):
         if scene is not None:
             for operator in scene.operator_items():
                 scene_ids.append(operator.operator_id)
-                self.operator_labels[operator.operator_id] = operator.custom_name
+                self.operator_definitions[operator.operator_id] = OperatorDefinition(
+                    id=operator.operator_id,
+                    custom_name=operator.custom_name,
+                    side=TeamSide(operator.side),
+                    operator_key=operator.operator_key,
+                )
 
         state_ids = {
             operator_id
             for frame in self.keyframe_columns
             for operator_id in frame
         }
-        all_ids = sorted(set(scene_ids) | state_ids, key=self._sort_operator_id)
+        all_ids = sorted(
+            set(scene_ids) | state_ids | set(self.operator_definitions),
+            key=self._sort_operator_id,
+        )
         self.operator_order = all_ids
 
-        for operator_id in list(self.operator_labels):
+        for operator_id in list(self.operator_definitions):
             if operator_id not in all_ids:
-                del self.operator_labels[operator_id]
+                del self.operator_definitions[operator_id]
 
     def _remove_operator_from_timeline(self, operator_id: str) -> None:
         for frame in self.keyframe_columns:
             frame.pop(operator_id, None)
-        self.operator_labels.pop(operator_id, None)
+        self.operator_definitions.pop(operator_id, None)
 
-    def _state_from_operator(self, operator: OperatorItem) -> OperatorState | None:
+    def _delete_operator_by_id(self, operator_id: str, confirm: bool) -> None:
         scene = self._map_scene()
         if scene is None:
-            return None
-        return scene.snapshot_operator_states_dict().get(operator.operator_id)
+            return
+
+        if confirm:
+            dialog = MessageBox("删除干员", f"确定删除干员 {operator_id} 吗？", self)
+            dialog.yesButton.setText("确定")
+            dialog.cancelButton.setText("取消")
+            if not dialog.exec():
+                return
+
+        before = self._capture_history_state()
+        self._pause_column_playback()
+        operator = scene.find_operator(operator_id)
+        if operator is not None:
+            scene.removeItem(operator)
+        self._remove_operator_from_timeline(operator_id)
+        self.current_timeline_row = -1
+        self._sync_operator_registry()
+        self._refresh_property_panel()
+        self._refresh_timeline()
+        self._commit_history(before)
+
+    def _frame_state_from_operator(self, operator: OperatorItem) -> OperatorFrameState | None:
+        display_mode = (
+            OperatorDisplayMode.ICON
+            if operator.display_mode == OperatorItem.ICON
+            else OperatorDisplayMode.CUSTOM_NAME
+        )
+        return OperatorFrameState(
+            id=operator.operator_id,
+            position=Point2D(x=operator.pos().x(), y=operator.pos().y()),
+            rotation=operator.rotation(),
+            display_mode=display_mode,
+        )
+
+    def _apply_global_operator_metadata(
+        self,
+        operator_id: str,
+        *,
+        custom_name: str | None = None,
+        side: str | None = None,
+        operator_key: str | None = None,
+    ) -> None:
+        scene = self._map_scene()
+        operator = scene.find_operator(operator_id) if scene is not None else None
+        definition = self.operator_definitions.get(operator_id)
+        if definition is None:
+            definition = OperatorDefinition(
+                id=operator_id,
+                custom_name=operator.custom_name if operator is not None else f"干员 {operator_id}",
+                side=TeamSide(operator.side) if operator is not None else TeamSide.ATTACK,
+                operator_key=operator.operator_key if operator is not None else "",
+            )
+
+        if custom_name is not None:
+            definition.custom_name = custom_name
+        if side is not None:
+            definition.side = TeamSide(side)
+        if operator_key is not None:
+            definition.operator_key = operator_key
+
+        self.operator_definitions[operator_id] = definition
+
+        if operator is not None:
+            operator.set_custom_name(definition.custom_name)
+            operator.set_side(definition.side.value)
+            operator.set_operator_key(definition.operator_key)
+            self._update_operator_icon(operator)
 
     def _build_project(self) -> TacticProject:
         scene = self._map_scene()
@@ -803,16 +1125,24 @@ class EditorPage(QWidget):
             map_path = Path(scene.current_map_path)
             map_info = MapInfo(key=map_path.stem, name=map_path.name, image_path=str(map_path))
 
+        operators = [
+            deepcopy(self.operator_definitions[operator_id])
+            for operator_id in self.operator_order
+            if operator_id in self.operator_definitions
+        ]
         keyframes = [
             Keyframe(
                 time_ms=index * self._transition_duration_ms,
-                operator_states=[deepcopy(frame[operator_id]) for operator_id in self.operator_order if operator_id in frame],
+                name=self.keyframe_names[index] if index < len(self.keyframe_names) else "",
+                note=self.keyframe_notes[index] if index < len(self.keyframe_notes) else "",
+                operator_frames=[deepcopy(frame[operator_id]) for operator_id in self.operator_order if operator_id in frame],
             )
             for index, frame in enumerate(self.keyframe_columns)
         ]
         return TacticProject(
             name=Path(self.current_project_path).stem if self.current_project_path else "untitled",
             map_info=map_info,
+            operators=operators,
             timeline=Timeline(keyframes=keyframes),
             operator_order=list(self.operator_order),
             current_keyframe_index=self.current_keyframe_index,
@@ -836,19 +1166,26 @@ class EditorPage(QWidget):
             self.map_status_label.setText("当前地图：未加载")
 
         self.operator_order = list(project.operator_order)
-        self.operator_labels = {}
+        self.operator_definitions = {
+            operator.id: deepcopy(operator)
+            for operator in project.operators
+        }
         self.keyframe_columns = [
-            {state.id: deepcopy(state) for state in keyframe.operator_states}
+            {state.id: deepcopy(state) for state in keyframe.operator_frames}
             for keyframe in project.timeline.keyframes
         ] or [{}]
+        self.keyframe_names = [keyframe.name for keyframe in project.timeline.keyframes] or [""]
+        self.keyframe_notes = [keyframe.note for keyframe in project.timeline.keyframes] or [""]
         self.current_keyframe_index = min(project.current_keyframe_index, len(self.keyframe_columns) - 1)
         self.current_timeline_row = -1
         self._transition_duration_ms = project.transition_duration_ms
         self.timeline.duration_slider.setValue(self._transition_duration_ms)
 
+        for operator_id in self.operator_definitions:
+            if operator_id not in self.operator_order:
+                self.operator_order.append(operator_id)
         for frame in self.keyframe_columns:
             for state in frame.values():
-                self.operator_labels[state.id] = state.custom_name
                 if state.id not in self.operator_order:
                     self.operator_order.append(state.id)
 
@@ -863,8 +1200,10 @@ class EditorPage(QWidget):
             scene_states=deepcopy(scene.snapshot_operator_states() if scene is not None else []),
             selected_operator_id=selected.operator_id if selected is not None else "",
             operator_order=list(self.operator_order),
-            operator_labels=dict(self.operator_labels),
+            operator_definitions=deepcopy(self.operator_definitions),
             keyframe_columns=deepcopy(self.keyframe_columns),
+            keyframe_names=list(self.keyframe_names),
+            keyframe_notes=list(self.keyframe_notes),
             current_keyframe_index=self.current_keyframe_index,
             current_timeline_row=self.current_timeline_row,
             transition_duration_ms=self._transition_duration_ms,
@@ -920,8 +1259,10 @@ class EditorPage(QWidget):
             self.map_status_label.setText("当前地图：未加载")
 
         self.operator_order = list(snapshot.operator_order)
-        self.operator_labels = dict(snapshot.operator_labels)
+        self.operator_definitions = deepcopy(snapshot.operator_definitions)
         self.keyframe_columns = deepcopy(snapshot.keyframe_columns)
+        self.keyframe_names = list(snapshot.keyframe_names)
+        self.keyframe_notes = list(snapshot.keyframe_notes)
         self.current_keyframe_index = snapshot.current_keyframe_index
         self.current_timeline_row = snapshot.current_timeline_row
         self._transition_duration_ms = snapshot.transition_duration_ms
@@ -934,6 +1275,16 @@ class EditorPage(QWidget):
         self._refresh_property_panel()
         self._history_lock = False
         self._refresh_timeline()
+
+    @staticmethod
+    def _moved_index(current_index: int, from_index: int, to_index: int) -> int:
+        if current_index == from_index:
+            return to_index
+        if from_index < current_index <= to_index:
+            return current_index - 1
+        if to_index <= current_index < from_index:
+            return current_index + 1
+        return current_index
 
     def _operator_row(self, operator_id: str) -> int:
         try:

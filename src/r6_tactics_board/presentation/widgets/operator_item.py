@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QPixmap, QPolygonF
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPixmap, QPolygonF
 from PyQt6.QtWidgets import QGraphicsItem
 
 
@@ -25,7 +25,7 @@ class OperatorItem(QGraphicsItem):
         self.setTransformOriginPoint(0, 0)
 
     def boundingRect(self) -> QRectF:
-        return QRectF(-60, -36, 120, 72)
+        return QRectF(-15, -17, 30, 34)
 
     def paint(self, painter: QPainter, option, widget=None) -> None:
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -57,37 +57,48 @@ class OperatorItem(QGraphicsItem):
 
     def _paint_icon_mode(self, painter: QPainter) -> None:
         pen = QPen(QColor("#F5F5F5"), 2)
+        fill = QColor("#2B88D8")
         if self.isSelected():
             pen.setColor(QColor("#FFD54F"))
             pen.setWidth(3)
+            fill = QColor("#3598EB")
 
         painter.setPen(pen)
-        icon_rect = QRectF(-24, -24, 48, 48)
+        icon_rect = QRectF(-5, -5, 10, 10)
         if not self.icon_pixmap.isNull():
-            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setBrush(QBrush(QColor("#101214")))
             painter.drawEllipse(icon_rect)
+            clip_path = QPainterPath()
+            clip_path.addEllipse(icon_rect)
+            painter.save()
+            painter.setClipPath(clip_path)
             painter.drawPixmap(icon_rect.toRect(), self.icon_pixmap)
+            painter.restore()
         else:
-            painter.setBrush(QBrush(QColor("#2B88D8")))
+            painter.setBrush(QBrush(fill))
             painter.drawEllipse(icon_rect)
 
-        arrow = QPolygonF(
+        triangle = QPolygonF(
             [
-                QPointF(0, -18),
-                QPointF(-8, -4),
-                QPointF(8, -4),
+                QPointF(0, -9),
+                QPointF(-2.5, -4),
+                QPointF(2.5, -4),
             ]
         )
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(QColor("#FFFFFF")))
-        painter.drawPolygon(arrow)
+        painter.drawPolygon(triangle)
 
-        painter.setPen(QColor("#FFFFFF"))
-        painter.setFont(QFont("Microsoft YaHei UI", 8))
+        painter.save()
+        painter.rotate(-self.rotation())
+        painter.setPen(QColor(255, 255, 255, 190))
+        painter.setFont(QFont("Microsoft YaHei UI", 5))
         painter.drawText(
-            QRectF(-20, 2, 40, 16),
+            QRectF(-5, -4, 10, 8),
             int(Qt.AlignmentFlag.AlignCenter),
-            self.operator_key or self.operator_id,
+            self.operator_key[:2].upper() if self.operator_key else self.operator_id,
         )
+        painter.restore()
 
     def _paint_name_mode(self, painter: QPainter) -> None:
         pen = QPen(QColor("#F5F5F5"), 2)
@@ -113,8 +124,11 @@ class OperatorItem(QGraphicsItem):
 
         painter.setPen(QColor("#FFFFFF"))
         painter.setFont(QFont("Microsoft YaHei UI", 9))
+        painter.save()
+        painter.rotate(-self.rotation())
         painter.drawText(
             QRectF(-46, -12, 92, 24),
             int(Qt.AlignmentFlag.AlignCenter),
             self.custom_name,
         )
+        painter.restore()

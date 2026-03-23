@@ -4,7 +4,9 @@ from pathlib import Path
 from r6_tactics_board.domain.models import (
     Keyframe,
     MapInfo,
+    OperatorDefinition,
     OperatorDisplayMode,
+    OperatorFrameState,
     OperatorState,
     Point2D,
     TacticProject,
@@ -29,15 +31,15 @@ class ProjectStore:
                 image_path=self._resolve_path(project_path.parent, image_path),
             )
 
+        operators = self._load_operator_definitions(data)
         keyframes = [
             Keyframe(
                 time_ms=item.get("time_ms", 0),
-                operator_states=[
-                    OperatorState(
+                name=item.get("name", ""),
+                note=item.get("note", ""),
+                operator_frames=[
+                    OperatorFrameState(
                         id=state["id"],
-                        operator_key=state.get("operator_key", ""),
-                        custom_name=state.get("custom_name", ""),
-                        side=TeamSide(state.get("side", TeamSide.ATTACK.value)),
                         position=Point2D(
                             x=state["position"]["x"],
                             y=state["position"]["y"],
@@ -47,7 +49,7 @@ class ProjectStore:
                             state.get("display_mode", OperatorDisplayMode.ICON.value)
                         ),
                     )
-                    for state in item.get("operator_states", [])
+                    for state in item.get("operator_frames", item.get("operator_states", []))
                 ],
             )
             for item in data.get("timeline", {}).get("keyframes", [])
@@ -56,6 +58,7 @@ class ProjectStore:
         return TacticProject(
             name=data.get("name", project_path.stem),
             map_info=map_info,
+            operators=operators,
             timeline=Timeline(keyframes=keyframes),
             operator_order=data.get("operator_order", []),
             current_keyframe_index=data.get("current_keyframe_index", 0),
@@ -73,16 +76,24 @@ class ProjectStore:
                 "name": project.map_info.name,
                 "image_path": self._serialize_path(project_path.parent, project.map_info.image_path),
             },
+            "operators": [
+                {
+                    "id": operator.id,
+                    "custom_name": operator.custom_name,
+                    "side": operator.side.value,
+                    "operator_key": operator.operator_key,
+                }
+                for operator in project.operators
+            ],
             "timeline": {
                 "keyframes": [
                     {
                         "time_ms": keyframe.time_ms,
-                        "operator_states": [
+                        "name": keyframe.name,
+                        "note": keyframe.note,
+                        "operator_frames": [
                             {
                                 "id": state.id,
-                                "operator_key": state.operator_key,
-                                "custom_name": state.custom_name,
-                                "side": state.side.value,
                                 "position": {
                                     "x": state.position.x,
                                     "y": state.position.y,
@@ -90,7 +101,7 @@ class ProjectStore:
                                 "rotation": state.rotation,
                                 "display_mode": state.display_mode.value,
                             }
-                            for state in keyframe.operator_states
+                            for state in keyframe.operator_frames
                         ],
                     }
                     for keyframe in project.timeline.keyframes
@@ -127,3 +138,31 @@ class ProjectStore:
             return candidate.relative_to(base_dir).as_posix()
         except ValueError:
             return str(candidate)
+
+    @staticmethod
+    def _load_operator_definitions(data: dict) -> list[OperatorDefinition]:
+        if data.get("operators"):
+            return [
+                OperatorDefinition(
+                    id=item["id"],
+                    custom_name=item.get("custom_name", ""),
+                    side=TeamSide(item.get("side", TeamSide.ATTACK.value)),
+                    operator_key=item.get("operator_key", ""),
+                )
+                for item in data.get("operators", [])
+            ]
+
+        inferred: dict[str, OperatorDefinition] = {}
+        for keyframe in data.get("timeline", {}).get("keyframes", []):
+            for state in keyframe.get("operator_states", []):
+                operator_id = state["id"]
+                if operator_id in inferred:
+                    continue
+                inferred[operator_id] = OperatorDefinition(
+                    id=operator_id,
+                    custom_name=state.get("custom_name", ""),
+                    side=TeamSide(state.get("side", TeamSide.ATTACK.value)),
+                    operator_key=state.get("operator_key", ""),
+                )
+
+        return list(inferred.values())
