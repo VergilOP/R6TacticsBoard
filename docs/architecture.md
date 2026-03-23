@@ -17,8 +17,10 @@
 纯业务对象，不依赖 Qt 组件。
 
 - `MapInfo`: 地图资源信息
-- `OperatorState`: 某一时刻单个干员状态
-- `Keyframe`: 某一时刻全场景状态
+- `OperatorDefinition`: 干员固有定义，例如名称、阵营、图标 key
+- `OperatorFrameState`: 某个时间点的局部状态，例如位置、朝向、显示模式
+- `OperatorState`: 由定义 + 局部状态解析出的渲染态
+- `Keyframe`: 某一时刻的显式局部状态集合
 - `Timeline`: 关键帧集合
 - `TacticProject`: 战术工程根对象
 
@@ -50,18 +52,51 @@
 
 ## 关键数据流
 
-1. 用户在 `MapScene` 中拖拽干员
-2. `OperatorItem` 更新场景表现
-3. 编辑页将变更同步到 `EditorSession`
-4. 保存关键帧时，将当前状态固化为 `Keyframe`
-5. 播放时，`PlaybackController` 根据时间计算插值结果
-6. 插值结果回写到场景图元，形成动画效果
+1. 用户修改干员名称、阵营、图标等固有属性
+2. 编辑页更新 `OperatorDefinition`
+3. 用户在地图上放置干员、改朝向或改显示模式
+4. 编辑页仅把局部变化写入当前关键帧的 `OperatorFrameState`
+5. 需要显示或播放时，用 `OperatorDefinition + OperatorFrameState` 解析出 `OperatorState`
+6. `OperatorState` 回写到场景图元，形成静态显示或插值动画
+
+## 数据结构边界
+
+当前版本明确区分三类数据：
+
+### 1. 干员固有属性
+
+全局生效，不应只改某一个时间轴单元格。
+
+- `custom_name`
+- `side`
+- `operator_key`
+
+这些数据保存在 `OperatorDefinition` 中。
+
+### 2. 时间轴局部属性
+
+只属于某个关键帧单元格。
+
+- `position`
+- `rotation`
+- `display_mode`
+
+这些数据保存在 `OperatorFrameState` 中。
+
+### 3. 渲染态
+
+场景显示、播放插值、预览路径使用的是解析后的完整状态：
+
+- `OperatorState`
+
+它不是直接编辑源，而是由前两层合成得到。
 
 ## 时间轴模型选择
 
-首版采用“全局关键帧”：
+首版采用“按干员行 + 关键帧列”的表格时间轴：
 
-- 每个关键帧记录全部干员状态
+- 每个关键帧列只记录显式修改过的 `OperatorFrameState`
+- 空单元格沿用左侧最近一次有效状态
 - 回放时在相邻关键帧间做线性插值
 
 优点：
