@@ -117,6 +117,7 @@ class MapScene(QGraphicsScene):
                     position=Point2D(x=item.pos().x(), y=item.pos().y()),
                     rotation=item.rotation(),
                     display_mode=display_mode,
+                    floor_key=item.floor_key,
                 )
             )
 
@@ -156,6 +157,7 @@ class MapScene(QGraphicsScene):
             operator.set_custom_name(state.custom_name)
             operator.set_side(state.side.value)
             operator.set_operator_key(state.operator_key)
+            operator.set_floor_key(state.floor_key)
             operator.set_display_mode(state.display_mode.value)
             operator.setRotation(state.rotation)
             operator.setPos(state.position.x, state.position.y)
@@ -230,6 +232,7 @@ class MapScene(QGraphicsScene):
                 "operator_key": item.operator_key,
                 "custom_name": item.custom_name,
                 "side": item.side,
+                "floor_key": item.floor_key,
                 "display_mode": item.display_mode,
                 "rotation": int(item.rotation()),
                 "position": item.pos(),
@@ -249,6 +252,7 @@ class MapScene(QGraphicsScene):
             operator = OperatorItem(state["id"], state["custom_name"])
             operator.set_side(state["side"])
             operator.set_operator_key(state["operator_key"])
+            operator.set_floor_key(state["floor_key"])
             operator.set_display_mode(state["display_mode"])
             operator.setRotation(state["rotation"])
             operator.setZValue(10)
@@ -286,6 +290,7 @@ class MapScene(QGraphicsScene):
         operator.set_custom_name(self._placement_state.custom_name)
         operator.set_side(self._placement_state.side.value)
         operator.set_operator_key(self._placement_state.operator_key)
+        operator.set_floor_key(self._placement_state.floor_key)
         operator.set_display_mode(self._placement_state.display_mode.value)
         operator.setPos(self._placement_anchor)
         operator.setRotation(self._placement_state.rotation)

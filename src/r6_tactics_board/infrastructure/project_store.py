@@ -25,10 +25,13 @@ class ProjectStore:
         map_info = None
         if data.get("map_info") is not None:
             image_path = data["map_info"].get("image_path", "")
+            metadata_path = data["map_info"].get("metadata_path", "")
             map_info = MapInfo(
                 key=data["map_info"].get("key", ""),
                 name=data["map_info"].get("name", ""),
                 image_path=self._resolve_path(project_path.parent, image_path),
+                metadata_path=self._resolve_path(project_path.parent, metadata_path),
+                current_floor_key=data["map_info"].get("current_floor_key", ""),
             )
 
         operators = self._load_operator_definitions(data)
@@ -48,6 +51,7 @@ class ProjectStore:
                         display_mode=OperatorDisplayMode(
                             state.get("display_mode", OperatorDisplayMode.ICON.value)
                         ),
+                        floor_key=state.get("floor_key", ""),
                     )
                     for state in item.get("operator_frames", item.get("operator_states", []))
                 ],
@@ -75,6 +79,8 @@ class ProjectStore:
                 "key": project.map_info.key,
                 "name": project.map_info.name,
                 "image_path": self._serialize_path(project_path.parent, project.map_info.image_path),
+                "metadata_path": self._serialize_path(project_path.parent, project.map_info.metadata_path),
+                "current_floor_key": project.map_info.current_floor_key,
             },
             "operators": [
                 {
@@ -100,6 +106,7 @@ class ProjectStore:
                                 },
                                 "rotation": state.rotation,
                                 "display_mode": state.display_mode.value,
+                                "floor_key": state.floor_key,
                             }
                             for state in keyframe.operator_frames
                         ],

@@ -29,7 +29,8 @@ from r6_tactics_board.domain.models import (
     Timeline,
     resolve_operator_state,
 )
-from r6_tactics_board.infrastructure.asset_registry import AssetRegistry
+from r6_tactics_board.infrastructure.asset_paths import MAPS_DIR
+from r6_tactics_board.infrastructure.asset_registry import AssetRegistry, MapAsset
 from r6_tactics_board.infrastructure.project_store import ProjectStore
 from r6_tactics_board.presentation.widgets.map_scene import MapScene
 from r6_tactics_board.presentation.widgets.map_view import MapView
@@ -39,7 +40,9 @@ from r6_tactics_board.presentation.widgets.timeline_widget import TimelineWidget
 
 @dataclass(slots=True)
 class EditorHistoryState:
-    map_path: str
+    map_asset_path: str
+    map_floor_key: str
+    map_image_path: str
     scene_states: list[OperatorState]
     selected_operator_id: str
     operator_order: list[str]
@@ -82,6 +85,9 @@ class EditorPage(QWidget):
         self.current_keyframe_index = 0
         self.current_timeline_row = -1
         self.current_project_path = ""
+        self.current_map_asset_path = ""
+        self.current_map_floor_key = ""
+        self._current_map_asset: MapAsset | None = None
 
         self.project_store = ProjectStore()
         self.asset_registry = AssetRegistry()
@@ -100,7 +106,7 @@ class EditorPage(QWidget):
         self.delete_operator_button = PushButton("删除选中干员")
         self.map_status_label = BodyLabel("当前地图：未加载")
         self.property_title = SubtitleLabel("属性面板")
-        self.property_hint = BodyLabel("名称、阵营、图标是全局属性；位置、朝向、显示模式跟随当前时间点。")
+        self.property_hint = BodyLabel("名称、阵营、图标是全局属性；位置、朝向、显示模式、楼层跟随当前时间点。")
         self.selection_label = BodyLabel("当前选中：无")
         self.keyframe_title = SubtitleLabel("关键帧属性")
         self.keyframe_hint = BodyLabel("关键帧名称和备注只作用于当前关键帧列。")
@@ -111,9 +117,12 @@ class EditorPage(QWidget):
         self.operator_combo = ComboBox()
         self.rotation_slider = Slider(Qt.Orientation.Horizontal)
         self.rotation_value_label = BodyLabel("0°")
+        self.floor_value_label = BodyLabel("-")
         self.display_mode_combo = ComboBox()
         self.undo_shortcut = QShortcut(QKeySequence.StandardKey.Undo, self)
         self.redo_shortcut = QShortcut(QKeySequence.StandardKey.Redo, self)
+        self.floor_panel = QWidget(self)
+        self.floor_panel_layout = QVBoxLayout(self.floor_panel)
 
         self._init_ui()
         self._init_signals()
@@ -144,6 +153,19 @@ class EditorPage(QWidget):
         center_layout.addLayout(toolbar_layout)
         center_layout.addWidget(self.map_view, 1)
         center_layout.addWidget(self.timeline)
+
+        self.floor_panel.setObjectName("floor-panel")
+        self.floor_panel.hide()
+        self.floor_panel.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.floor_panel.setStyleSheet(
+            "#floor-panel {"
+            "background-color: rgba(24, 28, 34, 215);"
+            "border: 1px solid rgba(255, 255, 255, 24);"
+            "border-radius: 10px;"
+            "}"
+        )
+        self.floor_panel_layout.setContentsMargins(10, 10, 10, 10)
+        self.floor_panel_layout.setSpacing(8)
 
         side_panel = QVBoxLayout()
         side_panel.setSpacing(12)
@@ -182,6 +204,8 @@ class EditorPage(QWidget):
         property_grid.addWidget(self.rotation_value_label, 4, 1)
         property_grid.addWidget(BodyLabel("显示模式"), 5, 0)
         property_grid.addWidget(self.display_mode_combo, 5, 1)
+        property_grid.addWidget(BodyLabel("楼层"), 6, 0)
+        property_grid.addWidget(self.floor_value_label, 6, 1)
 
         keyframe_grid.addWidget(BodyLabel("名称"), 0, 0)
         keyframe_grid.addWidget(self.keyframe_name_edit, 0, 1)
@@ -243,6 +267,7 @@ class EditorPage(QWidget):
         self.timeline.keyframe_column_moved.connect(self._move_keyframe_column)
         self.timeline.operator_row_moved.connect(self._move_operator_row)
         self.playback_timer.timeout.connect(self._advance_playback)
+        self.map_view.viewport_resized.connect(self._position_floor_panel)
 
         scene = self._map_scene()
         if scene is not None:
@@ -255,12 +280,12 @@ class EditorPage(QWidget):
             return
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "选择地图图片",
-            "",
-            "Images (*.png *.jpg *.jpeg *.bmp *.webp)",
+            "选择地图",
+            str(MAPS_DIR),
+            "Map Metadata (*.json)",
         )
         if file_path:
-            self._load_map_file(file_path)
+            self._load_map_asset(file_path)
 
     def _load_map_file(self, file_path: str) -> None:
         scene = self._map_scene()
@@ -271,11 +296,57 @@ class EditorPage(QWidget):
             self._pause_column_playback()
             self.map_status_label.setText(f"当前地图：{Path(file_path).name}")
             self.map_view.fit_scene()
+            self.current_map_asset_path = ""
+            self.current_map_floor_key = ""
+            self._current_map_asset = None
+            self._rebuild_floor_panel()
             self._refresh_property_panel()
             self._commit_history(before)
 
     def load_map_from_path(self, file_path: str) -> None:
-        self._load_map_file(file_path)
+        self._load_map_asset(file_path)
+
+    def _load_map_asset(
+        self,
+        map_asset_path: str,
+        floor_key: str = "",
+        fit_view: bool = True,
+        pause_playback: bool = True,
+    ) -> bool:
+        scene = self._map_scene()
+        if scene is None:
+            return False
+
+        asset = self.asset_registry.load_map_asset(map_asset_path)
+        if asset is None or not asset.floors:
+            return False
+
+        selected_floor = next(
+            (floor for floor in asset.floors if floor.key == floor_key),
+            asset.floors[0],
+        )
+        if not scene.load_map_image(selected_floor.image_path):
+            return False
+
+        if pause_playback:
+            self._pause_column_playback()
+        self.current_map_asset_path = asset.path
+        self.current_map_floor_key = selected_floor.key
+        self._current_map_asset = asset
+        self.map_status_label.setText(f"当前地图：{asset.name} / {selected_floor.name}")
+        self._rebuild_floor_panel()
+        if fit_view:
+            self.map_view.fit_scene()
+        self._refresh_property_panel()
+        return True
+
+    def _switch_map_floor(self, floor_key: str) -> None:
+        if not self.current_map_asset_path or floor_key == self.current_map_floor_key:
+            return
+        before = self._capture_history_state()
+        if self._load_map_asset(self.current_map_asset_path, floor_key=floor_key, fit_view=False):
+            self._apply_timeline_column(self.current_keyframe_index)
+            self._commit_history(before)
 
     def _open_project(self) -> None:
         if not self.confirm_discard_changes("打开工程"):
@@ -325,6 +396,7 @@ class EditorPage(QWidget):
         before = self._capture_history_state()
         self._pause_column_playback()
         operator = scene.add_operator(self.map_view.scene_center())
+        operator.set_floor_key(self._current_floor_key())
         scene.select_operator(operator)
         self._update_operator_icon(operator)
         self._sync_operator_registry()
@@ -341,6 +413,7 @@ class EditorPage(QWidget):
         before = self._capture_history_state()
         self._pause_column_playback()
         operator = scene.add_operator(self.map_view.scene_center())
+        operator.set_floor_key(self._current_floor_key())
         operator.set_side(side)
         operator.set_operator_key(operator_key)
         self._update_operator_icon(operator)
@@ -359,26 +432,65 @@ class EditorPage(QWidget):
 
     def _refresh_property_panel(self) -> None:
         operator = self._current_operator()
+        target_operator_id = self._target_operator_id()
+        target_definition = (
+            self.operator_definitions.get(target_operator_id)
+            if target_operator_id is not None
+            else None
+        )
+        target_frame = (
+            self._resolved_frame_state(target_operator_id, self.current_keyframe_index)
+            if target_operator_id is not None and 0 <= self.current_keyframe_index < len(self.keyframe_columns)
+            else None
+        )
 
         self._syncing_panel = True
-        if operator is None:
+        if operator is None and target_operator_id is None:
             self.selection_label.setText("当前选中：无")
             self.name_edit.setText("")
             self.side_combo.setCurrentIndex(0)
             self._refresh_operator_combo("attack")
             self.rotation_slider.setValue(0)
             self.rotation_value_label.setText("0°")
+            self.floor_value_label.setText(self._current_floor_key())
             self.display_mode_combo.setCurrentIndex(0)
             self._set_property_enabled(False)
         else:
-            self.selection_label.setText(f"当前选中：干员 {operator.operator_id}")
-            self.name_edit.setText(operator.custom_name)
-            self.side_combo.setCurrentIndex(0 if operator.side == "attack" else 1)
-            self._refresh_operator_combo(operator.side, operator.operator_key)
-            self.rotation_slider.setValue(int(operator.rotation()) % 360)
-            self.rotation_value_label.setText(f"{int(operator.rotation()) % 360}°")
+            operator_id = operator.operator_id if operator is not None else target_operator_id
+            custom_name = operator.custom_name if operator is not None else (
+                target_definition.custom_name if target_definition is not None else f"干员 {operator_id}"
+            )
+            side = operator.side if operator is not None else (
+                target_definition.side.value if target_definition is not None else "attack"
+            )
+            operator_key = operator.operator_key if operator is not None else (
+                target_definition.operator_key if target_definition is not None else ""
+            )
+            rotation = int(operator.rotation()) % 360 if operator is not None else (
+                int(target_frame.rotation) % 360 if target_frame is not None else 0
+            )
+            floor_key = operator.floor_key if operator is not None else (
+                target_frame.floor_key if target_frame is not None and target_frame.floor_key else self._current_floor_key()
+            )
+            display_mode = operator.display_mode if operator is not None else (
+                OperatorItem.ICON
+                if target_frame is None or target_frame.display_mode == OperatorDisplayMode.ICON
+                else OperatorItem.CUSTOM_NAME
+            )
+
+            if operator is not None:
+                self.selection_label.setText(f"当前选中：干员 {operator_id}")
+            else:
+                self.selection_label.setText(f"当前目标：干员 {operator_id}（时间轴）")
+
+            self.name_edit.setText(custom_name)
+            self.side_combo.setCurrentIndex(0 if side == "attack" else 1)
+            self._refresh_operator_combo(side, operator_key)
+            self.rotation_slider.setValue(rotation)
+            self.rotation_value_label.setText(f"{rotation}°")
+            self.floor_value_label.setText(floor_key or self._current_floor_key())
             self.display_mode_combo.setCurrentIndex(
-                0 if operator.display_mode == OperatorItem.ICON else 1
+                0 if display_mode == OperatorItem.ICON else 1
             )
             self._set_property_enabled(True)
         self._syncing_panel = False
@@ -391,6 +503,41 @@ class EditorPage(QWidget):
         self.keyframe_note_edit.setEnabled(has_keyframe)
         self._syncing_keyframe_panel = False
 
+    def _rebuild_floor_panel(self) -> None:
+        while self.floor_panel_layout.count():
+            item = self.floor_panel_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        asset = self._current_map_asset
+        if asset is None or len(asset.floors) <= 1:
+            self.floor_panel.hide()
+            return
+
+        self.floor_panel_layout.addWidget(BodyLabel("楼层"))
+        for floor in asset.floors:
+            button = PrimaryPushButton(floor.name) if floor.key == self.current_map_floor_key else PushButton(floor.name)
+            button.clicked.connect(lambda checked=False, key=floor.key: self._switch_map_floor(key))
+            self.floor_panel_layout.addWidget(button)
+
+        self.floor_panel.show()
+        self._position_floor_panel()
+        self.floor_panel.raise_()
+        self.floor_panel.update()
+        QTimer.singleShot(0, self._position_floor_panel)
+
+    def _position_floor_panel(self) -> None:
+        if self.floor_panel.isHidden():
+            return
+        self.floor_panel_layout.activate()
+        self.floor_panel.setFixedSize(self.floor_panel_layout.sizeHint())
+        map_rect = self.map_view.geometry()
+        x = map_rect.left() + 12
+        y = max(map_rect.top() + 12, map_rect.top() + (map_rect.height() - self.floor_panel.height()) // 2)
+        self.floor_panel.move(x, y)
+        self.floor_panel.raise_()
+
     def _set_property_enabled(self, enabled: bool) -> None:
         self.name_edit.setEnabled(enabled)
         self.side_combo.setEnabled(enabled)
@@ -399,17 +546,27 @@ class EditorPage(QWidget):
         self.display_mode_combo.setEnabled(enabled)
         self.delete_operator_button.setEnabled(enabled)
 
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._position_floor_panel()
+
     def _apply_name_edit(self) -> None:
         if self._syncing_panel:
             return
         operator = self._current_operator()
-        if operator is None:
+        operator_id = operator.operator_id if operator is not None else self._target_operator_id()
+        current_name = operator.custom_name if operator is not None else (
+            self.operator_definitions.get(operator_id).custom_name
+            if operator_id is not None and operator_id in self.operator_definitions
+            else ""
+        )
+        if operator_id is None:
             return
-        name = self.name_edit.text().strip() or f"干员 {operator.operator_id}"
-        if name == operator.custom_name:
+        name = self.name_edit.text().strip() or f"干员 {operator_id}"
+        if name == current_name:
             return
         before = self._capture_history_state()
-        self._apply_global_operator_metadata(operator.operator_id, custom_name=name)
+        self._apply_global_operator_metadata(operator_id, custom_name=name)
         self._refresh_property_panel()
         self._refresh_timeline()
         self._commit_history(before)
@@ -418,15 +575,21 @@ class EditorPage(QWidget):
         if self._syncing_panel:
             return
         operator = self._current_operator()
-        if operator is None:
+        operator_id = operator.operator_id if operator is not None else self._target_operator_id()
+        current_side = operator.side if operator is not None else (
+            self.operator_definitions.get(operator_id).side.value
+            if operator_id is not None and operator_id in self.operator_definitions
+            else "attack"
+        )
+        if operator_id is None:
             return
 
         side = self.side_combo.itemData(index)
-        if side is None or side == operator.side:
+        if side is None or side == current_side:
             return
 
         before = self._capture_history_state()
-        self._apply_global_operator_metadata(operator.operator_id, side=side)
+        self._apply_global_operator_metadata(operator_id, side=side)
         self._refresh_operator_combo(side)
         self._refresh_property_panel()
         self._refresh_timeline()
@@ -436,14 +599,20 @@ class EditorPage(QWidget):
         if self._syncing_panel:
             return
         operator = self._current_operator()
-        if operator is None:
+        operator_id = operator.operator_id if operator is not None else self._target_operator_id()
+        current_key = operator.operator_key if operator is not None else (
+            self.operator_definitions.get(operator_id).operator_key
+            if operator_id is not None and operator_id in self.operator_definitions
+            else ""
+        )
+        if operator_id is None:
             return
 
         operator_key = self.operator_combo.itemData(index) or ""
-        if operator_key == operator.operator_key:
+        if operator_key == current_key:
             return
         before = self._capture_history_state()
-        self._apply_global_operator_metadata(operator.operator_id, operator_key=operator_key)
+        self._apply_global_operator_metadata(operator_id, operator_key=operator_key)
         self._refresh_property_panel()
         self._refresh_timeline()
         self._commit_history(before)
@@ -451,7 +620,7 @@ class EditorPage(QWidget):
     def _on_rotation_slider_pressed(self) -> None:
         if self._syncing_panel:
             return
-        if self._current_operator() is not None:
+        if self._current_operator() is not None or self._target_operator_id() is not None:
             self._rotation_history_snapshot = self._capture_history_state()
 
     def _update_selected_rotation(self, value: int) -> None:
@@ -460,6 +629,27 @@ class EditorPage(QWidget):
             return
         operator = self._current_operator()
         if operator is None:
+            operator_id = self._target_operator_id()
+            if operator_id is None or not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+                return
+            frame = self.keyframe_columns[self.current_keyframe_index].get(operator_id)
+            if frame is None:
+                frame = self._resolved_frame_state(operator_id, self.current_keyframe_index)
+                if frame is None:
+                    frame = OperatorFrameState(
+                        id=operator_id,
+                        position=Point2D(x=0, y=0),
+                        rotation=value,
+                        display_mode=OperatorDisplayMode.ICON,
+                        floor_key=self._current_floor_key(),
+                    )
+                else:
+                    frame = deepcopy(frame)
+            frame.rotation = value
+            frame.floor_key = self._current_floor_key()
+            self.keyframe_columns[self.current_keyframe_index][operator_id] = frame
+            self._refresh_property_panel()
+            self._refresh_timeline()
             return
         operator.setRotation(value)
         self._capture_selected_operator_to_current_cell(refresh_history=False)
@@ -474,10 +664,38 @@ class EditorPage(QWidget):
         if self._syncing_panel:
             return
         operator = self._current_operator()
-        if operator is None:
-            return
         mode = self.display_mode_combo.itemData(index)
-        if mode is not None and mode != operator.display_mode:
+        if mode is None:
+            return
+        if operator is None:
+            operator_id = self._target_operator_id()
+            if operator_id is None or not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+                return
+            current_frame = self.keyframe_columns[self.current_keyframe_index].get(operator_id)
+            if current_frame is None:
+                current_frame = self._resolved_frame_state(operator_id, self.current_keyframe_index)
+                if current_frame is None:
+                    current_frame = OperatorFrameState(
+                        id=operator_id,
+                        position=Point2D(x=0, y=0),
+                        rotation=0,
+                        display_mode=OperatorDisplayMode(mode),
+                        floor_key=self._current_floor_key(),
+                    )
+                else:
+                    current_frame = deepcopy(current_frame)
+            if current_frame.display_mode.value == mode:
+                return
+            before = self._capture_history_state()
+            current_frame.display_mode = OperatorDisplayMode(mode)
+            current_frame.floor_key = self._current_floor_key()
+            self.keyframe_columns[self.current_keyframe_index][operator_id] = current_frame
+            self._refresh_property_panel()
+            self._refresh_timeline()
+            self._commit_history(before)
+            return
+
+        if mode != operator.display_mode:
             before = self._capture_history_state()
             operator.set_display_mode(mode)
             self._capture_selected_operator_to_current_cell(refresh_history=False)
@@ -614,9 +832,11 @@ class EditorPage(QWidget):
 
     def _select_timeline_cell(self, row: int, column: int) -> None:
         self.current_timeline_row = row
-        self.current_keyframe_index = column
+        if column >= 0:
+            self.current_keyframe_index = column
         self._pause_column_playback()
-        self._apply_timeline_column(column)
+        if self.current_keyframe_index >= 0:
+            self._apply_timeline_column(self.current_keyframe_index)
 
         if 0 <= row < len(self.operator_order):
             operator_id = self.operator_order[row]
@@ -637,7 +857,7 @@ class EditorPage(QWidget):
         resolved_states: list[OperatorState] = []
         for operator_id in self.operator_order:
             state = self._resolved_state(operator_id, column)
-            if state is not None:
+            if state is not None and self._state_matches_current_floor(state):
                 resolved_states.append(deepcopy(state))
 
         scene.sync_operator_states(resolved_states)
@@ -700,7 +920,11 @@ class EditorPage(QWidget):
 
     def _on_scene_selection_changed(self) -> None:
         operator = self._current_operator()
-        self.current_timeline_row = self._operator_row(operator.operator_id) if operator else -1
+        # Keep the timeline cell as the source of truth for placement mode.
+        # Scene selection can temporarily disappear when switching floors because
+        # the operator may not exist on the currently visible floor.
+        if operator is not None:
+            self.current_timeline_row = self._operator_row(operator.operator_id)
         self._refresh_property_panel()
         self._refresh_timeline()
 
@@ -766,6 +990,7 @@ class EditorPage(QWidget):
 
         self._playback_elapsed_ms += self.playback_timer.interval()
         progress = min(self._playback_elapsed_ms / self._transition_duration_ms, 1.0)
+        self._sync_playback_focus_floor(progress)
         scene.sync_operator_states(self._interpolated_states(progress))
         for operator in scene.operator_items():
             self._update_operator_icon(operator)
@@ -774,7 +999,6 @@ class EditorPage(QWidget):
             return
 
         self.current_keyframe_index = self._playback_to_column
-        self.current_timeline_row = -1
         self._apply_timeline_column(self.current_keyframe_index)
         if self.current_keyframe_index >= len(self.keyframe_columns) - 1:
             self._pause_column_playback()
@@ -793,6 +1017,32 @@ class EditorPage(QWidget):
         self._playback_end_states = self._resolved_state_map(self._playback_to_column)
         self.playback_timer.start()
 
+    def _sync_playback_focus_floor(self, progress: float) -> None:
+        operator_id = self._target_operator_id()
+        if operator_id is None or not self.current_map_asset_path:
+            return
+
+        start_state = self._playback_start_states.get(operator_id)
+        end_state = self._playback_end_states.get(operator_id, start_state)
+        if start_state is None and end_state is None:
+            return
+        if start_state is None:
+            start_state = end_state
+        if end_state is None:
+            end_state = start_state
+
+        target_floor_key = start_state.floor_key or self._current_floor_key()
+        if progress >= 1.0:
+            target_floor_key = end_state.floor_key or target_floor_key
+
+        if target_floor_key and target_floor_key != self.current_map_floor_key:
+            self._load_map_asset(
+                self.current_map_asset_path,
+                floor_key=target_floor_key,
+                fit_view=False,
+                pause_playback=False,
+            )
+
     def _interpolated_states(self, progress: float) -> list[OperatorState]:
         states: list[OperatorState] = []
         for operator_id in self.operator_order:
@@ -804,6 +1054,8 @@ class EditorPage(QWidget):
                 start_state = end_state
             if end_state is None:
                 end_state = start_state
+            if not self._state_matches_current_floor(start_state) or not self._state_matches_current_floor(end_state):
+                continue
 
             rotation_delta = ((end_state.rotation - start_state.rotation + 180) % 360) - 180
             states.append(
@@ -818,6 +1070,7 @@ class EditorPage(QWidget):
                     ),
                     rotation=start_state.rotation + rotation_delta * progress,
                     display_mode=end_state.display_mode,
+                    floor_key=end_state.floor_key,
                 )
             )
         return states
@@ -930,6 +1183,8 @@ class EditorPage(QWidget):
             end_state = self._resolved_state(operator_id, to_column)
             if start_state is None or end_state is None:
                 continue
+            if not self._state_matches_current_floor(start_state) or not self._state_matches_current_floor(end_state):
+                continue
             segments[operator_id] = (start_state, end_state)
         return segments
 
@@ -943,7 +1198,9 @@ class EditorPage(QWidget):
         definition = self.operator_definitions.get(operator_id)
         frame = self._resolved_frame_state(operator_id, self.current_keyframe_index)
         if definition is not None and frame is not None:
-            return resolve_operator_state(definition, deepcopy(frame))
+            frame = deepcopy(frame)
+            frame.floor_key = self._current_floor_key()
+            return resolve_operator_state(definition, frame)
 
         scene = self._map_scene()
         operator = scene.find_operator(operator_id) if scene is not None else None
@@ -960,6 +1217,7 @@ class EditorPage(QWidget):
                     position=Point2D(x=0, y=0),
                     rotation=0,
                     display_mode=OperatorDisplayMode.ICON,
+                    floor_key=self._current_floor_key(),
                 ),
             )
 
@@ -972,11 +1230,24 @@ class EditorPage(QWidget):
             and abs(first.position.y - second.position.y) < 0.1
         )
 
+    def _current_floor_key(self) -> str:
+        return self.current_map_floor_key or "default"
+
+    def _state_matches_current_floor(self, state: OperatorState) -> bool:
+        if not state.floor_key:
+            return True
+        return state.floor_key == self._current_floor_key()
+
     def _operator_label(self, operator_id: str) -> str:
         definition = self.operator_definitions.get(operator_id)
         if definition is None or not definition.custom_name:
             return f"干员 {operator_id}"
         return definition.custom_name
+
+    def _target_operator_id(self) -> str | None:
+        if 0 <= self.current_timeline_row < len(self.operator_order):
+            return self.operator_order[self.current_timeline_row]
+        return None
 
     def _keyframe_label(self, index: int) -> str:
         if 0 <= index < len(self.keyframe_names) and self.keyframe_names[index]:
@@ -1082,6 +1353,7 @@ class EditorPage(QWidget):
             position=Point2D(x=operator.pos().x(), y=operator.pos().y()),
             rotation=operator.rotation(),
             display_mode=display_mode,
+            floor_key=self._current_floor_key(),
         )
 
     def _apply_global_operator_metadata(
@@ -1123,7 +1395,16 @@ class EditorPage(QWidget):
         map_info = None
         if scene is not None and scene.current_map_path:
             map_path = Path(scene.current_map_path)
-            map_info = MapInfo(key=map_path.stem, name=map_path.name, image_path=str(map_path))
+            if self._current_map_asset is not None:
+                map_info = MapInfo(
+                    key=self._current_map_asset.key,
+                    name=self._current_map_asset.name,
+                    image_path=str(map_path),
+                    metadata_path=self.current_map_asset_path,
+                    current_floor_key=self.current_map_floor_key,
+                )
+            else:
+                map_info = MapInfo(key=map_path.stem, name=map_path.name, image_path=str(map_path))
 
         operators = [
             deepcopy(self.operator_definitions[operator_id])
@@ -1155,15 +1436,34 @@ class EditorPage(QWidget):
         if scene is None:
             return
 
-        if project.map_info and project.map_info.image_path:
+        if project.map_info and project.map_info.metadata_path:
+            if not self._load_map_asset(
+                project.map_info.metadata_path,
+                floor_key=project.map_info.current_floor_key,
+            ):
+                scene.clear_map()
+                self.map_status_label.setText("当前地图：加载失败")
+                self.current_map_asset_path = ""
+                self.current_map_floor_key = ""
+                self._current_map_asset = None
+                self._rebuild_floor_panel()
+        elif project.map_info and project.map_info.image_path:
             if scene.load_map_image(project.map_info.image_path):
                 self.map_status_label.setText(f"当前地图：{Path(project.map_info.image_path).name}")
                 self.map_view.fit_scene()
+                self.current_map_asset_path = ""
+                self.current_map_floor_key = ""
+                self._current_map_asset = None
+                self._rebuild_floor_panel()
             else:
                 self.map_status_label.setText("当前地图：加载失败")
         else:
             scene.clear_map()
             self.map_status_label.setText("当前地图：未加载")
+            self.current_map_asset_path = ""
+            self.current_map_floor_key = ""
+            self._current_map_asset = None
+            self._rebuild_floor_panel()
 
         self.operator_order = list(project.operator_order)
         self.operator_definitions = {
@@ -1196,7 +1496,9 @@ class EditorPage(QWidget):
         scene = self._map_scene()
         selected = self._current_operator()
         return EditorHistoryState(
-            map_path=scene.current_map_path if scene is not None else "",
+            map_asset_path=self.current_map_asset_path,
+            map_floor_key=self.current_map_floor_key,
+            map_image_path=scene.current_map_path if scene is not None else "",
             scene_states=deepcopy(scene.snapshot_operator_states() if scene is not None else []),
             selected_operator_id=selected.operator_id if selected is not None else "",
             operator_order=list(self.operator_order),
@@ -1250,13 +1552,25 @@ class EditorPage(QWidget):
 
         self._history_lock = True
         self._pause_column_playback()
-        if snapshot.map_path:
-            scene.load_map_image(snapshot.map_path)
-            self.map_status_label.setText(f"当前地图：{Path(snapshot.map_path).name}")
-            self.map_view.fit_scene()
+        if snapshot.map_asset_path:
+            if not self._load_map_asset(snapshot.map_asset_path, floor_key=snapshot.map_floor_key, fit_view=False):
+                scene.clear_map()
+                self.map_status_label.setText("当前地图：加载失败")
+                self.current_map_asset_path = ""
+                self.current_map_floor_key = ""
+                self._current_map_asset = None
+                self._rebuild_floor_panel()
         else:
-            scene.clear_map()
-            self.map_status_label.setText("当前地图：未加载")
+            if snapshot.map_image_path:
+                scene.load_map_image(snapshot.map_image_path)
+                self.map_status_label.setText(f"当前地图：{Path(snapshot.map_image_path).name}")
+            else:
+                scene.clear_map()
+                self.map_status_label.setText("当前地图：未加载")
+            self.current_map_asset_path = ""
+            self.current_map_floor_key = ""
+            self._current_map_asset = None
+            self._rebuild_floor_panel()
 
         self.operator_order = list(snapshot.operator_order)
         self.operator_definitions = deepcopy(snapshot.operator_definitions)

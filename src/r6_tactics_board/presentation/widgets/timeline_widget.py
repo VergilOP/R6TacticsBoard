@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QBrush
+from PyQt6.QtGui import QColor, QBrush, QFont
 from PyQt6.QtWidgets import QHeaderView, QHBoxLayout, QSlider, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, PushButton
 
@@ -23,6 +23,7 @@ class TimelineWidget(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
+        self._selected_cell: tuple[int, int] | None = None
 
         self.title_label = BodyLabel("时间轴 / 轨道表格")
         self.add_button = PushButton()
@@ -95,6 +96,13 @@ class TimelineWidget(QWidget):
         self.table.verticalHeader().setHighlightSections(True)
         self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         self.table.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.table.setStyleSheet(
+            "QTableWidget::item:selected {"
+            "background-color: #3A6D95;"
+            "color: #FFFFFF;"
+            "border: 2px solid #FFD54F;"
+            "}"
+        )
 
         layout.addLayout(toolbar)
         layout.addWidget(self.table)
@@ -112,7 +120,7 @@ class TimelineWidget(QWidget):
         self.play_button.clicked.connect(self.play_requested.emit)
         self.pause_button.clicked.connect(self.pause_requested.emit)
         self.duration_slider.valueChanged.connect(self._on_duration_changed)
-        self.table.currentCellChanged.connect(self._on_current_cell_changed)
+        self.table.cellClicked.connect(self._on_cell_clicked)
         self.table.horizontalHeader().sectionMoved.connect(self._on_column_section_moved)
         self.table.verticalHeader().sectionMoved.connect(self._on_row_section_moved)
 
@@ -136,15 +144,22 @@ class TimelineWidget(QWidget):
         self.table.setHorizontalHeaderLabels(keyframe_labels)
         self._reset_header_order(self.table.horizontalHeader())
         self._reset_header_order(self.table.verticalHeader())
+        self._selected_cell = (
+            (current_row, current_column)
+            if 0 <= current_row < len(operator_labels) and 0 <= current_column < len(keyframe_labels)
+            else None
+        )
 
         for row in range(len(operator_labels)):
             for column in range(len(keyframe_labels)):
                 item = QTableWidgetItem("●" if (row, column) in explicit_cells else "")
-                item.setTextAlignment(0x84)
-                if column == current_column:
-                    item.setBackground(QBrush(QColor("#243447")))
+                item.setTextAlignment(int(Qt.AlignmentFlag.AlignCenter))
                 if row == current_row and column == current_column:
-                    item.setBackground(QBrush(QColor("#2D4F6C")))
+                    item.setBackground(QBrush(QColor("#3A6D95")))
+                    item.setForeground(QColor("#FFFFFF"))
+                    font = QFont()
+                    font.setBold(True)
+                    item.setFont(font)
                 self.table.setItem(row, column, item)
 
         for column, note in enumerate(keyframe_notes):
@@ -152,10 +167,10 @@ class TimelineWidget(QWidget):
             if header_item is not None:
                 header_item.setToolTip(note or keyframe_labels[column])
 
-        if 0 <= current_row < len(operator_labels) and 0 <= current_column < len(keyframe_labels):
-            self.table.setCurrentCell(current_row, current_column)
-        elif len(operator_labels) > 0 and len(keyframe_labels) > 0 and current_column >= 0:
-            self.table.setCurrentCell(0, min(current_column, len(keyframe_labels) - 1))
+        if self._selected_cell is not None:
+            self.table.setCurrentCell(*self._selected_cell)
+        else:
+            self.table.clearSelection()
 
         self.table.blockSignals(False)
         self.table.horizontalHeader().blockSignals(False)
@@ -177,9 +192,15 @@ class TimelineWidget(QWidget):
         self.play_button.setEnabled(has_columns and not is_playing and len(keyframe_labels) > 1)
         self.pause_button.setEnabled(is_playing)
 
-    def _on_current_cell_changed(self, current_row: int, current_column: int, *_args) -> None:
-        if current_row >= 0 and current_column >= 0:
-            self.cell_selected.emit(current_row, current_column)
+    def _on_cell_clicked(self, row: int, column: int) -> None:
+        if self._selected_cell == (row, column):
+            self._selected_cell = None
+            self.table.clearSelection()
+            self.cell_selected.emit(-1, column)
+            return
+
+        self._selected_cell = (row, column)
+        self.cell_selected.emit(row, column)
 
     def _on_duration_changed(self, value: int) -> None:
         self.duration_label.setText(f"过渡 {value} ms")

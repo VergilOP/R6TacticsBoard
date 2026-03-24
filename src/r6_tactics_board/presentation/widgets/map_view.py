@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QPoint, QPointF, Qt
+from PyQt6.QtCore import QPoint, QPointF, Qt, pyqtSignal
 from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QGraphicsView
 
@@ -6,6 +6,8 @@ from r6_tactics_board.presentation.widgets.map_scene import MapScene
 
 
 class MapView(QGraphicsView):
+    viewport_resized = pyqtSignal()
+
     def __init__(self) -> None:
         super().__init__(MapScene())
         self._zoom_factor = 1.15
@@ -80,3 +82,7 @@ class MapView(QGraphicsView):
         if event.key() == Qt.Key.Key_Space:
             self.setDragMode(QGraphicsView.DragMode.NoDrag)
         super().keyReleaseEvent(event)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self.viewport_resized.emit()

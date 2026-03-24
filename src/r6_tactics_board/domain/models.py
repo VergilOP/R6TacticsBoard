@@ -23,6 +23,8 @@ class MapInfo:
     key: str
     name: str
     image_path: str = ""
+    metadata_path: str = ""
+    current_floor_key: str = ""
 
 
 @dataclass(slots=True)
@@ -39,6 +41,7 @@ class OperatorFrameState:
     position: Point2D
     rotation: float = 0.0
     display_mode: OperatorDisplayMode = OperatorDisplayMode.ICON
+    floor_key: str = ""
 
 
 @dataclass(slots=True)
@@ -50,6 +53,7 @@ class OperatorState:
     position: Point2D
     rotation: float = 0.0
     display_mode: OperatorDisplayMode = OperatorDisplayMode.ICON
+    floor_key: str = ""
 
 
 @dataclass(slots=True)
@@ -88,4 +92,5 @@ def resolve_operator_state(
         position=Point2D(x=frame.position.x, y=frame.position.y),
         rotation=frame.rotation,
         display_mode=frame.display_mode,
+        floor_key=frame.floor_key,
     )

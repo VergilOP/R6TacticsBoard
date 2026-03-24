@@ -16,6 +16,7 @@ class OperatorItem(QGraphicsItem):
         self.display_mode = self.ICON
         self.side = "attack"
         self.operator_key = ""
+        self.floor_key = ""
         self.icon_pixmap = QPixmap()
 
         self.setFlags(
@@ -51,6 +52,9 @@ class OperatorItem(QGraphicsItem):
         self.operator_key = key
         self.update()
 
+    def set_floor_key(self, floor_key: str) -> None:
+        self.floor_key = floor_key
+
     def set_icon_path(self, path: str) -> None:
         self.icon_pixmap = QPixmap(path) if path else QPixmap()
         self.update()
@@ -63,8 +67,21 @@ class OperatorItem(QGraphicsItem):
             pen.setWidth(3)
             fill = QColor("#3598EB")
 
+        triangle = QPolygonF(
+            [
+                QPointF(0, -12),
+                QPointF(-3, -7),
+                QPointF(3, -7),
+            ]
+        )
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor("#FFFFFF")))
+        painter.drawPolygon(triangle)
+
+        painter.save()
+        painter.rotate(-self.rotation())
         painter.setPen(pen)
-        icon_rect = QRectF(-5, -5, 10, 10)
+        icon_rect = QRectF(-6, -6, 12, 12)
         if not self.icon_pixmap.isNull():
             painter.setBrush(QBrush(QColor("#101214")))
             painter.drawEllipse(icon_rect)
@@ -78,23 +95,10 @@ class OperatorItem(QGraphicsItem):
             painter.setBrush(QBrush(fill))
             painter.drawEllipse(icon_rect)
 
-        triangle = QPolygonF(
-            [
-                QPointF(0, -9),
-                QPointF(-2.5, -4),
-                QPointF(2.5, -4),
-            ]
-        )
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(QColor("#FFFFFF")))
-        painter.drawPolygon(triangle)
-
-        painter.save()
-        painter.rotate(-self.rotation())
         painter.setPen(QColor(255, 255, 255, 190))
         painter.setFont(QFont("Microsoft YaHei UI", 5))
         painter.drawText(
-            QRectF(-5, -4, 10, 8),
+            QRectF(-6, -4, 12, 8),
             int(Qt.AlignmentFlag.AlignCenter),
             self.operator_key[:2].upper() if self.operator_key else self.operator_id,
         )

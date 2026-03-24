@@ -44,8 +44,7 @@ class AssetsPage(QWidget):
         layout.addWidget(SubtitleLabel("资源管理"))
         layout.addWidget(
             BodyLabel(
-                "素材目录已经接入。双击地图可直接载入战术编辑页，"
-                "双击干员图标可直接在编辑区创建节点。"
+                "双击地图可直接载入整张地图资源，双击干员图标可在编辑区快速创建干员节点。"
             )
         )
 
@@ -71,7 +70,7 @@ class AssetsPage(QWidget):
         layout.addLayout(grid)
 
         lists_layout = QHBoxLayout()
-        lists_layout.addLayout(self._build_list_column("地图文件", self.maps_list))
+        lists_layout.addLayout(self._build_list_column("地图", self.maps_list))
         lists_layout.addLayout(self._build_list_column("进攻干员图标", self.attack_list))
         lists_layout.addLayout(self._build_list_column("防守干员图标", self.defense_list))
         layout.addLayout(lists_layout)
@@ -92,7 +91,7 @@ class AssetsPage(QWidget):
     def _refresh_summary(self) -> None:
         ensure_asset_directories()
 
-        map_files = self.asset_registry.list_map_files()
+        map_assets = self.asset_registry.list_map_assets()
         attack_assets = self.asset_registry.list_operator_assets("attack")
         defense_assets = self.asset_registry.list_operator_assets("defense")
 
@@ -100,23 +99,24 @@ class AssetsPage(QWidget):
         self.attack_path_label.setText(str(ATTACK_OPERATORS_DIR))
         self.defense_path_label.setText(str(DEFENSE_OPERATORS_DIR))
 
-        self.maps_count_label.setText(f"{len(map_files)} 个文件")
-        self.attack_count_label.setText(f"{len(attack_assets)} 个文件")
-        self.defense_count_label.setText(f"{len(defense_assets)} 个文件")
+        self.maps_count_label.setText(f"{len(map_assets)} 张地图")
+        self.attack_count_label.setText(f"{len(attack_assets)} 个图标")
+        self.defense_count_label.setText(f"{len(defense_assets)} 个图标")
 
-        self._fill_map_list(map_files)
+        self._fill_map_list(map_assets)
         self._fill_operator_list(self.attack_list, attack_assets)
         self._fill_operator_list(self.defense_list, defense_assets)
 
-    def _fill_map_list(self, map_files) -> None:
+    def _fill_map_list(self, map_assets) -> None:
         self.maps_list.clear()
-        if not map_files:
+        if not map_assets:
             self.maps_list.addItem("(空)")
             return
 
-        for map_file in map_files:
-            item = QListWidgetItem(map_file.name)
-            item.setData(0x0100, str(map_file))
+        for asset in map_assets:
+            item = QListWidgetItem(asset.name)
+            item.setToolTip(asset.path)
+            item.setData(0x0100, asset.path)
             self.maps_list.addItem(item)
 
     def _fill_operator_list(self, widget: QListWidget, assets) -> None:
