@@ -1,0 +1,30 @@
+{
+  "key": "oregon",
+  "name": "俄勒冈乡间屋宅",
+  "floors": [
+        {"key": "b1", "name": "Basement", "image": "assets/maps/oregon/b1.png"},
+        {"key": "1f", "name": "First Floor", "image": "assets/maps/oregon/1f.png"},
+        {"key": "2f", "name": "Second Floor", "image": "assets/maps/oregon/2f.png"},
+        {"key": "roof", "name": "Roof", "image": "assets/maps/oregon/roof.png"}
+      ],
+  "size": {
+    "width": 0,
+    "height": 0
+  },
+  "calibration": {
+    "origin": { "x": 0, "y": 0 },
+    "scale": 1.0
+  },
+  "layers": {
+    "walls": [],
+    "doors": [],
+    "windows": [],
+    "hatches": [],
+    "stairs": [],
+    "sites": [],
+    "spawn_points": [],
+    "cameras": [],
+    "gadgets": []
+  },
+  "notes": ""
+}

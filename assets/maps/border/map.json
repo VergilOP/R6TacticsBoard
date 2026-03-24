@@ -1,0 +1,29 @@
+{
+  "key": "border",
+  "name": "边境",
+  "floors": [
+        {"key": "1f", "name": "First Floor", "image": "assets/maps/border/1f.png"},
+        {"key": "2f", "name": "Second Floor", "image": "assets/maps/border/2f.png"},
+        {"key": "roof", "name": "Roof", "image": "assets/maps/border/roof.png"}
+      ],
+  "size": {
+    "width": 0,
+    "height": 0
+  },
+  "calibration": {
+    "origin": { "x": 0, "y": 0 },
+    "scale": 1.0
+  },
+  "layers": {
+    "walls": [],
+    "doors": [],
+    "windows": [],
+    "hatches": [],
+    "stairs": [],
+    "sites": [],
+    "spawn_points": [],
+    "cameras": [],
+    "gadgets": []
+  },
+  "notes": ""
+}

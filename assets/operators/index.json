@@ -1,0 +1,762 @@
+[
+  {
+    "key": "ace",
+    "side": "attack",
+    "name": "Ace",
+    "icon_path": "assets/operators/attack/icons/ace.png",
+    "portrait_path": "assets/operators/attack/portraits/ace.png",
+    "ability_icon_path": "assets/operators/attack/abilities/ace/icon.png",
+    "ability_name": "S.E.L.M.A. 水力攻坚器",
+    "ability_description": "有了 S.E.L.M.A. 水力攻坚器后，水将会成为关键要素。这项武器利用液压来突破可破坏与强化的表面。 Ace 只要把这个圆筒丢到任何想破坏的地方，它就会打开并发挥完整效用。它在地板、天花板和出入口上能爆炸一次，但如果空间允许，圆筒就会向下滚动，发挥最多二次效用。作用到的每个地方都会留下一个清楚的长方形缺口，结合起来会形成一个足够大的洞，让特勤干员可以轻松通过。"
+  },
+  {
+    "key": "amaru",
+    "side": "attack",
+    "name": "Amaru",
+    "icon_path": "assets/operators/attack/icons/amaru.png",
+    "portrait_path": "assets/operators/attack/portraits/amaru.png",
+    "ability_icon_path": "assets/operators/attack/abilities/amaru/icon.png",
+    "ability_name": "爪钩",
+    "ability_description": "爪钩是一个独特的装置。有了它，Amaru能够抓住边缘或是窗户，并将自己在极短时间内将她自己拉升过去。她的对手现在不只需要担心从上方来的攻击，还得要担心下方。有着爪钩的Amaru是唯一能够从已打开的舱口下方往上移动的特勤干员。当时机搭配恰当的时候，对着窗户使用爪钩能够使出恶名昭彰的“爪踢”，能够将站在窗户后面的对手立刻击倒。"
+  },
+  {
+    "key": "ash",
+    "side": "attack",
+    "name": "Ash",
+    "icon_path": "assets/operators/attack/icons/ash.png",
+    "portrait_path": "assets/operators/attack/portraits/ash.png",
+    "ability_icon_path": "assets/operators/attack/abilities/ash/icon.png",
+    "ability_name": "爆破弹",
+    "ability_description": "Ash 是快步调的前锋，能够在数秒内正面突破、侧翼突击并分散防守方的注意力。多亏了Ash的改造M120 CREM爆破弹，让她能够远距离破坏未强化的墙面。"
+  },
+  {
+    "key": "blackbeard",
+    "side": "attack",
+    "name": "Blackbeard",
+    "icon_path": "assets/operators/attack/icons/blackbeard.png",
+    "portrait_path": "assets/operators/attack/portraits/blackbeard.png",
+    "ability_icon_path": "assets/operators/attack/abilities/blackbeard/icon.png",
+    "ability_name": "H.U.L.L.自适应护盾",
+    "ability_description": "Blackbeard的装备包含“H.U.L.L.自适应护盾”。这种护盾可以改变形状，让使用者在步行与绳降时获得最佳的保护。它还具备突破用的气动系统，Blackbeard可借此破坏未强化墙面来制造洞口。Blackbeard的武器技术高超，可以同时装备“H.U.L.L.自适应护盾”和主要武器。"
+  },
+  {
+    "key": "blitz",
+    "side": "attack",
+    "name": "Blitz",
+    "icon_path": "assets/operators/attack/icons/blitz.png",
+    "portrait_path": "assets/operators/attack/portraits/blitz.png",
+    "ability_icon_path": "assets/operators/attack/abilities/blitz/icon.png",
+    "ability_name": "G52战术护盾",
+    "ability_description": "防弹护盾3排8颗闪光弹能提供高强度的照明"
+  },
+  {
+    "key": "brava",
+    "side": "attack",
+    "name": "Brava",
+    "icon_path": "assets/operators/attack/icons/brava.png",
+    "portrait_path": "assets/operators/attack/portraits/brava.png",
+    "ability_icon_path": "assets/operators/attack/abilities/brava/icon.png",
+    "ability_name": "自造无人机",
+    "ability_description": "Brava的自造无人机是一种破坏工具，能够夺取敌方装置。如果目标装置无法控制，则该装置会摧毁。"
+  },
+  {
+    "key": "buck",
+    "side": "attack",
+    "name": "Buck",
+    "icon_path": "assets/operators/attack/icons/buck.png",
+    "portrait_path": "assets/operators/attack/portraits/buck.png",
+    "ability_icon_path": "assets/operators/attack/abilities/buck/icon.png",
+    "ability_name": "万能钥匙",
+    "ability_description": "枪管下挂式12号口径霰弹枪能安装四发子弹，搭配突击步枪使用。万能钥匙能协助特勤干员轻松有效地切换使用标准突击步枪或攻坚霰弹枪。"
+  },
+  {
+    "key": "capitao",
+    "side": "attack",
+    "name": "CAPITÃO",
+    "icon_path": "assets/operators/attack/icons/capitao.png",
+    "portrait_path": "assets/operators/attack/portraits/capitao.png",
+    "ability_icon_path": "assets/operators/attack/abilities/capitao/icon.png",
+    "ability_name": "战术十字弓",
+    "ability_description": "玻璃箭弩可以进行无声袭击，不会暴露你所在位置。此玻璃子弹受到冲击后会破碎并释放出气体，可以点燃周遭的氧气。于无声中快速杀敌，不会暴露你所在位置。"
+  },
+  {
+    "key": "deimos",
+    "side": "attack",
+    "name": "Deimos",
+    "icon_path": "assets/operators/attack/icons/deimos.png",
+    "portrait_path": "assets/operators/attack/portraits/deimos.png",
+    "ability_icon_path": "assets/operators/attack/abilities/deimos/icon.png",
+    "ability_name": "死亡标记追踪器",
+    "ability_description": "这个小型飞行探测器会寻找标明目标并向Deimos揭露其位置，但同时也会让Deimos的位置暴露。Deimos在追踪时唯一可用的武器只有特制的.44 Vendetta，他是对人不对事。"
+  },
+  {
+    "key": "dokkaebi",
+    "side": "attack",
+    "name": "Dokkaebi",
+    "icon_path": "assets/operators/attack/icons/dokkaebi.png",
+    "portrait_path": "assets/operators/attack/portraits/dokkaebi.png",
+    "ability_icon_path": "assets/operators/attack/abilities/dokkaebi/icon.png",
+    "ability_name": "逻辑炸弹",
+    "ability_description": "Grace 能够利用一台代号为逻辑炸弹的防弹护甲军用笔电，骇入敌方的PDA战术装置。程序会下载她设计的病毒，协助她绕过防火墙，开启周遭的装置并释放出噪音来泄漏敌人的所在位置。"
+  },
+  {
+    "key": "finka",
+    "side": "attack",
+    "name": "Finka",
+    "icon_path": "assets/operators/attack/icons/finka.png",
+    "portrait_path": "assets/operators/attack/portraits/finka.png",
+    "ability_icon_path": "assets/operators/attack/abilities/finka/icon.png",
+    "ability_name": "肾上腺素激发",
+    "ability_description": "Finka 的肾上腺素飚升能为特勤干员预先注射由锌做成的奈米机器人，在他们的体内系统释放药物鸡尾酒疗法，让身体将锌当成养分来吸收。这些奈米机器人可以让她的团队短暂提升生命值，救起倒地的队友并稳定团队的瞄准能力。只有她才有能力为特勤干员调配量身设计的奈米机器人。"
+  },
+  {
+    "key": "flores",
+    "side": "attack",
+    "name": "Flores",
+    "icon_path": "assets/operators/attack/icons/flores.png",
+    "portrait_path": "assets/operators/attack/portraits/flores.png",
+    "ability_icon_path": "assets/operators/attack/abilities/flores/icon.png",
+    "ability_name": "遥控炸药“扒手”",
+    "ability_description": "遥控炸药“扒手”藉由远端遥控向前冲，而 Flores 则会侦察引爆的位置。一旦触发，“扒手”会抓住最近的表面，使用防弹外壳武装自身后爆炸，摧毁附近的装备与未强化表面。"
+  },
+  {
+    "key": "fuze",
+    "side": "attack",
+    "name": "Fuze",
+    "icon_path": "assets/operators/attack/icons/fuze.png",
+    "portrait_path": "assets/operators/attack/portraits/fuze.png",
+    "ability_icon_path": "assets/operators/attack/abilities/fuze/icon.png",
+    "ability_name": "霰射炸药",
+    "ability_description": "Fuze 是绝佳的激进侧击手和区域阻绝干员，他的优势在于能够触发大量的防御装置并扰乱驻守在防御位置的敌人。Fuze的APM-6霰射炸药可以透过任何未强化表面发射一组爆炸霰射手榴弹。"
+  },
+  {
+    "key": "glaz",
+    "side": "attack",
+    "name": "Glaz",
+    "icon_path": "assets/operators/attack/icons/glaz.png",
+    "portrait_path": "assets/operators/attack/portraits/glaz.png",
+    "ability_icon_path": "assets/operators/attack/abilities/glaz/icon.png",
+    "ability_name": "折叠式瞄准镜",
+    "ability_description": "Glaz是后防射手，能够进行软突破，并从远距离提供掩护火力。Glaz可以远距离射击主要是仰赖他的独特瞄准镜技能：HDS折叠式瞄准镜。"
+  },
+  {
+    "key": "gridlock",
+    "side": "attack",
+    "name": "Gridlock",
+    "icon_path": "assets/operators/attack/icons/gridlock.png",
+    "portrait_path": "assets/operators/attack/portraits/gridlock.png",
+    "ability_icon_path": "assets/operators/attack/abilities/gridlock/icon.png",
+    "ability_name": "针刺陷井",
+    "ability_description": "针刺陷井设计成可携式，在启动时会部署六角形的钉群，覆盖不平地面的效果胜过平整地面。在部署完毕后，陷井就会自行复制，并覆盖大范围区域。这个对攻击者来说非常独特的功能，让他们可以使用针刺陷井做为重塑地图与控制区域的障碍物。对敌人的影响包括降低敌人速度，并在敌人踩到时造成伤害。针刺陷井在受到枪击、冲击或热伤害时会被破坏。"
+  },
+  {
+    "key": "grim",
+    "side": "attack",
+    "name": "Grim",
+    "icon_path": "assets/operators/attack/icons/grim.png",
+    "portrait_path": "assets/operators/attack/portraits/grim.png",
+    "ability_icon_path": "assets/operators/attack/abilities/grim/icon.png",
+    "ability_name": "蜂巢发射器",
+    "ability_description": "你肯定听见嗡嗡声了，因为“蜂巢发射器”来了！它能发射会释放出一群机器人的投射物，这些机器人会追踪经过它们的敌人位置。别让它们跑进你的眼睛里面就对了。"
+  },
+  {
+    "key": "hibana",
+    "side": "attack",
+    "name": "Hibana",
+    "icon_path": "assets/operators/attack/icons/hibana.png",
+    "portrait_path": "assets/operators/attack/portraits/hibana.png",
+    "ability_icon_path": "assets/operators/attack/abilities/hibana/icon.png",
+    "ability_name": "X-KAIROS",
+    "ability_description": "“Eyenox III型”是一款行动追踪装置，可以即时辨识并追踪目标的踪迹。Eyenox 内置高级电脑视野，可以侦测肉眼看不见的足迹细节和重量分布，借此辨识并追踪你的目标。"
+  },
+  {
+    "key": "iana",
+    "side": "attack",
+    "name": "Iana",
+    "icon_path": "assets/operators/attack/icons/iana.png",
+    "portrait_path": "assets/operators/attack/portraits/iana.png",
+    "ability_icon_path": "assets/operators/attack/abilities/iana/icon.png",
+    "ability_name": "双子复制器",
+    "ability_description": "双子复制器是个透过远程操控的Iana 全像投影。它可以模仿跟她一样的动作和声音，但是它无法进行射击、近战，也无法使用辅助装备。它的作用时间是有限的，也可以随时解除。连着两次使用的中间间隔一定会有一段冷却时间，假如它遭到摧毁，该时间便会较长。复制器的主要功能就是欺骗Iana 的对手和搜集资讯。在部署期间，她可以找到并随心所欲地困惑对手。双子一旦被发现并且摧毁，便能帮助Iana 推测威胁的所在位置，但同时她的对手也会获得几秒宝贵的时间变换阵地。"
+  },
+  {
+    "key": "iq",
+    "side": "attack",
+    "name": "IQ",
+    "icon_path": "assets/operators/attack/icons/iq.png",
+    "portrait_path": "assets/operators/attack/portraits/iq.png",
+    "ability_icon_path": "assets/operators/attack/abilities/iq/icon.png",
+    "ability_name": "电子探测器",
+    "ability_description": "腕戴式，移动电话尺寸的感测器"
+  },
+  {
+    "key": "jackal",
+    "side": "attack",
+    "name": "Jackal",
+    "icon_path": "assets/operators/attack/icons/jackal.png",
+    "portrait_path": "assets/operators/attack/portraits/jackal.png",
+    "ability_icon_path": "assets/operators/attack/abilities/jackal/icon.png",
+    "ability_name": "EYENOX III型",
+    "ability_description": "“Eyenox III型”是一款行动追踪装置，可以即时辨识并追踪目标的踪迹。Eyenox 内置高级电脑视野，可以侦测肉眼看不见的足迹细节和重量分布，借此辨识并追踪你的目标。"
+  },
+  {
+    "key": "kali",
+    "side": "attack",
+    "name": "Kali",
+    "icon_path": "assets/operators/attack/icons/kali.png",
+    "portrait_path": "assets/operators/attack/portraits/kali.png",
+    "ability_icon_path": "assets/operators/attack/abilities/kali/icon.png",
+    "ability_name": "低速爆破矛",
+    "ability_description": "想要谈论低速爆破矛，就必须先提一提Kali的CSRX 300。这是种高危险性武器，能一击摧毁封阻物和舱板，并在可破坏墙面上开个洞。低速爆破矛是其枪管下挂配件，能与CSRX 300的瞄准镜同时使用。它的作用是在一定范围内透过轻微爆炸来破坏装备。对可破坏墙面使用时，它会形成一个比狙击步枪枪孔略小的洞。而对强化墙面射击时，它只会附着在表面。"
+  },
+  {
+    "key": "lion",
+    "side": "attack",
+    "name": "Lion",
+    "icon_path": "assets/operators/attack/icons/lion.png",
+    "portrait_path": "assets/operators/attack/portraits/lion.png",
+    "ability_icon_path": "assets/operators/attack/abilities/lion/icon.png",
+    "ability_name": "动作侦察无人机",
+    "ability_description": "Lion服役于法国宪兵特勤队时，Twitch提供他一台空中无人机。EE-ONE-D可以侦测附近范围的动作，提供战场激烈战区的情况，协助Lion远离危险。他的无人机可以不限时间的停滞在空中，但是必须选择正确的时间进行扫描。"
+  },
+  {
+    "key": "maverick",
+    "side": "attack",
+    "name": "Maverick",
+    "icon_path": "assets/operators/attack/icons/maverick.png",
+    "portrait_path": "assets/operators/attack/portraits/maverick.png",
+    "ability_icon_path": "assets/operators/attack/abilities/maverick/icon.png",
+    "ability_name": "突破用发焰装置",
+    "ability_description": "Maverick 自制的发焰装置能攻破任何表面，包括加强防御过的墙面和活板门。该装备需要稳定的双手和对环境的认知来制造小型孔洞和视线，因此 Maverick 必须在近距离内对所选表面使用装备。他的发焰装置几乎不会发出声音，但燃料消耗的速度很快，尽管如此，这个装备的高精准度还是使其成为在不依赖数位科技的情况下，相当有创意的工具。"
+  },
+  {
+    "key": "montagne",
+    "side": "attack",
+    "name": "Montagne",
+    "icon_path": "assets/operators/attack/icons/montagne.png",
+    "portrait_path": "assets/operators/attack/portraits/montagne.png",
+    "ability_icon_path": "assets/operators/attack/abilities/montagne/icon.png",
+    "ability_name": "坚石护盾",
+    "ability_description": "缩小一半体积，提高持盾者的行动力具有强化合金与克维拉纤维能抵御近距离开火与近战"
+  },
+  {
+    "key": "nomad",
+    "side": "attack",
+    "name": "Nomad",
+    "icon_path": "assets/operators/attack/icons/nomad.png",
+    "portrait_path": "assets/operators/attack/portraits/nomad.png",
+    "ability_icon_path": "assets/operators/attack/abilities/nomad/icon.png",
+    "ability_name": "气震槌发射器",
+    "ability_description": "Nomad的改造步枪配件让她能够发射气震槌推斥榴弹。这装置可以吸附在任何表面上，一但有敌人进入范围内便会引爆。 Nomad带了3个气震槌榴弹进场。这些推斥装置并不致命，但受到影响的人会暂时失去方向感。"
+  },
+  {
+    "key": "nokk",
+    "side": "attack",
+    "name": "NØKK",
+    "icon_path": "assets/operators/attack/icons/nokk.png",
+    "portrait_path": "assets/operators/attack/portraits/nokk.png",
+    "ability_icon_path": "assets/operators/attack/abilities/nokk/icon.png",
+    "ability_name": "HEL无感",
+    "ability_description": "HEL 窥视智慧眼镜是一种手套附件，启用后可以降低她的环境噪音输出，使得对手的监控工具无法看到她的图像。无人机、防弹相机、邪眼等观察工具会因此无视Nøkk的存在，使得在地图上游走的她不被看见。她的脚步将寂静无声，使得尾随敌对干员的她不被听见。对防守方来说，四处游走将比过去更加危险，因为Nøkk可能会躲在任何角落，或者更糟，直接悄悄跟在他们身后。但务必记住，HEL有使用时间限制，超过使用时间必须靠冷却来充电。"
+  },
+  {
+    "key": "osa",
+    "side": "attack",
+    "name": "Osa",
+    "icon_path": "assets/operators/attack/icons/osa.png",
+    "portrait_path": "assets/operators/attack/portraits/osa.png",
+    "ability_icon_path": "assets/operators/attack/abilities/osa/icon.png",
+    "ability_name": "Talon-8 透明护盾",
+    "ability_description": "这面透明又防弹的 Talon-8 护盾可以让 Osa 手持，或部署于地板与窗框上，在她策划进攻策略时给予她安全的视线。"
+  },
+  {
+    "key": "ram",
+    "side": "attack",
+    "name": "Ram",
+    "icon_path": "assets/operators/attack/icons/ram.png",
+    "portrait_path": "assets/operators/attack/portraits/ram.png",
+    "ability_icon_path": "assets/operators/attack/abilities/ram/icon.png",
+    "ability_name": "“BU-GI”自动攻坚器",
+    "ability_description": "没有多少事物能够抵挡“BU-GI”自动攻坚器。这种可部署迷你坦克能沿着设定好的路径摧毁所有可破坏表面与装置，在行经之处留下一道毁灭之路。"
+  },
+  {
+    "key": "sens",
+    "side": "attack",
+    "name": "Sens",
+    "icon_path": "assets/operators/attack/icons/sens.png",
+    "portrait_path": "assets/operators/attack/portraits/sens.png",
+    "ability_icon_path": "assets/operators/attack/abilities/sens/icon.png",
+    "ability_name": "R.O.U. 投影系统",
+    "ability_description": "“ROU 投影系统”会在被Sens投出后持续滚动，并沿着滚动轨迹投放微型投影机，借此制造一面屏障。虽然实体物件还是能穿越这道屏障，但它具有非常高的泛用性，可以同时切断多方视线。"
+  },
+  {
+    "key": "sledge",
+    "side": "attack",
+    "name": "Sledge",
+    "icon_path": "assets/operators/attack/icons/sledge.png",
+    "portrait_path": "assets/operators/attack/portraits/sledge.png",
+    "ability_icon_path": "assets/operators/attack/abilities/sledge/icon.png",
+    "ability_name": "战术突破锤",
+    "ability_description": "Sledge是个软突破手和侧卫，他擅长创造新的火线和入口点，对防守方加以干扰。Sledge能够破坏未加强的表面，这都要多亏他的战术突破锤：木桩。"
+  },
+  {
+    "key": "solidsnake",
+    "side": "attack",
+    "name": "Solid Snake",
+    "icon_path": "assets/operators/attack/icons/solidsnake.png",
+    "portrait_path": "assets/operators/attack/portraits/solidsnake.png",
+    "ability_icon_path": "assets/operators/attack/abilities/solidsnake/icon.png",
+    "ability_name": "孤子雷达MK III",
+    "ability_description": "使用 Solid Snake 的“孤子雷达 MK. Ⅲ”来发现附近的敌方威胁，这是一款带有小地图的手持装置，能标记出所有在场的敌方目标。使用装置的精确模式可以精准锁定威胁，但要小心，因为这会提醒敌人他们已被 Solid Snake 侦测到。雷达会提供周遭环境的视图，是侦察的绝佳工具，能让友军快速奠定基础并掌控地图。在猎杀敌人的同时，Solid Snake 还能从倒下的特勤干员身上搜刮装备，以适应瞬息万变的战场需求。"
+  },
+  {
+    "key": "striker",
+    "side": "attack",
+    "name": "Striker",
+    "icon_path": "assets/operators/attack/icons/striker.png",
+    "portrait_path": "assets/operators/attack/portraits/striker.png",
+    "ability_icon_path": "assets/operators/attack/abilities/striker/icon.png",
+    "ability_name": "装备组",
+    "ability_description": "Striker是攻击方特勤干员，能够使用所有攻击方特勤干员的次要装备。Striker可以使用M4和M249作为主要武器，也可以使用5.7 USG和ITA 12S作为次要武器。"
+  },
+  {
+    "key": "thatcher",
+    "side": "attack",
+    "name": "Thatcher",
+    "icon_path": "assets/operators/attack/icons/thatcher.png",
+    "portrait_path": "assets/operators/attack/portraits/thatcher.png",
+    "ability_icon_path": "assets/operators/attack/abilities/thatcher/icon.png",
+    "ability_name": "E.G.S.干扰器（电子装备扫描干扰器）",
+    "ability_description": "Thatcher的新装备“E.G.S.干扰器”能够穿透障碍物探测敌方电子设备，并用电磁脉冲将其摧毁。Thatcher应该冲锋在前，侦察敌方防御，为其他进攻方的行动铺平道路。撒切尔的新装备使他的游戏玩法更加精准、更具破坏性，也更加现代化，在保留其独特个性的同时，也更新了他的角色定位。"
+  },
+  {
+    "key": "thermite",
+    "side": "attack",
+    "name": "Thermite",
+    "icon_path": "assets/operators/attack/icons/thermite.png",
+    "portrait_path": "assets/operators/attack/portraits/thermite.png",
+    "ability_icon_path": "assets/operators/attack/abilities/thermite/icon.png",
+    "ability_name": "放热炸药",
+    "ability_description": "Thermite 是攻击方队伍重要的后防支持，身为游戏里仅有的强化突破手之一，在回合初期失去Thermite将严重阻碍你的队伍。操作Thermite需要耐心、领导能力和队伍间的紧密沟通。"
+  },
+  {
+    "key": "twitch",
+    "side": "attack",
+    "name": "Twitch",
+    "icon_path": "assets/operators/attack/icons/twitch.png",
+    "portrait_path": "assets/operators/attack/portraits/twitch.png",
+    "ability_icon_path": "assets/operators/attack/abilities/twitch/icon.png",
+    "ability_name": "电击无人机",
+    "ability_description": "Twitch擅长停用装置，是个情资特勤干员。她能够利用这些技术作为远端后援或是攻击性十足的突破手。Twitch可以从远距离停用装备，这全仰赖其独特技能：RSD第1型无人攻击机"
+  },
+  {
+    "key": "ying",
+    "side": "attack",
+    "name": "Ying",
+    "icon_path": "assets/operators/attack/icons/ying.png",
+    "portrait_path": "assets/operators/attack/portraits/ying.png",
+    "ability_icon_path": "assets/operators/attack/abilities/ying/icon.png",
+    "ability_name": "烛光",
+    "ability_description": "此装置的灵感来自于S.A.S.所使用的新型闪光弹，采用汞与镁，爆炸后会释放出强烈闪光让敌人失去视觉。强光装置会放出强烈闪光，可以安装在任何表面上，或当作手榴弹来投掷。"
+  },
+  {
+    "key": "zero",
+    "side": "attack",
+    "name": "Zero",
+    "icon_path": "assets/operators/attack/icons/zero.png",
+    "portrait_path": "assets/operators/attack/portraits/zero.png",
+    "ability_icon_path": "assets/operators/attack/abilities/zero/icon.png",
+    "ability_name": "阿格斯发射器",
+    "ability_description": "情报是制定良好进攻策略的基础，Zero深知这一点。他的阿格斯发射器配备特殊的摄影机，能固定在可破坏或强化表面，对两侧进行监视。没错，这些摄影机能兼顾两个角度，让你有效掌握敌方动静。不过阿格斯摄影机还有一项特点：单一雷射射击，非常适合破坏防守者设置的关键防御要素或转移战术要地人员的注意。"
+  },
+  {
+    "key": "zofia",
+    "side": "attack",
+    "name": "Zofia",
+    "icon_path": "assets/operators/attack/icons/zofia.png",
+    "portrait_path": "assets/operators/attack/portraits/zofia.png",
+    "ability_icon_path": "assets/operators/attack/abilities/zofia/icon.png",
+    "ability_name": "KS79生命线",
+    "ability_description": "KS79生命线采用电子抛射技术，可以同时射击震撼与冲击弹药。震撼弹会带来170分贝的冲击波，破坏听觉并造成晕眩。"
+  },
+  {
+    "key": "alibi",
+    "side": "defense",
+    "name": "Alibi",
+    "icon_path": "assets/operators/defense/icons/alibi.png",
+    "portrait_path": "assets/operators/defense/portraits/alibi.png",
+    "ability_icon_path": "assets/operators/defense/abilities/alibi/icon.png",
+    "ability_name": "棱镜",
+    "ability_description": "棱镜能在任意位置投射出和Alibi完全相同的立体图像，如果你射击或触碰到立体图像，就会在后续几秒被标记。将棱镜部署在室外时，攻击者会触发“室外出现防守者”的假警告。棱镜还有一项惊奇功能，就是隐藏任何冒险外出的防守者之身份。攻击棱镜的子弹、近战武器或炸药都会穿过立体图像，小心别站得太近。"
+  },
+  {
+    "key": "aruni",
+    "side": "defense",
+    "name": "Aruni",
+    "icon_path": "assets/operators/defense/icons/aruni.png",
+    "portrait_path": "assets/operators/defense/portraits/aruni.png",
+    "ability_icon_path": "assets/operators/defense/abilities/aruni/icon.png",
+    "ability_name": "烈日之门",
+    "ability_description": "一旦完成部署，这扇门会发出雷射阵列，侦测任何通过的人。发现入侵者时，它会藉由提高雷射输出能量，对其造成二至三级的烧伤。我们花了将近一小时向雷射阵列丢了各种东西，从纸卷到水果切块都有，最后找出一个可以同时将伤害最大化却有效限制能量消耗的设定。"
+  },
+  {
+    "key": "azami",
+    "side": "defense",
+    "name": "Azami",
+    "icon_path": "assets/operators/defense/icons/azami.png",
+    "portrait_path": "assets/operators/defense/portraits/azami.png",
+    "ability_icon_path": "assets/operators/defense/abilities/azami/icon.png",
+    "ability_name": "利牙屏障",
+    "ability_description": "利牙屏障是改良过的苦无，投掷后会黏在表面上，释放一种会先扩散再凝固的物质，形成防弹屏障，填补防御漏洞。"
+  },
+  {
+    "key": "bandit",
+    "side": "defense",
+    "name": "Bandit",
+    "icon_path": "assets/operators/defense/icons/bandit.png",
+    "portrait_path": "assets/operators/defense/portraits/bandit.png",
+    "ability_icon_path": "assets/operators/defense/abilities/bandit/icon.png",
+    "ability_name": "电击接线",
+    "ability_description": "Bandit 是个可靠的反硬突破手和游击者，能够阻止攻击方闯进主要入口，并在移动时保卫目标。Bandit 能够让多种表面通电，都是多亏他的特殊技能：简易电子装置，又称CED-1电击接线。"
+  },
+  {
+    "key": "castle",
+    "side": "defense",
+    "name": "Castle",
+    "icon_path": "assets/operators/defense/icons/castle.png",
+    "portrait_path": "assets/operators/defense/portraits/castle.png",
+    "ability_icon_path": "assets/operators/defense/abilities/castle/icon.png",
+    "ability_name": "装甲板",
+    "ability_description": "Castle 是个固守者和确保安全的特勤干员，他能在目标周围打造防御要塞，控制攻击方的动向，减缓他们的攻势。Castle的独特技能是利用他的装备：UTP1通用战术防护板，来设置强化封阻物。"
+  },
+  {
+    "key": "caveira",
+    "side": "defense",
+    "name": "Caveira",
+    "icon_path": "assets/operators/defense/icons/caveira.png",
+    "portrait_path": "assets/operators/defense/portraits/caveira.png",
+    "ability_icon_path": "assets/operators/defense/abilities/caveira/icon.png",
+    "ability_name": "寂静脚步",
+    "ability_description": "Luison的包覆外层采用矿石纤维，能使消音器隔热静音。Caveira可以利用此装置无声无息地让目标失去行动能力，并进行审问。Luison不但能保持匿迹，让敌人失去行动能力，同时还能确保无人可幸免。"
+  },
+  {
+    "key": "clash",
+    "side": "defense",
+    "name": "Clash",
+    "icon_path": "assets/operators/defense/icons/clash.png",
+    "portrait_path": "assets/operators/defense/portraits/clash.png",
+    "ability_icon_path": "assets/operators/defense/abilities/clash/icon.png",
+    "ability_name": "CCE 护盾 MK2",
+    "ability_description": "Clash 是第一位持有护盾的防御者，CCE 护盾是其主要武器，她可以随时切换次要武器，但需要先放下护盾。她的防弹伸缩护盾能够使用高电压的充能场域生成器（CFG），在护盾前方释放圆柱形空间减缓敌人行动，受到 CFG 影响的敌人也会持续承受微量伤害。充分利用护盾能让 Clash 封锁入口处，阻止或拖延攻击者的推进。"
+  },
+  {
+    "key": "denari",
+    "side": "defense",
+    "name": "Denari",
+    "icon_path": "assets/operators/defense/icons/denari.png",
+    "portrait_path": "assets/operators/defense/portraits/denari.png",
+    "ability_icon_path": "assets/operators/defense/abilities/denari/icon.png",
+    "ability_name": "T.R.I.P.链光器",
+    "ability_description": "Denari的独特技能“T.R.I.P.链光器”能覆盖整个房间。当两个连结器部署在彼此的视线范围内时，它们之间会形成一道激光连结。一旦被触发，激光将会缓速并伤害敌人。只要部署更多连结器，就能创造出更大的激光网，达成能满足任何房间防御需求的区域阻绝效果。"
+  },
+  {
+    "key": "doc",
+    "side": "defense",
+    "name": "Doc",
+    "icon_path": "assets/operators/defense/icons/doc.png",
+    "portrait_path": "assets/operators/defense/portraits/doc.png",
+    "ability_icon_path": "assets/operators/defense/abilities/doc/icon.png",
+    "ability_name": "激素手枪",
+    "ability_description": "手持、扳机装置手枪一剂生理盐水内含1毫克肾上腺素剂量此手枪的动力由高压二氧化碳气瓶提供"
+  },
+  {
+    "key": "echo",
+    "side": "defense",
+    "name": "Echo",
+    "icon_path": "assets/operators/defense/icons/echo.png",
+    "portrait_path": "assets/operators/defense/portraits/echo.png",
+    "ability_icon_path": "assets/operators/defense/abilities/echo/icon.png",
+    "ability_name": "妖怪",
+    "ability_description": "此台无人机配有声学扬声装置，可发射超声波声波，干扰一定范围内的所有目标。Yokai也会将图像传给Echo，随时确保范围内安全无虞。运用科技的力量来成为稳固的防御者，能够在抵御围攻的同时支持游走的防守方。"
+  },
+  {
+    "key": "ela",
+    "side": "defense",
+    "name": "Ela",
+    "icon_path": "assets/operators/defense/icons/ela.png",
+    "portrait_path": "assets/operators/defense/portraits/ela.png",
+    "ability_icon_path": "assets/operators/defense/abilities/ela/icon.png",
+    "ability_name": "雷电地雷",
+    "ability_description": "雷电地雷以二战时期波兰流亡军队使用的1939反坦克波兰手榴弹为灵感，地雷可以固定在平面上，引爆后会损害听力并造成晕眩。只要接近这些地雷就会立即引爆，影响范围内所有人。"
+  },
+  {
+    "key": "fenrir",
+    "side": "defense",
+    "name": "Fenrir",
+    "icon_path": "assets/operators/defense/icons/fenrir.png",
+    "portrait_path": "assets/operators/defense/portraits/fenrir.png",
+    "ability_icon_path": "assets/operators/defense/abilities/fenrir/icon.png",
+    "ability_name": "“战栗之夜”恐惧地雷",
+    "ability_description": "“战栗之夜”恐惧地雷是可附着于墙面的投掷装置，可以藏匿于引发恐惧之处。Fenrir能携带5枚地雷，每次出场可在地图任意地点启用3枚。"
+  },
+  {
+    "key": "frost",
+    "side": "defense",
+    "name": "Frost",
+    "icon_path": "assets/operators/defense/icons/frost.png",
+    "portrait_path": "assets/operators/defense/portraits/frost.png",
+    "ability_icon_path": "assets/operators/defense/abilities/frost/icon.png",
+    "ability_name": "迎宾踏垫",
+    "ability_description": "固定牢固的橡胶垫与隐蔽虎钳牙。踩到迎宾踏垫的特勤干员能自行或是在其他队友协助下将其从腿部移除。"
+  },
+  {
+    "key": "goyo",
+    "side": "defense",
+    "name": "Goyo",
+    "icon_path": "assets/operators/defense/icons/goyo.png",
+    "portrait_path": "assets/operators/defense/portraits/goyo.png",
+    "ability_icon_path": "assets/operators/defense/abilities/goyo/icon.png",
+    "ability_name": "火山爆破罐",
+    "ability_description": "如同一般的机动护盾，火山护盾能够提供掩护，并让防守者能够阻挡信道，但Goyo用燃烧炸弹让情势加温。从正面看过去，没什么地方能够看出端倪。在有人对炸弹射击来引爆之前，护盾对进攻者来说就只是个阻碍物。不过还是希望Goyo的队友能够记得，将爆炸留到有进攻方站在护盾前面，或是准备爬过护盾时再使用吧。"
+  },
+  {
+    "key": "jager",
+    "side": "defense",
+    "name": "Jäger",
+    "icon_path": "assets/operators/defense/icons/jager.png",
+    "portrait_path": "assets/operators/defense/portraits/jager.png",
+    "ability_icon_path": "assets/operators/defense/abilities/jager/icon.png",
+    "ability_name": "主动式防御",
+    "ability_description": "Jäger在地图游击以拦截侧翼攻击方之前，可以帮助队伍制造防御据点。他能够摧毁飞行投掷类物品，因为他持有独特的可部署装置：主动防御系统（ADS）。"
+  },
+  {
+    "key": "kaid",
+    "side": "defense",
+    "name": "Kaid",
+    "icon_path": "assets/operators/defense/icons/kaid.png",
+    "portrait_path": "assets/operators/defense/portraits/kaid.png",
+    "ability_icon_path": "assets/operators/defense/abilities/kaid/icon.png",
+    "ability_name": "RTILA 蜘蛛电爪",
+    "ability_description": "Kaid 的“Rtila”蜘蛛电爪能够使强化墙面与舱板、倒刺铁丝网与机动护盾电气化，让敌人更难突破堡垒，以及他受命保护的任何机构。他携带了两个这些可投掷的装置进场。在装备附着到表面上后，每一个装备都能让半径 0.75 公尺范围内的金属物体电气化。"
+  },
+  {
+    "key": "kapkan",
+    "side": "defense",
+    "name": "Kapkan",
+    "icon_path": "assets/operators/defense/icons/kapkan.png",
+    "portrait_path": "assets/operators/defense/portraits/kapkan.png",
+    "ability_icon_path": "assets/operators/defense/abilities/kapkan/icon.png",
+    "ability_name": "防止攻入装置",
+    "ability_description": "Kapkan是一名陷井特勤干员并且在防守队伍中是具致命性的一员。Kapkan配备着防止攻入装置（EDD-MK II）。这个陷井是一捆C4炸药并会在侦测到动作时引爆。它可以被放置在门框或窗框上——阻止进攻者的关键攻入点。"
+  },
+  {
+    "key": "lesion",
+    "side": "defense",
+    "name": "Lesion",
+    "icon_path": "assets/operators/defense/icons/lesion.png",
+    "portrait_path": "assets/operators/defense/portraits/lesion.png",
+    "ability_icon_path": "assets/operators/defense/abilities/lesion/icon.png",
+    "ability_name": "蛊",
+    "ability_description": "蛊地雷以越战所使用的尖竹钉陷井为灵感。尖竹钉包覆着有毒植物或排泄物，可以造成敌人严重感染借此拖缓敌方部队的速度。以此同样的概念，蛊地雷会注入毒素造成伤害，并减缓您对手的速度。"
+  },
+  {
+    "key": "maestro",
+    "side": "defense",
+    "name": "Maestro",
+    "icon_path": "assets/operators/defense/icons/maestro.png",
+    "portrait_path": "assets/operators/defense/portraits/maestro.png",
+    "ability_icon_path": "assets/operators/defense/abilities/maestro/icon.png",
+    "ability_name": "邪眼",
+    "ability_description": "Maestro能使用遥控炮塔发射高能量激光光束。只要将其附着在地面或墙壁上，Maestro就能远程监视，并透过旋转式镜头来保护该地点。唯有镜头装置开启、发射激光光束时，核心会暴露在危险之中，否则，炮塔不受子弹和近战武器影响。最后，邪眼可以透视烟雾。"
+  },
+  {
+    "key": "melusi",
+    "side": "defense",
+    "name": "Melusi",
+    "icon_path": "assets/operators/defense/icons/melusi.png",
+    "portrait_path": "assets/operators/defense/portraits/melusi.png",
+    "ability_icon_path": "assets/operators/defense/abilities/melusi/icon.png",
+    "ability_name": "报丧女妖声波御装置",
+    "ability_description": "报丧女妖声波御装置可以部署在各种表面上，就像 Maestro 的邪眼一样，但是不需要手动控制。只要对手走得离它够近，它就会大声尖叫，减慢对手的速度。这个东西可以摧毁，但由于它是防弹的，所以攻击方必须运用一些实用道具，或选择近距离攻击。"
+  },
+  {
+    "key": "mira",
+    "side": "defense",
+    "name": "Mira",
+    "icon_path": "assets/operators/defense/icons/mira.png",
+    "portrait_path": "assets/operators/defense/portraits/mira.png",
+    "ability_icon_path": "assets/operators/defense/abilities/mira/icon.png",
+    "ability_name": "黑镜",
+    "ability_description": "特制层合玻璃，可以使用氧乙炔在任何墙壁上开出一面单向镜。若是气压瓶被破坏，便会弹出玻璃，产生一个防守方与攻击方都能使用的大破口。"
+  },
+  {
+    "key": "mozzie",
+    "side": "defense",
+    "name": "Mozzie",
+    "icon_path": "assets/operators/defense/icons/mozzie.png",
+    "portrait_path": "assets/operators/defense/portraits/mozzie.png",
+    "ability_icon_path": "assets/operators/defense/abilities/mozzie/icon.png",
+    "ability_name": "骇虫发射器",
+    "ability_description": "Mozzie 的“骇虫发射器”，是一种微小的4足机器人，可以瞄准单一无人机，或部署在区域内，避免无人机侵入。在启动后，骇虫会锁定最近的敌方无人机，并阻挡它的摄影机。接着，它会启动覆写程式，骇入无人机里，将无人机的所属权更换为Mozzie。在反情报启用时，没有被逆向骇入的风险。骇虫仅能使用一次，在目标已被Mozzie掌握后，就能够凭空溶解，进行自毁。"
+  },
+  {
+    "key": "mute",
+    "side": "defense",
+    "name": "Mute",
+    "icon_path": "assets/operators/defense/icons/mute.png",
+    "portrait_path": "assets/operators/defense/portraits/mute.png",
+    "ability_icon_path": "assets/operators/defense/abilities/mute/icon.png",
+    "ability_name": "信号干扰器",
+    "ability_description": "折叠式天线可设置在地板上数位显示器启动开关"
+  },
+  {
+    "key": "oryx",
+    "side": "defense",
+    "name": "Oryx",
+    "icon_path": "assets/operators/defense/icons/oryx.png",
+    "portrait_path": "assets/operators/defense/portraits/oryx.png",
+    "ability_icon_path": "assets/operators/defense/abilities/oryx/icon.png",
+    "ability_name": "REMAH DASH",
+    "ability_description": "矛头冲刺的速度让他能够有效率地进行游击，以史无前例的高速进行短距离移动。它也可以用来将对手击倒、冲破可破坏的墙面，制造出一个大型破口。但是要注意使用的代价，每次使用矛头冲刺来进行突破时，他的生命值都会减少。除此之外，Oryx 还有一个特殊能力，可以与坏掉的舱口进行互动。他只需快速转身就能够直接爬过去、或他也可以悬挂在边缘处偷看，等待往上移动的完美时机。在悬挂状态中，若是攀爬动作看来过于危险，他也可以选择落下。"
+  },
+  {
+    "key": "pulse",
+    "side": "defense",
+    "name": "Pulse",
+    "icon_path": "assets/operators/defense/icons/pulse.png",
+    "portrait_path": "assets/operators/defense/portraits/pulse.png",
+    "ability_icon_path": "assets/operators/defense/abilities/pulse/icon.png",
+    "ability_name": "心跳感测器",
+    "ability_description": "Pulse是一名防守队伍中的游击者和情搜干员。通过HB-5心跳感测器的帮助，他可以穿透表面以追踪攻击者，并收集关于他们所在位置的宝贵情报。"
+  },
+  {
+    "key": "rauora",
+    "side": "defense",
+    "name": "Rauora",
+    "icon_path": "assets/operators/defense/icons/rauora.png",
+    "portrait_path": "assets/operators/defense/portraits/rauora.png",
+    "ability_icon_path": "assets/operators/defense/abilities/rauora/icon.png",
+    "ability_name": "D.O.M.装甲板发射器",
+    "ability_description": "利用Rauora的“D.O.M.装甲板发射器”掌控地图。远距离部署防弹装甲，策略性地控制战斗走向。运用门户上方的快速机关来开启或关闭面板，创造战术性机会。"
+  },
+  {
+    "key": "rook",
+    "side": "defense",
+    "name": "Rook",
+    "icon_path": "assets/operators/defense/icons/rook.png",
+    "portrait_path": "assets/operators/defense/portraits/rook.png",
+    "ability_icon_path": "assets/operators/defense/abilities/rook/icon.png",
+    "ability_name": "防护包",
+    "ability_description": "Rook是个固守者，也是增益特勤干员，能够为防守方提供加成效果，让他们在交战时获得珍贵的优势。Rook有能力保护自己和队友，只要透过他的独特技能：R1N“犀牛”装甲。"
+  },
+  {
+    "key": "sentry",
+    "side": "defense",
+    "name": "Sentry",
+    "icon_path": "assets/operators/defense/icons/sentry.png",
+    "portrait_path": "assets/operators/defense/portraits/sentry.png",
+    "ability_icon_path": "assets/operators/defense/abilities/sentry/icon.png",
+    "ability_name": "装备组",
+    "ability_description": "Sentry是防守方特勤干员，能够使用所有防守方特勤干员的次要装备。Sentry 可以使用Commando 9和M870作为主要武器，也可以使用C75 Auto和Super Shorty作为次要武器。"
+  },
+  {
+    "key": "skopos",
+    "side": "defense",
+    "name": "Skopós",
+    "icon_path": "assets/operators/defense/icons/skopos.png",
+    "portrait_path": "assets/operators/defense/portraits/skopos.png",
+    "ability_icon_path": "assets/operators/defense/abilities/skopos/icon.png",
+    "ability_name": "V10万神殿替壳",
+    "ability_description": "Skopós会让一对“V10万神殿替壳”代替她上战场，其中一个作为特勤干员行动，另一个则作为受强化护盾保护的观测工具。虽然Skopós一次只能操作一个替壳，且如果其中一个替壳遭到摧毁，她就会同时失去与两个替壳的连接，但她可以随意在两个替壳之间切换，因此能担任非常可靠的情搜与支持型特勤干员。"
+  },
+  {
+    "key": "smoke",
+    "side": "defense",
+    "name": "Smoke",
+    "icon_path": "assets/operators/defense/icons/smoke.png",
+    "portrait_path": "assets/operators/defense/portraits/smoke.png",
+    "ability_icon_path": "assets/operators/defense/abilities/smoke/icon.png",
+    "ability_name": "遥控毒气手榴弹",
+    "ability_description": "引爆器遥控接收器可以使用双面胶以纵向或横向安装"
+  },
+  {
+    "key": "solis",
+    "side": "defense",
+    "name": "Solis",
+    "icon_path": "assets/operators/defense/icons/solis.png",
+    "portrait_path": "assets/operators/defense/portraits/solis.png",
+    "ability_icon_path": "assets/operators/defense/abilities/solis/icon.png",
+    "ability_name": "“SPEC-IO”电子感应器",
+    "ability_description": "Solis的“SPEC-IO”电子感应器能让真相摊在阳光下，这是防守方特勤干员的全新装备侦测装置，其拥有标记对手电子装置的能力，让一切无所遁形。"
+  },
+  {
+    "key": "tachanka",
+    "side": "defense",
+    "name": "Tachanka",
+    "icon_path": "assets/operators/defense/icons/tachanka.png",
+    "portrait_path": "assets/operators/defense/portraits/tachanka.png",
+    "ability_icon_path": "assets/operators/defense/abilities/tachanka/icon.png",
+    "ability_name": "轰天雷发射器",
+    "ability_description": "Tachanka的新装备，“轰天雷”发射器，是区域阻绝和掩护不利角度的完美选项。发射器的重型燃烧榴弹可以反弹多次，而且榴弹的引信定时器在第一次反弹后才会启动，让这些榴弹拥有大量灵活度。Tachanka在对战开始时配有10发榴弹，而榴弹发射器可以装填最多7发。若想达到最大效益，可以同时使用多颗榴弹覆盖更广大的范围，防止敌人闪避。发射后，一次仅能装填一发，所以请谨慎挑选装弹时机。"
+  },
+  {
+    "key": "thorn",
+    "side": "defense",
+    "name": "Thorn",
+    "icon_path": "assets/operators/defense/icons/thorn.png",
+    "portrait_path": "assets/operators/defense/portraits/thorn.png",
+    "ability_icon_path": "assets/operators/defense/abilities/thorn/icon.png",
+    "ability_name": "剃刀散射榴弹",
+    "ability_description": "Thorn投掷出的剃刀散射榴弹会附着在表面上。能在侦测到附近敌人不久后，自动向四面八方射出一阵尖利刀刃，造成致命伤害。"
+  },
+  {
+    "key": "thunderbird",
+    "side": "defense",
+    "name": "Thunderbird",
+    "icon_path": "assets/operators/defense/icons/thunderbird.png",
+    "portrait_path": "assets/operators/defense/portraits/thunderbird.png",
+    "ability_icon_path": "assets/operators/defense/abilities/thunderbird/icon.png",
+    "ability_name": "科纳站",
+    "ability_description": "科纳站部署在地面后，可作为伤员与倒下特勤干员的安全地点。特勤干员只需要接近装置，科纳站就会自动提升特勤干员的生命值或进行救治。"
+  },
+  {
+    "key": "tubarao",
+    "side": "defense",
+    "name": "Tubarão",
+    "icon_path": "assets/operators/defense/icons/tubarao.png",
+    "portrait_path": "assets/operators/defense/portraits/tubarao.png",
+    "ability_icon_path": "assets/operators/defense/abilities/tubarao/icon.png",
+    "ability_name": "液氮罐",
+    "ability_description": "感受全新液氮罐的寒气。液氮罐为可投掷装置，不仅可以减缓敌人的速度，还能冻结装置来中断部署，让装置无法使用，当敌人走在结冰区域时甚至还会留下脚印。"
+  },
+  {
+    "key": "valkyrie",
+    "side": "defense",
+    "name": "Valkyrie",
+    "icon_path": "assets/operators/defense/icons/valkyrie.png",
+    "portrait_path": "assets/operators/defense/portraits/valkyrie.png",
+    "ability_icon_path": "assets/operators/defense/abilities/valkyrie/icon.png",
+    "ability_name": "暗眼",
+    "ability_description": "Blackbeard的装备包含“H.U.L.L.自适应护盾”。这种护盾可以改变形状，让使用者在步行与绳降时获得最佳的保护。它还具备突破用的气动系统，Blackbeard可借此破坏未强化墙面来制造洞口。Blackbeard的武器技术高超，可以同时装备“H.U.L.L.自适应护盾”和主要武器。"
+  },
+  {
+    "key": "vigil",
+    "side": "defense",
+    "name": "Vigil",
+    "icon_path": "assets/operators/defense/icons/vigil.png",
+    "portrait_path": "assets/operators/defense/portraits/vigil.png",
+    "ability_icon_path": "assets/operators/defense/abilities/vigil/icon.png",
+    "ability_name": "ERC-7",
+    "ability_description": "Chul Kyung在战场上来无影去无踪的能力仰赖于他的电子渲染迷彩（ERC-7）。ERC-7使用削弱实境技术，能移除直接环境的感知刺激。Vigil 将原型机放入其后背包，可以扫描周遭的电子装置，并从任何摄像头上消除他的踪迹。"
+  },
+  {
+    "key": "wamai",
+    "side": "defense",
+    "name": "Wamai",
+    "icon_path": "assets/operators/defense/icons/wamai.png",
+    "portrait_path": "assets/operators/defense/portraits/wamai.png",
+    "ability_icon_path": "assets/operators/defense/abilities/wamai/icon.png",
+    "ability_name": "磁吸销毁系统",
+    "ability_description": "磁吸销毁系统是一个投掷式粘性装备。它能附着在表面上静待时机。它的功能是将对手的投射物吸引到所在位置，透过自我毁灭的方式爆毁该投射物。这样一来，Wamai不仅能让攻击方的手榴弹和投射装备失去作用，还能战略性地部署装置，让投射物回击敌人。"
+  }
+]

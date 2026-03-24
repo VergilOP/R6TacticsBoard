@@ -1,0 +1,30 @@
+{
+  "key": "presidential-plane",
+  "name": "总统专机",
+  "floors": [
+        {"key": "1f", "name": "Level 1", "image": "assets/maps/presidential-plane/1f.png"},
+        {"key": "2f", "name": "Level 2", "image": "assets/maps/presidential-plane/2f.png"},
+        {"key": "3f", "name": "Level 3", "image": "assets/maps/presidential-plane/3f.png"},
+        {"key": "roof", "name": "Roof", "image": "assets/maps/presidential-plane/roof.png"}
+      ],
+  "size": {
+    "width": 0,
+    "height": 0
+  },
+  "calibration": {
+    "origin": { "x": 0, "y": 0 },
+    "scale": 1.0
+  },
+  "layers": {
+    "walls": [],
+    "doors": [],
+    "windows": [],
+    "hatches": [],
+    "stairs": [],
+    "sites": [],
+    "spawn_points": [],
+    "cameras": [],
+    "gadgets": []
+  },
+  "notes": ""
+}

@@ -1,0 +1,31 @@
+{
+  "key": "stadium-alpha",
+  "name": "A号竞技场",
+  "floors": [
+        {"key": "b1", "name": "Basement", "image": "assets/maps/stadium-alpha/b1.png"},
+        {"key": "1f", "name": "Ground Floor", "image": "assets/maps/stadium-alpha/1f.png"},
+        {"key": "2f", "name": "First Floor", "image": "assets/maps/stadium-alpha/2f.png"},
+        {"key": "3f", "name": "Second Floor", "image": "assets/maps/stadium-alpha/3f.png"},
+        {"key": "roof", "name": "Roof", "image": "assets/maps/stadium-alpha/roof.png"}
+      ],
+  "size": {
+    "width": 0,
+    "height": 0
+  },
+  "calibration": {
+    "origin": { "x": 0, "y": 0 },
+    "scale": 1.0
+  },
+  "layers": {
+    "walls": [],
+    "doors": [],
+    "windows": [],
+    "hatches": [],
+    "stairs": [],
+    "sites": [],
+    "spawn_points": [],
+    "cameras": [],
+    "gadgets": []
+  },
+  "notes": ""
+}

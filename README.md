@@ -35,12 +35,66 @@ R6 Tactics Board 面向单机桌面编辑场景，目标是把静态摆点升级
 - `assets/operators/attack/`
 - `assets/operators/defense/`
 
-建议约定：
+当前地图资源结构约定为：
+
+```text
+assets/maps/
+├─ index.json
+├─ download_all.sh
+├─ download_maps.sh
+├─ download_blueprints.js
+├─ create_json.sh
+└─ <map_key>/
+   ├─ map.json
+   ├─ 1f.png / 2f.png / 3f.png
+   ├─ b1.png
+   └─ roof.png
+```
+
+当前干员资源结构约定为：
+
+```text
+assets/
+├─ maps/
+└─ operators/
+   ├─ index.json
+   ├─ download_ops.py
+   ├─ attack/
+   │  ├─ icons/
+   │  │  └─ <operator_key>.png
+   │  ├─ portraits/
+   │  │  └─ <operator_key>.png
+   │  └─ abilities/
+   │     └─ <operator_key>/
+   │        ├─ icon.png
+   │        ├─ name.txt
+   │        └─ description.txt
+   └─ defense/
+      ├─ icons/
+      │  └─ <operator_key>.png
+      ├─ portraits/
+      │  └─ <operator_key>.png
+      └─ abilities/
+         └─ <operator_key>/
+            ├─ icon.png
+            ├─ name.txt
+            └─ description.txt
+```
+
+资源命名约定：
 
 - 地图文件放入 `assets/maps/`
-- 进攻方图标放入 `assets/operators/attack/`
-- 防守方图标放入 `assets/operators/defense/`
-- 图标文件名使用干员标识，例如 `ash.png`、`thermite.png`、`smoke.png`
+- 地图目录使用 `<map_key>`，当前以英文小写短横线命名
+- 每张地图单独维护 `map.json`
+- `assets/maps/index.json` 作为地图资源总索引
+- 楼层图按 `1f.png`、`2f.png`、`3f.png`、`b1.png`、`roof.png` 等方式命名
+- 干员标识统一使用英文小写 `operator_key`
+- 图标与立绘文件统一命名为 `<operator_key>.png`
+- 技能目录名与干员 `operator_key` 保持一致
+- `name.txt` 与 `description.txt` 使用 `UTF-8 + LF`
+- `assets/operators/index.json` 作为干员资源总索引
+
+后续如需批量导入、校验或重建资源索引，以上结构视为项目内固定约定。
 
 ## 工程文件
 

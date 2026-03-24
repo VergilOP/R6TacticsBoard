@@ -1,0 +1,30 @@
+{
+  "key": "kanal",
+  "name": "运河",
+  "floors": [
+        {"key": "b1", "name": "Basement", "image": "assets/maps/kanal/b1.png"},
+        {"key": "1f", "name": "First Floor", "image": "assets/maps/kanal/1f.png"},
+        {"key": "2f", "name": "Second Floor", "image": "assets/maps/kanal/2f.png"},
+        {"key": "roof", "name": "Roof", "image": "assets/maps/kanal/roof.png"}
+      ],
+  "size": {
+    "width": 0,
+    "height": 0
+  },
+  "calibration": {
+    "origin": { "x": 0, "y": 0 },
+    "scale": 1.0
+  },
+  "layers": {
+    "walls": [],
+    "doors": [],
+    "windows": [],
+    "hatches": [],
+    "stairs": [],
+    "sites": [],
+    "spawn_points": [],
+    "cameras": [],
+    "gadgets": []
+  },
+  "notes": ""
+}
