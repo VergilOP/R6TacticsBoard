@@ -239,3 +239,13 @@ R6TacticsBoard/
 - 支持 Windows 打包脚本与开发态 / 打包态资源路径兼容
 
 </details>
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=VergilOP%2FR6TacticsBoard&type=date&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=VergilOP/R6TacticsBoard&type=date&theme=dark&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=VergilOP/R6TacticsBoard&type=date&logscale&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=VergilOP/R6TacticsBoard&type=date&logscale&legend=top-left" />
+ </picture>
+</a>
