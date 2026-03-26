@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from r6_tactics_board.domain.models import MapInteractionPoint, MapInteractionType, Point2D
 from r6_tactics_board.infrastructure.asset_paths import (
     ATTACK_OPERATORS_DIR,
     DEFENSE_OPERATORS_DIR,
@@ -34,6 +35,7 @@ class MapAsset:
     name: str
     path: str
     floors: list[MapFloorAsset] = field(default_factory=list)
+    interactions: list[MapInteractionPoint] = field(default_factory=list)
 
 
 class AssetRegistry:
@@ -97,11 +99,14 @@ class AssetRegistry:
         if not floors:
             return None
 
+        interactions = self._load_interactions(data)
+
         return MapAsset(
             key=data.get("key", path.parent.name),
             name=data.get("name", path.parent.name),
             path=str(path),
             floors=floors,
+            interactions=interactions,
         )
 
     def find_map_asset(self, key: str) -> MapAsset | None:
@@ -109,6 +114,28 @@ class AssetRegistry:
             if asset.key == key:
                 return asset
         return None
+
+    def save_map_interactions(
+        self,
+        map_json_path: str,
+        interactions: list[MapInteractionPoint],
+    ) -> None:
+        path = Path(map_json_path)
+        if not path.is_absolute():
+            path = (PROJECT_ROOT / path).resolve()
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        layers = data.setdefault("layers", {})
+        serialized = [self._serialize_interaction(item) for item in interactions]
+        layers["interactions"] = serialized
+        layers["stairs"] = [item for item in serialized if item.get("kind") == MapInteractionType.STAIRS.value]
+        layers["hatches"] = [item for item in serialized if item.get("kind") == MapInteractionType.HATCH.value]
+
+        path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
 
     def list_operator_assets(self, side: str | None = None) -> list[OperatorAsset]:
         assets: list[OperatorAsset] = []
@@ -142,6 +169,44 @@ class AssetRegistry:
         ]
 
     @staticmethod
+    def _load_interactions(data: dict) -> list[MapInteractionPoint]:
+        layers = data.get("layers", {})
+        raw_items = layers.get("interactions")
+        if raw_items is None:
+            raw_items = list(layers.get("stairs", [])) + list(layers.get("hatches", []))
+
+        interactions: list[MapInteractionPoint] = []
+        for index, item in enumerate(raw_items):
+            position = item.get("position", {})
+            kind_value = item.get("kind", MapInteractionType.STAIRS.value)
+            try:
+                kind = MapInteractionType(kind_value)
+            except ValueError:
+                continue
+
+            interactions.append(
+                MapInteractionPoint(
+                    id=item.get("id", f"interaction-{index + 1}"),
+                    kind=kind,
+                    position=Point2D(
+                        x=float(position.get("x", 0)),
+                        y=float(position.get("y", 0)),
+                    ),
+                    floor_key=item.get("floor_key", "default"),
+                    linked_floor_keys=[
+                        str(value)
+                        for value in item.get("linked_floor_keys", [])
+                        if str(value)
+                    ],
+                    is_bidirectional=bool(item.get("is_bidirectional", kind == MapInteractionType.STAIRS)),
+                    label=item.get("label", ""),
+                    note=item.get("note", ""),
+                )
+            )
+
+        return interactions
+
+    @staticmethod
     def _list_image_files(directory: Path) -> list[Path]:
         if not directory.is_dir():
             return []
@@ -163,3 +228,19 @@ class AssetRegistry:
         if raw_path.startswith("assets/") or raw_path.startswith("assets\\"):
             return (PROJECT_ROOT / candidate).resolve()
         return (base_dir / candidate).resolve() if raw_path else base_dir
+
+    @staticmethod
+    def _serialize_interaction(item: MapInteractionPoint) -> dict:
+        return {
+            "id": item.id,
+            "kind": item.kind.value,
+            "position": {
+                "x": item.position.x,
+                "y": item.position.y,
+            },
+            "floor_key": item.floor_key,
+            "linked_floor_keys": list(item.linked_floor_keys),
+            "is_bidirectional": item.is_bidirectional,
+            "label": item.label,
+            "note": item.note,
+        }

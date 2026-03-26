@@ -131,3 +131,41 @@ assets/operators/<side>/
 - `portraits/` 用于更完整的干员信息展示
 - `abilities/` 用于技能说明与资料展示
 - `index.json` 用于资源总览、筛选与快速读取
+
+## 地图互动点结构
+
+当前 `map.json` 里的互动点统一写入 `layers.interactions`，并按类型同步拆分到 `layers.stairs` 与 `layers.hatches`。
+
+推荐结构如下：
+
+```json
+{
+  "id": "interaction-1",
+  "kind": "stairs",
+  "position": {
+    "x": 1024,
+    "y": 768
+  },
+  "floor_key": "1f",
+  "linked_floor_keys": ["2f"],
+  "is_bidirectional": true,
+  "label": "Main Stairs",
+  "note": ""
+}
+```
+
+字段说明：
+- `id`：互动点唯一标识
+- `kind`：当前支持 `stairs`、`hatch`
+- `position`：在地图画布上的坐标
+- `floor_key`：源楼层
+- `linked_floor_keys`：目标楼层列表
+- `is_bidirectional`：是否双向联通
+- `label`：可选短名称
+- `note`：可选备注
+
+显示规则：
+- `stairs` 适合设置为双向联通，会在源楼层和联通楼层显示同一个互动点
+- `hatch` 默认单向联通，只在源楼层显示
+
+当前地图 Debug 页面已支持对上述互动点进行放置、移动、删除和保存。

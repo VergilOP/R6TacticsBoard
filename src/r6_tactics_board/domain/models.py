@@ -12,6 +12,11 @@ class OperatorDisplayMode(str, Enum):
     CUSTOM_NAME = "custom_name"
 
 
+class MapInteractionType(str, Enum):
+    STAIRS = "stairs"
+    HATCH = "hatch"
+
+
 @dataclass(slots=True)
 class Point2D:
     x: float
@@ -25,6 +30,18 @@ class MapInfo:
     image_path: str = ""
     metadata_path: str = ""
     current_floor_key: str = ""
+
+
+@dataclass(slots=True)
+class MapInteractionPoint:
+    id: str
+    kind: MapInteractionType
+    position: Point2D
+    floor_key: str
+    linked_floor_keys: list[str] = field(default_factory=list)
+    is_bidirectional: bool = False
+    label: str = ""
+    note: str = ""
 
 
 @dataclass(slots=True)

@@ -246,6 +246,32 @@ R6TacticsBoard/
 
 </details>
 
+## 地图 Debug 元数据
+
+当前项目已经开始支持地图级自定义元数据编辑。  
+在 `测试调试` 页中，可以针对当前地图与楼层设置互动点，并写回对应的 `map.json`。
+
+当前互动点数据写入：
+- `layers.interactions`
+- `layers.stairs`
+- `layers.hatches`
+
+当前支持的互动点类型：
+- `stairs`：可配置为双向联通，适合楼梯
+- `hatch`：默认单向联通，适合舱口
+
+互动点基础字段包括：
+- `id`
+- `kind`
+- `position`
+- `floor_key`
+- `linked_floor_keys`
+- `is_bidirectional`
+- `label`
+- `note`
+
+后续墙体、门窗、舱口、爆破点等地图扩展结构，会沿这套 `map.json` 元数据方案继续扩展。
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=VergilOP%2FR6TacticsBoard&type=date&logscale=&legend=top-left">

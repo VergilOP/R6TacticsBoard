@@ -2,29 +2,354 @@
   "key": "bank",
   "name": "银行",
   "floors": [
-        {"key": "b1", "name": "Basement", "image": "assets/maps/bank/b1.png"},
-        {"key": "1f", "name": "First Floor", "image": "assets/maps/bank/1f.png"},
-        {"key": "2f", "name": "Second Floor", "image": "assets/maps/bank/2f.png"},
-        {"key": "roof", "name": "Roof", "image": "assets/maps/bank/roof.png"}
-      ],
+    {
+      "key": "b1",
+      "name": "Basement",
+      "image": "assets/maps/bank/b1.png"
+    },
+    {
+      "key": "1f",
+      "name": "First Floor",
+      "image": "assets/maps/bank/1f.png"
+    },
+    {
+      "key": "2f",
+      "name": "Second Floor",
+      "image": "assets/maps/bank/2f.png"
+    },
+    {
+      "key": "roof",
+      "name": "Roof",
+      "image": "assets/maps/bank/roof.png"
+    }
+  ],
   "size": {
     "width": 0,
     "height": 0
   },
   "calibration": {
-    "origin": { "x": 0, "y": 0 },
+    "origin": {
+      "x": 0,
+      "y": 0
+    },
     "scale": 1.0
   },
   "layers": {
     "walls": [],
     "doors": [],
     "windows": [],
-    "hatches": [],
-    "stairs": [],
+    "hatches": [
+      {
+        "id": "interaction-3",
+        "kind": "hatch",
+        "position": {
+          "x": 919.7733670856811,
+          "y": 531.3498793401741
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "roof"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-4",
+        "kind": "hatch",
+        "position": {
+          "x": 659.1428882954058,
+          "y": 640.646531736096
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-5",
+        "kind": "hatch",
+        "position": {
+          "x": 855.0361191280965,
+          "y": 695.294857934057
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-7",
+        "kind": "hatch",
+        "position": {
+          "x": 710.4282405734922,
+          "y": 344.70482678713824
+        },
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "2f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-8",
+        "kind": "hatch",
+        "position": {
+          "x": 708.7467536135549,
+          "y": 633.9205838963469
+        },
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-9",
+        "kind": "hatch",
+        "position": {
+          "x": 942.4734410448341,
+          "y": 519.5794706206133
+        },
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-10",
+        "kind": "hatch",
+        "position": {
+          "x": 1064.3812456402854,
+          "y": 397.6716660251619
+        },
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      }
+    ],
+    "stairs": [
+      {
+        "id": "interaction-1",
+        "kind": "stairs",
+        "position": {
+          "x": 773.7144804977282,
+          "y": 666.2889691590377
+        },
+        "floor_key": "b1",
+        "linked_floor_keys": [
+          "1f",
+          "2f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-2",
+        "kind": "stairs",
+        "position": {
+          "x": 1074.470167399909,
+          "y": 349.74928766695
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-6",
+        "kind": "stairs",
+        "position": {
+          "x": 599.4501012176331,
+          "y": 479.22378358211904
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      }
+    ],
     "sites": [],
     "spawn_points": [],
     "cameras": [],
-    "gadgets": []
+    "gadgets": [],
+    "interactions": [
+      {
+        "id": "interaction-1",
+        "kind": "stairs",
+        "position": {
+          "x": 773.7144804977282,
+          "y": 666.2889691590377
+        },
+        "floor_key": "b1",
+        "linked_floor_keys": [
+          "1f",
+          "2f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-2",
+        "kind": "stairs",
+        "position": {
+          "x": 1074.470167399909,
+          "y": 349.74928766695
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-3",
+        "kind": "hatch",
+        "position": {
+          "x": 919.7733670856811,
+          "y": 531.3498793401741
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "roof"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-4",
+        "kind": "hatch",
+        "position": {
+          "x": 659.1428882954058,
+          "y": 640.646531736096
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-5",
+        "kind": "hatch",
+        "position": {
+          "x": 855.0361191280965,
+          "y": 695.294857934057
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-6",
+        "kind": "stairs",
+        "position": {
+          "x": 599.4501012176331,
+          "y": 479.22378358211904
+        },
+        "floor_key": "2f",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-7",
+        "kind": "hatch",
+        "position": {
+          "x": 710.4282405734922,
+          "y": 344.70482678713824
+        },
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "2f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-8",
+        "kind": "hatch",
+        "position": {
+          "x": 708.7467536135549,
+          "y": 633.9205838963469
+        },
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-9",
+        "kind": "hatch",
+        "position": {
+          "x": 942.4734410448341,
+          "y": 519.5794706206133
+        },
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-10",
+        "kind": "hatch",
+        "position": {
+          "x": 1064.3812456402854,
+          "y": 397.6716660251619
+        },
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      }
+    ]
   },
   "notes": ""
 }
