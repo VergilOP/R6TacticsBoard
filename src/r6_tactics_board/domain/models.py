@@ -12,6 +12,11 @@ class OperatorDisplayMode(str, Enum):
     CUSTOM_NAME = "custom_name"
 
 
+class OperatorTransitionMode(str, Enum):
+    AUTO = "auto"
+    MANUAL = "manual"
+
+
 class MapInteractionType(str, Enum):
     STAIRS = "stairs"
     HATCH = "hatch"
@@ -59,6 +64,8 @@ class OperatorFrameState:
     rotation: float = 0.0
     display_mode: OperatorDisplayMode = OperatorDisplayMode.ICON
     floor_key: str = ""
+    transition_mode: OperatorTransitionMode = OperatorTransitionMode.AUTO
+    manual_interaction_ids: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -71,6 +78,8 @@ class OperatorState:
     rotation: float = 0.0
     display_mode: OperatorDisplayMode = OperatorDisplayMode.ICON
     floor_key: str = ""
+    transition_mode: OperatorTransitionMode = OperatorTransitionMode.AUTO
+    manual_interaction_ids: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -110,4 +119,6 @@ def resolve_operator_state(
         rotation=frame.rotation,
         display_mode=frame.display_mode,
         floor_key=frame.floor_key,
+        transition_mode=frame.transition_mode,
+        manual_interaction_ids=list(frame.manual_interaction_ids),
     )

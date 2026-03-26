@@ -7,6 +7,7 @@ from r6_tactics_board.domain.models import (
     OperatorDefinition,
     OperatorDisplayMode,
     OperatorFrameState,
+    OperatorTransitionMode,
     OperatorState,
     Point2D,
     TacticProject,
@@ -52,6 +53,14 @@ class ProjectStore:
                             state.get("display_mode", OperatorDisplayMode.ICON.value)
                         ),
                         floor_key=state.get("floor_key", ""),
+                        transition_mode=OperatorTransitionMode(
+                            state.get("transition_mode", OperatorTransitionMode.AUTO.value)
+                        ),
+                        manual_interaction_ids=[
+                            str(item)
+                            for item in state.get("manual_interaction_ids", [])
+                            if str(item)
+                        ],
                     )
                     for state in item.get("operator_frames", item.get("operator_states", []))
                 ],
@@ -107,6 +116,8 @@ class ProjectStore:
                                 "rotation": state.rotation,
                                 "display_mode": state.display_mode.value,
                                 "floor_key": state.floor_key,
+                                "transition_mode": state.transition_mode.value,
+                                "manual_interaction_ids": list(state.manual_interaction_ids),
                             }
                             for state in keyframe.operator_frames
                         ],

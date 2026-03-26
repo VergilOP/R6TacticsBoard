@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QBrush, QFont
-from PyQt6.QtWidgets import QHeaderView, QHBoxLayout, QSlider, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QHeaderView, QHBoxLayout, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, PushButton
 
 
@@ -12,11 +12,6 @@ class TimelineWidget(QWidget):
     capture_requested = pyqtSignal()
     capture_column_requested = pyqtSignal()
     clear_cell_requested = pyqtSignal()
-    previous_column_requested = pyqtSignal()
-    next_column_requested = pyqtSignal()
-    play_requested = pyqtSignal()
-    pause_requested = pyqtSignal()
-    duration_changed = pyqtSignal(int)
     cell_selected = pyqtSignal(int, int)
     keyframe_column_moved = pyqtSignal(int, int)
     operator_row_moved = pyqtSignal(int, int)
@@ -33,12 +28,6 @@ class TimelineWidget(QWidget):
         self.capture_button = PushButton()
         self.capture_column_button = PushButton()
         self.clear_button = PushButton()
-        self.previous_button = PushButton()
-        self.next_button = PushButton()
-        self.play_button = PushButton()
-        self.pause_button = PushButton()
-        self.duration_label = BodyLabel("过渡 700 ms")
-        self.duration_slider = QSlider(Qt.Orientation.Horizontal)
         self.table = QTableWidget()
 
         self._init_ui()
@@ -59,25 +48,8 @@ class TimelineWidget(QWidget):
         self.capture_button.setText("记录当前干员")
         self.capture_column_button.setText("记录当前列全部干员")
         self.clear_button.setText("清空当前单元格")
-        self.previous_button.setText("上一列")
-        self.next_button.setText("下一列")
-        self.play_button.setText("播放")
-        self.pause_button.setText("暂停")
-
-        self.duration_slider.setRange(200, 2000)
-        self.duration_slider.setSingleStep(100)
-        self.duration_slider.setPageStep(100)
-        self.duration_slider.setValue(700)
-        self.duration_slider.setMaximumWidth(180)
-
         toolbar.addWidget(self.title_label)
         toolbar.addStretch(1)
-        toolbar.addWidget(self.duration_label)
-        toolbar.addWidget(self.duration_slider)
-        toolbar.addWidget(self.previous_button)
-        toolbar.addWidget(self.next_button)
-        toolbar.addWidget(self.play_button)
-        toolbar.addWidget(self.pause_button)
         toolbar.addWidget(self.add_button)
         toolbar.addWidget(self.insert_button)
         toolbar.addWidget(self.duplicate_button)
@@ -115,11 +87,6 @@ class TimelineWidget(QWidget):
         self.capture_button.clicked.connect(self.capture_requested.emit)
         self.capture_column_button.clicked.connect(self.capture_column_requested.emit)
         self.clear_button.clicked.connect(self.clear_cell_requested.emit)
-        self.previous_button.clicked.connect(self.previous_column_requested.emit)
-        self.next_button.clicked.connect(self.next_column_requested.emit)
-        self.play_button.clicked.connect(self.play_requested.emit)
-        self.pause_button.clicked.connect(self.pause_requested.emit)
-        self.duration_slider.valueChanged.connect(self._on_duration_changed)
         self.table.cellClicked.connect(self._on_cell_clicked)
         self.table.horizontalHeader().sectionMoved.connect(self._on_column_section_moved)
         self.table.verticalHeader().sectionMoved.connect(self._on_row_section_moved)
@@ -187,11 +154,6 @@ class TimelineWidget(QWidget):
             if current_row >= 0 and current_column >= 0
             else False
         )
-        self.previous_button.setEnabled(has_columns and current_column > 0)
-        self.next_button.setEnabled(has_columns and 0 <= current_column < len(keyframe_labels) - 1)
-        self.play_button.setEnabled(has_columns and not is_playing and len(keyframe_labels) > 1)
-        self.pause_button.setEnabled(is_playing)
-
     def _on_cell_clicked(self, row: int, column: int) -> None:
         if self._selected_cell == (row, column):
             self._selected_cell = None
@@ -201,10 +163,6 @@ class TimelineWidget(QWidget):
 
         self._selected_cell = (row, column)
         self.cell_selected.emit(row, column)
-
-    def _on_duration_changed(self, value: int) -> None:
-        self.duration_label.setText(f"过渡 {value} ms")
-        self.duration_changed.emit(value)
 
     def _on_column_section_moved(self, logical_index: int, old_visual_index: int, new_visual_index: int) -> None:
         if old_visual_index != new_visual_index:

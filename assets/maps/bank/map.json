@@ -191,6 +191,21 @@
         "is_bidirectional": true,
         "label": "",
         "note": ""
+      },
+      {
+        "id": "interaction-11",
+        "kind": "stairs",
+        "position": {
+          "x": 1044.2034021210382,
+          "y": 342.26667069522915
+        },
+        "floor_key": "b1",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
       }
     ],
     "sites": [],
@@ -346,6 +361,21 @@
           "b1"
         ],
         "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-11",
+        "kind": "stairs",
+        "position": {
+          "x": 1044.2034021210382,
+          "y": 342.26667069522915
+        },
+        "floor_key": "b1",
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": true,
         "label": "",
         "note": ""
       }

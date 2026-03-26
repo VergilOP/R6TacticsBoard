@@ -3,9 +3,10 @@ from math import atan2, degrees
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QTransform
-from PyQt6.QtWidgets import QGraphicsLineItem, QGraphicsPixmapItem, QGraphicsScene
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPixmapItem, QGraphicsScene
 
-from r6_tactics_board.domain.models import OperatorDisplayMode, OperatorState, Point2D, TeamSide
+from r6_tactics_board.domain.models import MapInteractionPoint, OperatorDisplayMode, OperatorState, Point2D, TeamSide
+from r6_tactics_board.presentation.widgets.map_interaction_item import MapInteractionItem
 from r6_tactics_board.presentation.widgets.operator_item import OperatorItem
 
 
@@ -23,6 +24,14 @@ class MapScene(QGraphicsScene):
         self._placement_operator_id = ""
         self._placement_anchor = QPointF()
         self._path_items: dict[str, QGraphicsLineItem] = {}
+        self._interaction_items: dict[str, MapInteractionItem] = {}
+        self._interaction_link_items: list[QGraphicsLineItem] = []
+        self._interactions: list[MapInteractionPoint] = []
+        self._interaction_floor_key = ""
+        self._show_interactions = False
+        self._highlighted_interaction_ids: set[str] = set()
+        self._highlighted_interaction_order: list[str] = []
+        self._hovered_interaction_id = ""
 
         self.setSceneRect(QRectF(0, 0, 4000, 4000))
         self.setBackgroundBrush(QBrush(QColor("#202020")))
@@ -46,6 +55,7 @@ class MapScene(QGraphicsScene):
         self._map_item.setZValue(-100)
         self._map_item.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
         self.addItem(self._map_item)
+        self._rebuild_interaction_items()
         return True
 
     def clear_map(self) -> None:
@@ -66,6 +76,22 @@ class MapScene(QGraphicsScene):
 
     def set_placement_state(self, state: OperatorState | None) -> None:
         self._placement_state = deepcopy(state) if state is not None else None
+
+    def set_interaction_overlays(
+        self,
+        interactions: list[MapInteractionPoint],
+        floor_key: str,
+        visible: bool,
+        highlighted_ids: list[str] | None = None,
+        hovered_id: str = "",
+    ) -> None:
+        self._interactions = list(interactions)
+        self._interaction_floor_key = floor_key
+        self._show_interactions = visible
+        self._highlighted_interaction_order = list(highlighted_ids or [])
+        self._highlighted_interaction_ids = set(highlighted_ids or [])
+        self._hovered_interaction_id = hovered_id
+        self._rebuild_interaction_items()
 
     def set_preview_paths(self, paths: dict[str, tuple[QPointF, QPointF]]) -> None:
         for item in self._path_items.values():
@@ -244,6 +270,8 @@ class MapScene(QGraphicsScene):
         self._map_item = None
         self.current_map_path = ""
         self._path_items = {}
+        self._interaction_items = {}
+        self._interaction_link_items = []
         self.setSceneRect(QRectF(0, 0, width, height))
         self.setBackgroundBrush(QBrush(QColor("#202020")))
         self._add_grid(width, height)
@@ -309,3 +337,66 @@ class MapScene(QGraphicsScene):
         delta = scene_pos - self._placement_anchor
         if delta.manhattanLength() >= 1:
             operator.setRotation(degrees(atan2(delta.y(), delta.x())) + 90)
+
+    def _rebuild_interaction_items(self) -> None:
+        for line_item in self._interaction_link_items:
+            self.removeItem(line_item)
+        self._interaction_link_items.clear()
+        for item in self._interaction_items.values():
+            self.removeItem(item)
+        self._interaction_items.clear()
+
+        if not self._show_interactions:
+            return
+
+        sequence_index_by_id = {
+            interaction_id: index
+            for index, interaction_id in enumerate(self._highlighted_interaction_order)
+        }
+
+        for interaction in self._interactions:
+            if not self._interaction_visible(interaction):
+                continue
+
+            item = MapInteractionItem(interaction)
+            item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+            item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
+            item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+            self.addItem(item)
+            if interaction.id in self._highlighted_interaction_ids:
+                sequence_index = sequence_index_by_id[interaction.id]
+                item.set_preview_state(
+                    sequence_index,
+                    True,
+                    hovered=interaction.id == self._hovered_interaction_id,
+                )
+            else:
+                item.set_preview_state(None, False, hovered=interaction.id == self._hovered_interaction_id)
+            self._interaction_items[interaction.id] = item
+
+        ordered_items = [
+            self._interaction_items[item_id]
+            for item_id in self._highlighted_interaction_order
+            if item_id in self._interaction_items
+        ]
+        if len(ordered_items) >= 2:
+            route_pen = QPen(QColor(250, 204, 21, 180))
+            route_pen.setWidth(2)
+            route_pen.setStyle(Qt.PenStyle.DashLine)
+            for start_item, end_item in zip(ordered_items, ordered_items[1:]):
+                line_item = self.addLine(
+                    start_item.pos().x(),
+                    start_item.pos().y(),
+                    end_item.pos().x(),
+                    end_item.pos().y(),
+                    route_pen,
+                )
+                line_item.setZValue(18)
+                self._interaction_link_items.append(line_item)
+
+    def _interaction_visible(self, interaction: MapInteractionPoint) -> bool:
+        if not self._interaction_floor_key:
+            return True
+        if interaction.floor_key == self._interaction_floor_key:
+            return True
+        return interaction.is_bidirectional and self._interaction_floor_key in interaction.linked_floor_keys
