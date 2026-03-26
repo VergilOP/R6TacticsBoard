@@ -1,2 +1,16 @@
-# Normalize all text files to LF in the repository
-* text eol=lf
+# Normalize text files to LF in the repository without touching binary assets
+* text=auto eol=lf
+
+# Treat common binary assets as binary so Git never normalizes line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.bmp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
