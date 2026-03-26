@@ -3,10 +3,16 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-$python = Join-Path $root ".venv\\Scripts\\python.exe"
+$pythonCandidates = @(
+    (Join-Path $root ".venv\\Scripts\\python.exe"),
+    (Join-Path $root ".venv\\python.exe")
+)
 
-if (-not (Test-Path $python)) {
-    throw "Virtual environment not found: $python"
+$python = $pythonCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if (-not $python) {
+    $expected = $pythonCandidates -join ", "
+    throw "Virtual environment not found. Expected one of: $expected"
 }
 
 & $python -m PyInstaller `
