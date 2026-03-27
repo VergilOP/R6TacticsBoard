@@ -5,9 +5,9 @@ from PyQt6.QtWidgets import QCheckBox, QGridLayout, QHBoxLayout, QVBoxLayout, QW
 from qfluentwidgets import BodyLabel, ComboBox, LineEdit, PrimaryPushButton, PushButton, SubtitleLabel
 
 from r6_tactics_board.domain.models import MapInteractionPoint, MapInteractionType, Point2D
-from r6_tactics_board.infrastructure.asset_registry import AssetRegistry, MapAsset
-from r6_tactics_board.presentation.widgets.map_debug_scene import MapDebugScene
-from r6_tactics_board.presentation.widgets.map_view import MapView
+from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry, MapAsset
+from r6_tactics_board.presentation.widgets.canvas.map_debug_scene import MapDebugScene
+from r6_tactics_board.presentation.widgets.canvas.map_view import MapView
 
 
 class DebugPage(QWidget):

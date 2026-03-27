@@ -1,27 +1,26 @@
 from copy import deepcopy
-from dataclasses import dataclass
-from heapq import heappop, heappush
-from math import hypot
 from pathlib import Path
 
-from PyQt6.QtCore import QPointF, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QPointF, Qt, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
-from PyQt6.QtWidgets import QComboBox, QFileDialog, QGridLayout, QHBoxLayout, QMessageBox, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QMessageBox, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
     ComboBox,
-    LineEdit,
     MessageBox,
     PrimaryPushButton,
     PushButton,
-    Slider,
-    SubtitleLabel,
 )
 
+from r6_tactics_board.application.routing.interaction_routing import (
+    InteractionRoutePlanner,
+    PlaybackRouteSegment,
+)
+from r6_tactics_board.application.services.editor_session import EditorSessionService
+from r6_tactics_board.application.state.history import UndoRedoHistory
+from r6_tactics_board.application.timeline.timeline_editor import TimelineEditorController
 from r6_tactics_board.domain.models import (
-    Keyframe,
     MapInteractionPoint,
-    MapInfo,
     OperatorDefinition,
     OperatorDisplayMode,
     OperatorFrameState,
@@ -30,88 +29,21 @@ from r6_tactics_board.domain.models import (
     Point2D,
     TacticProject,
     TeamSide,
-    Timeline,
     resolve_operator_state,
 )
-from r6_tactics_board.infrastructure.asset_paths import MAPS_DIR
-from r6_tactics_board.infrastructure.debug_logging import debug_log
-from r6_tactics_board.infrastructure.asset_registry import AssetRegistry, MapAsset
-from r6_tactics_board.infrastructure.project_store import ProjectStore
-from r6_tactics_board.presentation.widgets.map_scene import MapScene
-from r6_tactics_board.presentation.widgets.map_view import MapView
-from r6_tactics_board.presentation.widgets.operator_item import OperatorItem
-from r6_tactics_board.presentation.widgets.timeline_widget import TimelineWidget
-
-
-@dataclass(slots=True)
-class EditorHistoryState:
-    map_asset_path: str
-    map_floor_key: str
-    map_image_path: str
-    scene_states: list[OperatorState]
-    selected_operator_id: str
-    operator_order: list[str]
-    operator_definitions: dict[str, OperatorDefinition]
-    keyframe_columns: list[dict[str, OperatorFrameState]]
-    keyframe_names: list[str]
-    keyframe_notes: list[str]
-    current_keyframe_index: int
-    current_timeline_row: int
-    transition_duration_ms: int
-
-
-@dataclass(slots=True)
-class PlaybackRouteSegment:
-    floor_key: str
-    start: Point2D
-    end: Point2D
-    result_floor_key: str
-
-
-class PopupAwareComboBox(QComboBox):
-    popupHidden = pyqtSignal()
-
-    def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-        self.setStyleSheet(
-            """
-            QComboBox {
-                background-color: rgba(24, 28, 34, 220);
-                color: #F3F4F6;
-                border: 1px solid rgba(255, 255, 255, 0.10);
-                border-radius: 8px;
-                padding: 6px 32px 6px 10px;
-                min-height: 34px;
-            }
-            QComboBox:hover {
-                border: 1px solid rgba(96, 165, 250, 0.9);
-            }
-            QComboBox:focus {
-                border: 1px solid rgba(96, 165, 250, 1.0);
-            }
-            QComboBox:disabled {
-                color: rgba(243, 244, 246, 0.45);
-                background-color: rgba(24, 28, 34, 140);
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 24px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: rgba(24, 28, 34, 235);
-                color: #F3F4F6;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                outline: none;
-                padding: 4px;
-                selection-background-color: rgba(96, 165, 250, 0.28);
-                selection-color: #FFFFFF;
-            }
-            """
-        )
-
-    def hidePopup(self) -> None:  # noqa: N802
-        super().hidePopup()
-        self.popupHidden.emit()
+from r6_tactics_board.infrastructure.assets.asset_paths import MAPS_DIR
+from r6_tactics_board.infrastructure.assets.asset_registry import MapAsset
+from r6_tactics_board.infrastructure.diagnostics.debug_logging import debug_log
+from r6_tactics_board.presentation.pages.editor.editor_models import EditorHistoryState
+from r6_tactics_board.presentation.widgets.editor.editor_panels import (
+    EditorPropertyPanel,
+    FloorOverlayPanel,
+    PlaybackOverlayPanel,
+)
+from r6_tactics_board.presentation.widgets.canvas.map_scene import MapScene
+from r6_tactics_board.presentation.widgets.canvas.map_view import MapView
+from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
+from r6_tactics_board.presentation.widgets.timeline.timeline_widget import TimelineWidget
 
 
 class EditorPage(QWidget):
@@ -136,10 +68,7 @@ class EditorPage(QWidget):
         self._playback_start_states: dict[str, OperatorState] = {}
         self._playback_end_states: dict[str, OperatorState] = {}
         self._playback_routes: dict[str, list[PlaybackRouteSegment]] = {}
-        self._undo_stack: list[EditorHistoryState] = []
-        self._redo_stack: list[EditorHistoryState] = []
-        self._history_limit = 100
-        self._clean_snapshot: EditorHistoryState | None = None
+        self._history = UndoRedoHistory[EditorHistoryState](limit=100)
 
         self.operator_order: list[str] = []
         self.operator_definitions: dict[str, OperatorDefinition] = {}
@@ -153,8 +82,7 @@ class EditorPage(QWidget):
         self.current_map_floor_key = ""
         self._current_map_asset: MapAsset | None = None
 
-        self.project_store = ProjectStore()
-        self.asset_registry = AssetRegistry()
+        self.session_service = EditorSessionService()
         self.playback_timer = QTimer(self)
         self.playback_timer.setInterval(16)
 
@@ -167,45 +95,45 @@ class EditorPage(QWidget):
         self.load_map_button = PrimaryPushButton("加载地图")
         self.add_operator_button = PushButton("添加干员")
         self.reset_view_button = PushButton("重置视图")
-        self.delete_operator_button = PushButton("删除选中干员")
         self.map_status_label = BodyLabel("当前地图：未加载")
-        self.property_title = SubtitleLabel("属性面板")
-        self.property_hint = BodyLabel("名称、阵营、图标是全局属性；位置、朝向、显示模式、楼层跟随当前时间点。")
-        self.selection_label = BodyLabel("当前选中：无")
-        self.keyframe_title = SubtitleLabel("关键帧属性")
-        self.keyframe_hint = BodyLabel("关键帧名称和备注只作用于当前关键帧列。")
-        self.keyframe_name_edit = LineEdit()
-        self.keyframe_note_edit = LineEdit()
-        self.name_edit = LineEdit()
-        self.side_combo = ComboBox()
-        self.operator_combo = ComboBox()
-        self.rotation_slider = Slider(Qt.Orientation.Horizontal)
-        self.rotation_value_label = BodyLabel("0°")
-        self.floor_value_label = BodyLabel("-")
-        self.display_mode_combo = ComboBox()
-        self.transition_mode_combo = ComboBox()
-        self.manual_interactions_edit = LineEdit()
-        self.manual_interactions_hint = BodyLabel("手动互动点：留空时使用自动路径")
         self.undo_shortcut = QShortcut(QKeySequence.StandardKey.Undo, self)
         self.redo_shortcut = QShortcut(QKeySequence.StandardKey.Redo, self)
-        self.floor_panel = QWidget(self)
-        self.floor_panel_layout = QVBoxLayout(self.floor_panel)
-        self.manual_interaction_combo = PopupAwareComboBox()
-        self.manual_interaction_add_button = PushButton("添加")
-        self.manual_interaction_remove_button = PushButton("移除最后")
-        self.manual_interaction_clear_button = PushButton("清空")
-        self.manual_interactions_value_label = BodyLabel("自动路径")
-        self.playback_panel = QWidget(self)
-        self.playback_panel_layout = QHBoxLayout(self.playback_panel)
-        self.playback_previous_button = PushButton("上一项")
-        self.playback_play_button = PrimaryPushButton("播放")
-        self.playback_pause_button = PushButton("暂停")
-        self.playback_next_button = PushButton("下一项")
-        self.playback_progress_slider = Slider(Qt.Orientation.Horizontal)
-        self.playback_status_label = BodyLabel("未开始")
-        self.playback_speed_combo = ComboBox()
-        self.playback_duration_label = BodyLabel("过渡 700 ms")
-        self.playback_duration_slider = Slider(Qt.Orientation.Horizontal)
+        self.property_panel = EditorPropertyPanel()
+        self.floor_panel = FloorOverlayPanel(self)
+        self.playback_panel = PlaybackOverlayPanel(initial_duration_ms=self._transition_duration_ms, parent=self)
+
+        self.property_title = self.property_panel.property_title
+        self.property_hint = self.property_panel.property_hint
+        self.selection_label = self.property_panel.selection_label
+        self.keyframe_title = self.property_panel.keyframe_title
+        self.keyframe_hint = self.property_panel.keyframe_hint
+        self.keyframe_name_edit = self.property_panel.keyframe_name_edit
+        self.keyframe_note_edit = self.property_panel.keyframe_note_edit
+        self.name_edit = self.property_panel.name_edit
+        self.side_combo = self.property_panel.side_combo
+        self.operator_combo = self.property_panel.operator_combo
+        self.rotation_slider = self.property_panel.rotation_slider
+        self.rotation_value_label = self.property_panel.rotation_value_label
+        self.floor_value_label = self.property_panel.floor_value_label
+        self.display_mode_combo = self.property_panel.display_mode_combo
+        self.transition_mode_combo = self.property_panel.transition_mode_combo
+        self.manual_interactions_edit = self.property_panel.manual_interactions_edit
+        self.manual_interactions_hint = self.property_panel.manual_interactions_hint
+        self.manual_interaction_combo = self.property_panel.manual_interaction_combo
+        self.manual_interaction_add_button = self.property_panel.manual_interaction_add_button
+        self.manual_interaction_remove_button = self.property_panel.manual_interaction_remove_button
+        self.manual_interaction_clear_button = self.property_panel.manual_interaction_clear_button
+        self.manual_interactions_value_label = self.property_panel.manual_interactions_value_label
+        self.delete_operator_button = self.property_panel.delete_operator_button
+        self.playback_previous_button = self.playback_panel.previous_button
+        self.playback_play_button = self.playback_panel.play_button
+        self.playback_pause_button = self.playback_panel.pause_button
+        self.playback_next_button = self.playback_panel.next_button
+        self.playback_progress_slider = self.playback_panel.progress_slider
+        self.playback_status_label = self.playback_panel.status_label
+        self.playback_speed_combo = self.playback_panel.speed_combo
+        self.playback_duration_label = self.playback_panel.duration_label
+        self.playback_duration_slider = self.playback_panel.duration_slider
 
         self._init_ui()
         self._init_signals()
@@ -237,138 +165,8 @@ class EditorPage(QWidget):
         center_layout.addWidget(self.map_view, 1)
         center_layout.addWidget(self.timeline)
 
-        self.floor_panel.setObjectName("floor-panel")
-        self.floor_panel.hide()
-        self.floor_panel.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.floor_panel.setStyleSheet(
-            "#floor-panel {"
-            "background-color: rgba(24, 28, 34, 215);"
-            "border: 1px solid rgba(255, 255, 255, 24);"
-            "border-radius: 10px;"
-            "}"
-        )
-        self.floor_panel_layout.setContentsMargins(10, 10, 10, 10)
-        self.floor_panel_layout.setSpacing(8)
-        self.playback_panel.setObjectName("playback-panel")
-        self.playback_panel.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.playback_panel.setStyleSheet(
-            "#playback-panel {"
-            "background-color: rgba(24, 28, 34, 215);"
-            "border: 1px solid rgba(255, 255, 255, 24);"
-            "border-radius: 10px;"
-            "}"
-        )
-        self.playback_panel_layout.setContentsMargins(12, 10, 12, 10)
-        self.playback_panel_layout.setSpacing(10)
-        self.playback_progress_slider.setRange(0, 0)
-        self.playback_progress_slider.setSingleStep(1)
-        self.playback_progress_slider.setPageStep(1)
-        self.playback_progress_slider.setMinimumWidth(260)
-        self.playback_duration_slider.setRange(200, 2000)
-        self.playback_duration_slider.setSingleStep(100)
-        self.playback_duration_slider.setPageStep(100)
-        self.playback_duration_slider.setValue(self._transition_duration_ms)
-        self.playback_duration_slider.setMaximumWidth(180)
-        for index, (label, value) in enumerate((
-            ("0.5x", 0.5),
-            ("1.0x", 1.0),
-            ("1.5x", 1.5),
-            ("2.0x", 2.0),
-        )):
-            self.playback_speed_combo.addItem(label)
-            self.playback_speed_combo.setItemData(index, value)
-        self.playback_speed_combo.setCurrentIndex(1)
-        self.playback_status_label.setFixedWidth(120)
-        self.playback_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.playback_panel_layout.addWidget(self.playback_previous_button)
-        self.playback_pause_button.hide()
-        self.playback_panel_layout.addWidget(self.playback_play_button)
-        self.playback_panel_layout.addWidget(self.playback_next_button)
-        self.playback_panel_layout.addWidget(self.playback_progress_slider, 1)
-        self.playback_panel_layout.addWidget(self.playback_status_label)
-        self.playback_panel_layout.addWidget(BodyLabel("速度"))
-        self.playback_panel_layout.addWidget(self.playback_speed_combo)
-        self.playback_panel_layout.addWidget(self.playback_duration_label)
-        self.playback_panel_layout.addWidget(self.playback_duration_slider)
-
-        side_panel = QVBoxLayout()
-        side_panel.setSpacing(12)
-
-        property_grid = QGridLayout()
-        property_grid.setHorizontalSpacing(12)
-        property_grid.setVerticalSpacing(12)
-        keyframe_grid = QGridLayout()
-        keyframe_grid.setHorizontalSpacing(12)
-        keyframe_grid.setVerticalSpacing(12)
-
-        self.name_edit.setPlaceholderText("输入自定义名称")
-        self.keyframe_name_edit.setPlaceholderText("例如：开局抢点")
-        self.keyframe_note_edit.setPlaceholderText("例如：30 秒内优先控图")
-        self.rotation_slider.setRange(0, 359)
-
-        self.side_combo.addItem("进攻")
-        self.side_combo.setItemData(0, "attack")
-        self.side_combo.addItem("防守")
-        self.side_combo.setItemData(1, "defense")
-
-        self.display_mode_combo.addItem("干员图标")
-        self.display_mode_combo.setItemData(0, OperatorItem.ICON)
-        self.display_mode_combo.addItem("自定义名")
-        self.display_mode_combo.setItemData(1, OperatorItem.CUSTOM_NAME)
-        self.transition_mode_combo.addItem("自动路径")
-        self.transition_mode_combo.setItemData(0, OperatorTransitionMode.AUTO.value)
-        self.transition_mode_combo.addItem("手动互动点")
-        self.transition_mode_combo.setItemData(1, OperatorTransitionMode.MANUAL.value)
-        self.manual_interaction_combo.addItem("当前地图无可用互动点")
-        self.manual_interaction_combo.setItemData(0, "")
-        self.manual_interactions_edit.setPlaceholderText("例如：interaction-1, interaction-4")
-
-        property_grid.addWidget(BodyLabel("名称"), 0, 0)
-        property_grid.addWidget(self.name_edit, 0, 1)
-        property_grid.addWidget(BodyLabel("阵营"), 1, 0)
-        property_grid.addWidget(self.side_combo, 1, 1)
-        property_grid.addWidget(BodyLabel("图标"), 2, 0)
-        property_grid.addWidget(self.operator_combo, 2, 1)
-        property_grid.addWidget(BodyLabel("朝向"), 3, 0)
-        property_grid.addWidget(self.rotation_slider, 3, 1)
-        property_grid.addWidget(BodyLabel("角度"), 4, 0)
-        property_grid.addWidget(self.rotation_value_label, 4, 1)
-        property_grid.addWidget(BodyLabel("显示模式"), 5, 0)
-        property_grid.addWidget(self.display_mode_combo, 5, 1)
-        property_grid.addWidget(BodyLabel("楼层"), 6, 0)
-        property_grid.addWidget(self.floor_value_label, 6, 1)
-        property_grid.addWidget(BodyLabel("路径模式"), 7, 0)
-        property_grid.addWidget(self.transition_mode_combo, 7, 1)
-        manual_selection_layout = QHBoxLayout()
-        manual_selection_layout.setSpacing(8)
-        manual_selection_layout.addWidget(self.manual_interaction_combo, 1)
-        self.manual_interactions_edit.hide()
-        self.manual_interactions_value_label.hide()
-        self.manual_interactions_hint.hide()
-        property_grid.addLayout(manual_selection_layout, 8, 1)
-        property_grid.addWidget(self.manual_interactions_value_label, 10, 1)
-        property_grid.addWidget(BodyLabel("手动互动点"), 8, 0)
-        property_grid.addWidget(self.manual_interactions_edit, 8, 1)
-        property_grid.addWidget(self.manual_interactions_hint, 9, 1)
-
-        keyframe_grid.addWidget(BodyLabel("名称"), 0, 0)
-        keyframe_grid.addWidget(self.keyframe_name_edit, 0, 1)
-        keyframe_grid.addWidget(BodyLabel("备注"), 1, 0)
-        keyframe_grid.addWidget(self.keyframe_note_edit, 1, 1)
-
-        side_panel.addWidget(self.property_title)
-        side_panel.addWidget(self.property_hint)
-        side_panel.addWidget(self.selection_label)
-        side_panel.addLayout(property_grid)
-        side_panel.addWidget(self.delete_operator_button)
-        side_panel.addSpacing(12)
-        side_panel.addWidget(self.keyframe_title)
-        side_panel.addWidget(self.keyframe_hint)
-        side_panel.addLayout(keyframe_grid)
-        side_panel.addStretch(1)
-
         layout.addLayout(center_layout, 1)
-        layout.addLayout(side_panel)
+        layout.addWidget(self.property_panel)
 
     def _init_signals(self) -> None:
         self.undo_button.clicked.connect(self.undo)
@@ -486,14 +284,11 @@ class EditorPage(QWidget):
         if scene is None:
             return False
 
-        asset = self.asset_registry.load_map_asset(map_asset_path)
-        if asset is None or not asset.floors:
+        selection = self.session_service.load_map_selection(map_asset_path, floor_key)
+        if selection is None:
             return False
-
-        selected_floor = next(
-            (floor for floor in asset.floors if floor.key == floor_key),
-            asset.floors[0],
-        )
+        asset = selection.asset
+        selected_floor = selection.floor
         if not scene.load_map_image(selected_floor.image_path):
             return False
 
@@ -529,7 +324,7 @@ class EditorPage(QWidget):
         if not file_path:
             return
 
-        project = self.project_store.load(file_path)
+        project = self.session_service.load_project(file_path)
         self._apply_project(project)
         self.current_project_path = file_path
         self._reset_history()
@@ -548,12 +343,9 @@ class EditorPage(QWidget):
             )
         if not file_path:
             return False
-        if not file_path.endswith(".r6tb.json"):
-            file_path += ".r6tb.json"
-
-        self.project_store.save(file_path, self._build_project())
+        file_path = self.session_service.save_project(file_path, self._build_project())
         self.current_project_path = file_path
-        self._clean_snapshot = self._capture_history_state()
+        self._history.mark_clean(self._capture_history_state())
         self._update_dirty_state()
         return True
 
@@ -694,48 +486,24 @@ class EditorPage(QWidget):
         debug_log("editor: refresh property panel done")
 
     def _rebuild_floor_panel(self) -> None:
-        while self.floor_panel_layout.count():
-            item = self.floor_panel_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-
         asset = self._current_map_asset
         if asset is None or len(asset.floors) <= 1:
             self.floor_panel.hide()
             return
 
-        self.floor_panel_layout.addWidget(BodyLabel("楼层"))
-        for floor in asset.floors:
-            button = PrimaryPushButton(floor.name) if floor.key == self.current_map_floor_key else PushButton(floor.name)
-            button.clicked.connect(lambda checked=False, key=floor.key: self._switch_map_floor(key))
-            self.floor_panel_layout.addWidget(button)
-
-        self.floor_panel.show()
+        self.floor_panel.set_floors(
+            asset.floors,
+            self.current_map_floor_key,
+            self._switch_map_floor,
+        )
         self._position_floor_panel()
-        self.floor_panel.raise_()
-        self.floor_panel.update()
         QTimer.singleShot(0, self._position_floor_panel)
 
     def _position_floor_panel(self) -> None:
-        if self.floor_panel.isHidden():
-            return
-        self.floor_panel_layout.activate()
-        self.floor_panel.setFixedSize(self.floor_panel_layout.sizeHint())
-        map_rect = self.map_view.geometry()
-        x = map_rect.left() + 12
-        y = max(map_rect.top() + 12, map_rect.top() + (map_rect.height() - self.floor_panel.height()) // 2)
-        self.floor_panel.move(x, y)
-        self.floor_panel.raise_()
+        self.floor_panel.reposition(self.map_view.geometry())
 
     def _position_playback_panel(self) -> None:
-        self.playback_panel_layout.activate()
-        self.playback_panel.setFixedSize(self.playback_panel_layout.sizeHint())
-        map_rect = self.map_view.geometry()
-        x = map_rect.left() + max((map_rect.width() - self.playback_panel.width()) // 2, 12)
-        y = map_rect.bottom() - self.playback_panel.height() - 12
-        self.playback_panel.move(x, y)
-        self.playback_panel.raise_()
+        self.playback_panel.reposition(self.map_view.geometry())
 
     def _position_overlay_panels(self) -> None:
         self._position_floor_panel()
@@ -814,20 +582,10 @@ class EditorPage(QWidget):
         start_state, end_state = self._current_transition_states(operator_id)
         if start_state is None or end_state is None:
             return []
-        start_floor = start_state.floor_key or self._current_floor_key()
-        end_floor = end_state.floor_key or start_floor
-        candidates: list[tuple[MapInteractionPoint, str]] = []
-        for item in self._current_map_asset.interactions:
-            target_floor = self._resolve_manual_target_floor(item, start_floor)
-            if target_floor is None:
-                continue
-            if not self._can_reach_floor(target_floor, end_floor):
-                continue
-            candidates.append((item, target_floor))
-
-        return sorted(
-            [item for item, _ in candidates],
-            key=lambda item: (item.floor_key, item.id),
+        return self._route_planner().available_manual_interactions(
+            start_state,
+            end_state,
+            default_floor_key=self._current_floor_key(),
         )
 
     def _manual_interaction_prefix(
@@ -835,27 +593,7 @@ class EditorPage(QWidget):
         start_floor: str,
         manual_interaction_ids: list[str],
     ) -> tuple[list[tuple[MapInteractionPoint, str]], str] | None:
-        if self._current_map_asset is None:
-            return None
-
-        interactions_by_id = {
-            interaction.id: interaction
-            for interaction in self._current_map_asset.interactions
-        }
-        route: list[tuple[MapInteractionPoint, str]] = []
-        current_floor = start_floor
-
-        for interaction_id in manual_interaction_ids:
-            interaction = interactions_by_id.get(interaction_id)
-            if interaction is None:
-                return None
-            target_floor = self._resolve_manual_target_floor(interaction, current_floor)
-            if target_floor is None:
-                return None
-            route.append((interaction, target_floor))
-            current_floor = target_floor
-
-        return route, current_floor
+        return self._route_planner().manual_interaction_prefix(start_floor, manual_interaction_ids)
 
     def _current_transition_states(
         self,
@@ -886,21 +624,7 @@ class EditorPage(QWidget):
         return start_floor == end_floor
 
     def _can_reach_floor(self, start_floor: str | None, end_floor: str) -> bool:
-        if not start_floor:
-            return False
-        if start_floor == end_floor:
-            return True
-        seen = {start_floor}
-        queue = [start_floor]
-        while queue:
-            current_floor = queue.pop(0)
-            for _, target_floor in self._iter_interaction_transitions(current_floor):
-                if target_floor == end_floor:
-                    return True
-                if target_floor not in seen:
-                    seen.add(target_floor)
-                    queue.append(target_floor)
-        return False
+        return self._route_planner().can_reach_floor(start_floor, end_floor)
 
     @staticmethod
     def _interaction_choice_label(interaction: MapInteractionPoint) -> str:
@@ -1297,21 +1021,33 @@ class EditorPage(QWidget):
     def _add_keyframe_column(self) -> None:
         before = self._capture_history_state()
         self._pause_column_playback()
-        self.keyframe_columns.append({})
-        self.keyframe_names.append("")
-        self.keyframe_notes.append("")
-        self.current_keyframe_index = len(self.keyframe_columns) - 1
+        (
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+        ) = TimelineEditorController.add_keyframe_column(
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+        )
         self._refresh_timeline()
         self._commit_history(before)
 
     def _insert_keyframe_column(self) -> None:
         before = self._capture_history_state()
         self._pause_column_playback()
-        insert_index = min(self.current_keyframe_index + 1, len(self.keyframe_columns))
-        self.keyframe_columns.insert(insert_index, {})
-        self.keyframe_names.insert(insert_index, "")
-        self.keyframe_notes.insert(insert_index, "")
-        self.current_keyframe_index = insert_index
+        (
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+        ) = TimelineEditorController.insert_keyframe_column(
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+        )
         self._refresh_timeline()
         self._commit_history(before)
 
@@ -1320,16 +1056,17 @@ class EditorPage(QWidget):
         if not self.keyframe_columns:
             return
         before = self._capture_history_state()
-        duplicate = {
-            operator_id: deepcopy(state)
-            for operator_id, state in self.keyframe_columns[self.current_keyframe_index].items()
-        }
-        insert_index = self.current_keyframe_index + 1
-        self.keyframe_columns.insert(insert_index, duplicate)
-        source_name = self.keyframe_names[self.current_keyframe_index]
-        self.keyframe_names.insert(insert_index, f"{source_name} 副本" if source_name else "")
-        self.keyframe_notes.insert(insert_index, self.keyframe_notes[self.current_keyframe_index])
-        self.current_keyframe_index = insert_index
+        (
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+        ) = TimelineEditorController.duplicate_keyframe_column(
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+        )
         self._refresh_timeline()
         self._commit_history(before)
 
@@ -1342,11 +1079,19 @@ class EditorPage(QWidget):
         if not self.keyframe_columns or not (0 <= column_index < len(self.keyframe_columns)):
             return
         if len(self.keyframe_columns) == 1:
-            self.keyframe_columns = [{}]
-            self.keyframe_names = [""]
-            self.keyframe_notes = [""]
-            self.current_keyframe_index = 0
-            self.current_timeline_row = -1
+            (
+                self.keyframe_columns,
+                self.keyframe_names,
+                self.keyframe_notes,
+                self.current_keyframe_index,
+                self.current_timeline_row,
+            ) = TimelineEditorController.delete_keyframe_column(
+                self.keyframe_columns,
+                self.keyframe_names,
+                self.keyframe_notes,
+                self.current_keyframe_index,
+                column_index,
+            )
             self._apply_timeline_column(0)
             self._refresh_timeline()
             self._commit_history(before)
@@ -1363,10 +1108,19 @@ class EditorPage(QWidget):
         if not dialog.exec():
             return
 
-        del self.keyframe_columns[column_index]
-        del self.keyframe_names[column_index]
-        del self.keyframe_notes[column_index]
-        self.current_keyframe_index = min(self.current_keyframe_index, len(self.keyframe_columns) - 1)
+        (
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+            _,
+        ) = TimelineEditorController.delete_keyframe_column(
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+            column_index,
+        )
         self._apply_timeline_column(self.current_keyframe_index)
         self._refresh_timeline()
         self._commit_history(before)
@@ -1384,7 +1138,12 @@ class EditorPage(QWidget):
         state = self._frame_state_from_operator(operator)
         if state is None:
             return
-        self.keyframe_columns[self.current_keyframe_index][operator.operator_id] = state
+        self.keyframe_columns = TimelineEditorController.set_cell(
+            self.keyframe_columns,
+            self.current_keyframe_index,
+            operator.operator_id,
+            state,
+        )
         self.current_timeline_row = self._operator_row(operator.operator_id)
         self._refresh_timeline()
         if before is not None:
@@ -1401,7 +1160,12 @@ class EditorPage(QWidget):
         for operator in scene.operator_items():
             state = self._frame_state_from_operator(operator)
             if state is not None:
-                self.keyframe_columns[self.current_keyframe_index][operator.operator_id] = state
+                self.keyframe_columns = TimelineEditorController.set_cell(
+                    self.keyframe_columns,
+                    self.current_keyframe_index,
+                    operator.operator_id,
+                    state,
+                )
         self._refresh_timeline()
         self._commit_history(before)
 
@@ -1416,7 +1180,11 @@ class EditorPage(QWidget):
         if not (0 <= row < len(self.operator_order)):
             return
         operator_id = self.operator_order[row]
-        self.keyframe_columns[column].pop(operator_id, None)
+        self.keyframe_columns = TimelineEditorController.clear_cell(
+            self.keyframe_columns,
+            column,
+            operator_id,
+        )
         self.current_timeline_row = row
         self.current_keyframe_index = column
         self._refresh_timeline()
@@ -1509,8 +1277,8 @@ class EditorPage(QWidget):
         self._sync_scene_placement_target()
         self._sync_scene_preview_paths()
         self._sync_scene_interaction_overlays()
-        self.undo_button.setEnabled(bool(self._undo_stack))
-        self.redo_button.setEnabled(bool(self._redo_stack))
+        self.undo_button.setEnabled(self._history.can_undo())
+        self.redo_button.setEnabled(self._history.can_redo())
         self._update_dirty_state()
 
     def _refresh_playback_panel(self) -> None:
@@ -1817,184 +1585,13 @@ class EditorPage(QWidget):
         transition_mode: OperatorTransitionMode = OperatorTransitionMode.AUTO,
         manual_interaction_ids: list[str] | None = None,
     ) -> list[PlaybackRouteSegment]:
-        start_floor = start_state.floor_key or self._current_floor_key()
-        end_floor = end_state.floor_key or start_floor
-        if start_floor == end_floor:
-            return [
-                PlaybackRouteSegment(
-                    floor_key=start_floor,
-                    start=Point2D(start_state.position.x, start_state.position.y),
-                    end=Point2D(end_state.position.x, end_state.position.y),
-                    result_floor_key=end_floor,
-                )
-            ]
-
-        interaction_steps = self._find_interaction_route(
+        return self._route_planner().build_transition_route(
             start_state,
             end_state,
+            default_floor_key=self._current_floor_key(),
             transition_mode=transition_mode,
             manual_interaction_ids=manual_interaction_ids or [],
         )
-        if not interaction_steps:
-            return [
-                PlaybackRouteSegment(
-                    floor_key=start_floor,
-                    start=Point2D(start_state.position.x, start_state.position.y),
-                    end=Point2D(end_state.position.x, end_state.position.y),
-                    result_floor_key=end_floor,
-                )
-            ]
-
-        segments: list[PlaybackRouteSegment] = []
-        current_floor = start_floor
-        current_point = Point2D(start_state.position.x, start_state.position.y)
-
-        for interaction, target_floor in interaction_steps:
-            interaction_point = Point2D(interaction.position.x, interaction.position.y)
-            segments.append(
-                PlaybackRouteSegment(
-                    floor_key=current_floor,
-                    start=Point2D(current_point.x, current_point.y),
-                    end=Point2D(interaction_point.x, interaction_point.y),
-                    result_floor_key=target_floor,
-                )
-            )
-            current_floor = target_floor
-            current_point = Point2D(interaction_point.x, interaction_point.y)
-
-        segments.append(
-            PlaybackRouteSegment(
-                floor_key=end_floor,
-                start=Point2D(current_point.x, current_point.y),
-                end=Point2D(end_state.position.x, end_state.position.y),
-                result_floor_key=end_floor,
-            )
-        )
-        return segments
-
-    def _find_interaction_route(
-        self,
-        start_state: OperatorState,
-        end_state: OperatorState,
-        transition_mode: OperatorTransitionMode,
-        manual_interaction_ids: list[str],
-    ) -> list[tuple[MapInteractionPoint, str]]:
-        if self._current_map_asset is None or not self._current_map_asset.interactions:
-            return []
-
-        start_floor = start_state.floor_key or self._current_floor_key()
-        end_floor = end_state.floor_key or start_floor
-        if start_floor == end_floor:
-            return []
-
-        if transition_mode == OperatorTransitionMode.MANUAL and manual_interaction_ids:
-            manual_prefix = self._manual_interaction_prefix(start_floor, manual_interaction_ids)
-            if manual_prefix is not None:
-                route_prefix, current_floor = manual_prefix
-                if current_floor == end_floor:
-                    return route_prefix
-
-                prefix_point = Point2D(start_state.position.x, start_state.position.y)
-                if route_prefix:
-                    last_interaction, _ = route_prefix[-1]
-                    prefix_point = Point2D(last_interaction.position.x, last_interaction.position.y)
-
-                continuation_start = self._copy_state_with_position(
-                    start_state,
-                    prefix_point,
-                    current_floor,
-                )
-                suffix = self._find_automatic_interaction_route(continuation_start, end_state)
-                if suffix:
-                    return route_prefix + suffix
-
-        return self._find_automatic_interaction_route(start_state, end_state)
-
-    def _find_automatic_interaction_route(
-        self,
-        start_state: OperatorState,
-        end_state: OperatorState,
-    ) -> list[tuple[MapInteractionPoint, str]]:
-        start_floor = start_state.floor_key or self._current_floor_key()
-        end_floor = end_state.floor_key or start_floor
-        if start_floor == end_floor:
-            return []
-
-        goal_key = ("goal", "")
-        start_key = ("start", start_floor)
-        best_costs: dict[tuple[str, str], float] = {start_key: 0.0}
-        parents: dict[tuple[str, str], tuple[tuple[str, str], MapInteractionPoint | None, str]] = {}
-        node_positions: dict[tuple[str, str], Point2D] = {
-            start_key: Point2D(start_state.position.x, start_state.position.y)
-        }
-        heap: list[tuple[float, str, str]] = [(0.0, start_key[0], start_key[1])]
-
-        while heap:
-            current_cost, current_kind, current_floor = heappop(heap)
-            current_key = (current_kind, current_floor)
-            if current_cost > best_costs.get(current_key, float("inf")):
-                continue
-            if current_key == goal_key:
-                break
-
-            current_point = node_positions[current_key]
-            if current_floor == end_floor:
-                goal_cost = current_cost + self._distance_points(current_point, end_state.position)
-                if goal_cost < best_costs.get(goal_key, float("inf")):
-                    best_costs[goal_key] = goal_cost
-                    parents[goal_key] = (current_key, None, end_floor)
-                    node_positions[goal_key] = Point2D(end_state.position.x, end_state.position.y)
-                    heappush(heap, (goal_cost, goal_key[0], goal_key[1]))
-
-            for interaction, target_floor in self._iter_interaction_transitions(current_floor):
-                next_key = (interaction.id, target_floor)
-                interaction_point = Point2D(interaction.position.x, interaction.position.y)
-                travel_cost = self._distance_points(current_point, interaction_point)
-                next_cost = current_cost + travel_cost
-                if next_cost >= best_costs.get(next_key, float("inf")):
-                    continue
-                best_costs[next_key] = next_cost
-                parents[next_key] = (current_key, interaction, target_floor)
-                node_positions[next_key] = Point2D(interaction.position.x, interaction.position.y)
-                heappush(heap, (next_cost, next_key[0], next_key[1]))
-
-        if goal_key not in parents:
-            return []
-
-        steps: list[tuple[MapInteractionPoint, str]] = []
-        current_key = goal_key
-        while current_key != start_key:
-            parent_key, interaction, target_floor = parents[current_key]
-            if interaction is not None:
-                steps.append((interaction, target_floor))
-            current_key = parent_key
-        steps.reverse()
-        return steps
-
-    def _manual_interaction_route(
-        self,
-        start_floor: str,
-        end_floor: str,
-        manual_interaction_ids: list[str],
-    ) -> list[tuple[MapInteractionPoint, str]]:
-        if not manual_interaction_ids:
-            return []
-        manual_prefix = self._manual_interaction_prefix(start_floor, manual_interaction_ids)
-        if manual_prefix is None:
-            return []
-        route, current_floor = manual_prefix
-        return route if current_floor == end_floor else []
-
-    @staticmethod
-    def _resolve_manual_target_floor(
-        interaction: MapInteractionPoint,
-        current_floor: str,
-    ) -> str | None:
-        if interaction.floor_key == current_floor:
-            return interaction.linked_floor_keys[0] if interaction.linked_floor_keys else None
-        if interaction.is_bidirectional and current_floor in interaction.linked_floor_keys:
-            return interaction.floor_key
-        return None
 
     def _transition_settings_for_operator(
         self,
@@ -2006,19 +1603,6 @@ class EditorPage(QWidget):
             return (OperatorTransitionMode.AUTO, [])
         return (frame.transition_mode, list(frame.manual_interaction_ids))
 
-    def _iter_interaction_transitions(self, floor_key: str) -> list[tuple[MapInteractionPoint, str]]:
-        if self._current_map_asset is None:
-            return []
-
-        transitions: list[tuple[MapInteractionPoint, str]] = []
-        for interaction in self._current_map_asset.interactions:
-            if interaction.floor_key == floor_key:
-                for target_floor in interaction.linked_floor_keys:
-                    transitions.append((interaction, target_floor))
-            elif interaction.is_bidirectional and floor_key in interaction.linked_floor_keys:
-                transitions.append((interaction, interaction.floor_key))
-        return transitions
-
     def _state_on_route(
         self,
         start_state: OperatorState,
@@ -2026,69 +1610,13 @@ class EditorPage(QWidget):
         route: list[PlaybackRouteSegment],
         progress: float,
     ) -> OperatorState:
-        total_length = sum(self._route_segment_length(segment) for segment in route)
-        if total_length <= 0.001:
-            return deepcopy(end_state)
-
-        target_distance = total_length * progress
-        traveled = 0.0
-        current_floor = start_state.floor_key or self._current_floor_key()
-        current_point = Point2D(start_state.position.x, start_state.position.y)
-
-        for segment in route:
-            length = self._route_segment_length(segment)
-            if length <= 0.001:
-                if target_distance <= traveled:
-                    return self._copy_state_with_position(
-                        start_state,
-                        current_point,
-                        current_floor,
-                    )
-                current_floor = segment.result_floor_key or current_floor
-                current_point = Point2D(segment.end.x, segment.end.y)
-                continue
-
-            if target_distance <= traveled + length or segment is route[-1]:
-                local_progress = max(0.0, min(1.0, (target_distance - traveled) / length))
-                position = Point2D(
-                    x=segment.start.x + (segment.end.x - segment.start.x) * local_progress,
-                    y=segment.start.y + (segment.end.y - segment.start.y) * local_progress,
-                )
-                floor_key = segment.floor_key
-                if local_progress >= 1.0 and segment.result_floor_key:
-                    floor_key = segment.result_floor_key
-                return self._copy_state_with_position(end_state, position, floor_key)
-
-            traveled += length
-            current_floor = segment.result_floor_key or current_floor
-            current_point = Point2D(segment.end.x, segment.end.y)
-
-        return deepcopy(end_state)
-
-    @staticmethod
-    def _copy_state_with_position(
-        template: OperatorState,
-        position: Point2D,
-        floor_key: str,
-    ) -> OperatorState:
-        return OperatorState(
-            id=template.id,
-            operator_key=template.operator_key,
-            custom_name=template.custom_name,
-            side=template.side,
-            position=Point2D(position.x, position.y),
-            rotation=template.rotation,
-            display_mode=template.display_mode,
-            floor_key=floor_key,
+        return self._route_planner().state_on_route(
+            start_state,
+            end_state,
+            route,
+            progress,
+            default_floor_key=self._current_floor_key(),
         )
-
-    @staticmethod
-    def _route_segment_length(segment: PlaybackRouteSegment) -> float:
-        return hypot(segment.end.x - segment.start.x, segment.end.y - segment.start.y)
-
-    @staticmethod
-    def _distance_points(first: Point2D, second: Point2D) -> float:
-        return hypot(second.x - first.x, second.y - first.y)
 
     def _set_transition_duration(self, value: int) -> None:
         self._transition_duration_ms = value
@@ -2107,7 +1635,11 @@ class EditorPage(QWidget):
         if normalized == self.keyframe_names[self.current_keyframe_index]:
             return
         before = self._capture_history_state()
-        self.keyframe_names[self.current_keyframe_index] = normalized
+        self.keyframe_names = TimelineEditorController.update_keyframe_name(
+            self.keyframe_names,
+            self.current_keyframe_index,
+            name,
+        )
         self._refresh_property_panel()
         self._refresh_timeline()
         self._commit_history(before)
@@ -2121,7 +1653,11 @@ class EditorPage(QWidget):
         if normalized == self.keyframe_notes[self.current_keyframe_index]:
             return
         before = self._capture_history_state()
-        self.keyframe_notes[self.current_keyframe_index] = normalized
+        self.keyframe_notes = TimelineEditorController.update_keyframe_note(
+            self.keyframe_notes,
+            self.current_keyframe_index,
+            note,
+        )
         self._refresh_property_panel()
         self._refresh_timeline()
         self._commit_history(before)
@@ -2133,13 +1669,19 @@ class EditorPage(QWidget):
             return
         before = self._capture_history_state()
         self._pause_column_playback()
-        column = self.keyframe_columns.pop(from_index)
-        self.keyframe_columns.insert(to_index, column)
-        keyframe_name = self.keyframe_names.pop(from_index)
-        keyframe_note = self.keyframe_notes.pop(from_index)
-        self.keyframe_names.insert(to_index, keyframe_name)
-        self.keyframe_notes.insert(to_index, keyframe_note)
-        self.current_keyframe_index = self._moved_index(self.current_keyframe_index, from_index, to_index)
+        (
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+        ) = TimelineEditorController.move_keyframe_column(
+            self.keyframe_columns,
+            self.keyframe_names,
+            self.keyframe_notes,
+            self.current_keyframe_index,
+            from_index,
+            to_index,
+        )
         self._apply_timeline_column(self.current_keyframe_index)
         self._refresh_timeline()
         self._commit_history(before)
@@ -2150,9 +1692,12 @@ class EditorPage(QWidget):
         if from_index == to_index:
             return
         before = self._capture_history_state()
-        operator_id = self.operator_order.pop(from_index)
-        self.operator_order.insert(to_index, operator_id)
-        self.current_timeline_row = self._moved_index(self.current_timeline_row, from_index, to_index)
+        self.operator_order, self.current_timeline_row = TimelineEditorController.move_operator_row(
+            self.operator_order,
+            self.current_timeline_row,
+            from_index,
+            to_index,
+        )
         self._refresh_timeline()
         self._commit_history(before)
 
@@ -2230,29 +1775,13 @@ class EditorPage(QWidget):
         route: list[PlaybackRouteSegment],
         progress: float,
     ) -> tuple[OperatorState, OperatorState] | None:
-        if not route:
-            if not self._state_matches_current_floor(start_state) or not self._state_matches_current_floor(end_state):
-                return None
-            return (start_state, end_state)
-
-        total_length = sum(self._route_segment_length(segment) for segment in route)
-        if total_length <= 0.001:
-            return None
-
-        target_distance = total_length * progress
-        traveled = 0.0
-        for segment in route:
-            length = self._route_segment_length(segment)
-            if length <= 0.001:
-                continue
-            if target_distance <= traveled + length or segment is route[-1]:
-                if segment.floor_key != self._current_floor_key():
-                    return None
-                segment_start = self._copy_state_with_position(start_state, segment.start, segment.floor_key)
-                segment_end = self._copy_state_with_position(end_state, segment.end, segment.floor_key)
-                return (segment_start, segment_end)
-            traveled += length
-        return None
+        return self._route_planner().preview_segment_on_route(
+            start_state,
+            end_state,
+            route,
+            progress,
+            current_floor_key=self._current_floor_key(),
+        )
 
     def _current_placement_state(self) -> OperatorState | None:
         if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
@@ -2331,7 +1860,7 @@ class EditorPage(QWidget):
         return ""
 
     def _refresh_operator_combo(self, side: str, selected_key: str = "") -> None:
-        assets = self.asset_registry.list_operator_assets(side)
+        assets = self.session_service.list_operator_assets(side)
         self.operator_combo.blockSignals(True)
         self.operator_combo.clear()
         self.operator_combo.addItem("(未指定)")
@@ -2348,7 +1877,7 @@ class EditorPage(QWidget):
         self.operator_combo.blockSignals(False)
 
     def _update_operator_icon(self, operator: OperatorItem) -> None:
-        asset = self.asset_registry.find_operator_asset(operator.side, operator.operator_key)
+        asset = self.session_service.find_operator_asset(operator.side, operator.operator_key)
         operator.set_icon_path(asset.path if asset else "")
 
     def _sync_operator_registry(self) -> None:
@@ -2380,9 +1909,11 @@ class EditorPage(QWidget):
                 del self.operator_definitions[operator_id]
 
     def _remove_operator_from_timeline(self, operator_id: str) -> None:
-        for frame in self.keyframe_columns:
-            frame.pop(operator_id, None)
-        self.operator_definitions.pop(operator_id, None)
+        self.keyframe_columns, self.operator_definitions = TimelineEditorController.remove_operator_from_timeline(
+            self.keyframe_columns,
+            self.operator_definitions,
+            operator_id,
+        )
 
     def _delete_operator_by_id(self, operator_id: str, confirm: bool) -> None:
         scene = self._map_scene()
@@ -2469,40 +2000,17 @@ class EditorPage(QWidget):
 
     def _build_project(self) -> TacticProject:
         scene = self._map_scene()
-        map_info = None
-        if scene is not None and scene.current_map_path:
-            map_path = Path(scene.current_map_path)
-            if self._current_map_asset is not None:
-                map_info = MapInfo(
-                    key=self._current_map_asset.key,
-                    name=self._current_map_asset.name,
-                    image_path=str(map_path),
-                    metadata_path=self.current_map_asset_path,
-                    current_floor_key=self.current_map_floor_key,
-                )
-            else:
-                map_info = MapInfo(key=map_path.stem, name=map_path.name, image_path=str(map_path))
-
-        operators = [
-            deepcopy(self.operator_definitions[operator_id])
-            for operator_id in self.operator_order
-            if operator_id in self.operator_definitions
-        ]
-        keyframes = [
-            Keyframe(
-                time_ms=index * self._transition_duration_ms,
-                name=self.keyframe_names[index] if index < len(self.keyframe_names) else "",
-                note=self.keyframe_notes[index] if index < len(self.keyframe_notes) else "",
-                operator_frames=[deepcopy(frame[operator_id]) for operator_id in self.operator_order if operator_id in frame],
-            )
-            for index, frame in enumerate(self.keyframe_columns)
-        ]
-        return TacticProject(
-            name=Path(self.current_project_path).stem if self.current_project_path else "untitled",
-            map_info=map_info,
-            operators=operators,
-            timeline=Timeline(keyframes=keyframes),
-            operator_order=list(self.operator_order),
+        return self.session_service.build_project(
+            current_project_path=self.current_project_path,
+            current_map_asset=self._current_map_asset,
+            current_map_asset_path=self.current_map_asset_path,
+            current_map_floor_key=self.current_map_floor_key,
+            map_image_path=scene.current_map_path if scene is not None else "",
+            operator_order=self.operator_order,
+            operator_definitions=self.operator_definitions,
+            keyframe_columns=self.keyframe_columns,
+            keyframe_names=self.keyframe_names,
+            keyframe_notes=self.keyframe_notes,
             current_keyframe_index=self.current_keyframe_index,
             transition_duration_ms=self._transition_duration_ms,
         )
@@ -2592,34 +2100,25 @@ class EditorPage(QWidget):
         if self._history_lock:
             return
         after = self._capture_history_state()
-        if before == after:
-            return
-        self._undo_stack.append(before)
-        if len(self._undo_stack) > self._history_limit:
-            self._undo_stack = self._undo_stack[-self._history_limit :]
-        self._redo_stack.clear()
-        self._refresh_timeline()
+        if self._history.commit(before, after):
+            self._refresh_timeline()
 
     def _reset_history(self) -> None:
-        self._undo_stack.clear()
-        self._redo_stack.clear()
-        self._clean_snapshot = self._capture_history_state()
+        self._history.reset(self._capture_history_state())
         self._refresh_timeline()
 
     def undo(self) -> None:
-        if not self._undo_stack:
-            return
         current = self._capture_history_state()
-        snapshot = self._undo_stack.pop()
-        self._redo_stack.append(current)
+        snapshot = self._history.undo(current)
+        if snapshot is None:
+            return
         self._restore_history_state(snapshot)
 
     def redo(self) -> None:
-        if not self._redo_stack:
-            return
         current = self._capture_history_state()
-        snapshot = self._redo_stack.pop()
-        self._undo_stack.append(current)
+        snapshot = self._history.redo(current)
+        if snapshot is None:
+            return
         self._restore_history_state(snapshot)
 
     def _restore_history_state(self, snapshot: EditorHistoryState) -> None:
@@ -2667,16 +2166,6 @@ class EditorPage(QWidget):
         self._history_lock = False
         self._refresh_timeline()
 
-    @staticmethod
-    def _moved_index(current_index: int, from_index: int, to_index: int) -> int:
-        if current_index == from_index:
-            return to_index
-        if from_index < current_index <= to_index:
-            return current_index - 1
-        if to_index <= current_index < from_index:
-            return current_index + 1
-        return current_index
-
     def _operator_row(self, operator_id: str) -> int:
         try:
             return self.operator_order.index(operator_id)
@@ -2695,6 +2184,10 @@ class EditorPage(QWidget):
             return scene
         return None
 
+    def _route_planner(self) -> InteractionRoutePlanner:
+        interactions = self._current_map_asset.interactions if self._current_map_asset is not None else []
+        return InteractionRoutePlanner(interactions)
+
     def _update_dirty_state(self) -> None:
         is_dirty = self.is_dirty()
         self.save_project_button.setText("保存工程*" if is_dirty else "保存工程")
@@ -2707,7 +2200,7 @@ class EditorPage(QWidget):
 
     def is_dirty(self) -> bool:
         current = self._capture_history_state()
-        return self._clean_snapshot is not None and current != self._clean_snapshot
+        return self._history.is_dirty(current)
 
     def confirm_discard_changes(self, action_name: str) -> bool:
         if not self.is_dirty():

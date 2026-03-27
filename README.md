@@ -35,14 +35,14 @@ R6 Tactics Board 面向单机桌面编辑场景，目标是把静态摆点升级
 
 项目默认读取以下资源目录：
 
-- `assets/maps/`
-- `assets/operators/attack/`
-- `assets/operators/defense/`
+- `src/assets/maps/`
+- `src/assets/operators/attack/`
+- `src/assets/operators/defense/`
 
 当前地图资源结构约定为：
 
 ```text
-assets/maps/
+src/assets/maps/
 ├─ index.json
 ├─ download_all.sh
 ├─ download_maps.sh
@@ -58,7 +58,7 @@ assets/maps/
 当前干员资源结构约定为：
 
 ```text
-assets/
+src/assets/
 ├─ maps/
 └─ operators/
    ├─ index.json
@@ -87,16 +87,16 @@ assets/
 
 资源命名约定：
 
-- 地图文件放入 `assets/maps/`
+- 地图文件放入 `src/assets/maps/`
 - 地图目录使用 `<map_key>`，当前以英文小写短横线命名
 - 每张地图单独维护 `map.json`
-- `assets/maps/index.json` 作为地图资源总索引
+- `src/assets/maps/index.json` 作为地图资源总索引
 - 楼层图按 `1f.png`、`2f.png`、`3f.png`、`b1.png`、`roof.png` 等方式命名
 - 干员标识统一使用英文小写 `operator_key`
 - 图标与立绘文件统一命名为 `<operator_key>.png`
 - 技能目录名与干员 `operator_key` 保持一致
 - `name.txt` 与 `description.txt` 使用 `UTF-8 + LF`
-- `assets/operators/index.json` 作为干员资源总索引
+- `src/assets/operators/index.json` 作为干员资源总索引
 
 后续如需批量导入、校验或重建资源索引，以上结构视为项目内固定约定。
 
@@ -162,21 +162,33 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_exe.ps1
 
 ```text
 R6TacticsBoard/
-├─ assets/
-│  ├─ maps/
-│  └─ operators/
-│     ├─ attack/
-│     └─ defense/
 ├─ docs/
 ├─ scripts/
 ├─ src/
+│  ├─ assets/
+│  │  ├─ maps/
+│  │  └─ operators/
+│  │     ├─ attack/
+│  │     └─ defense/
 │  └─ r6_tactics_board/
 │     ├─ app.py
 │     ├─ main.py
+│     ├─ README.md
 │     ├─ domain/
 │     ├─ application/
+│     │  ├─ services/
+│     │  ├─ routing/
+│     │  ├─ timeline/
+│     │  ├─ state/
+│     │  └─ playback/
 │     ├─ infrastructure/
+│     │  ├─ assets/
+│     │  ├─ persistence/
+│     │  └─ diagnostics/
 │     └─ presentation/
+│        ├─ shell/
+│        ├─ pages/
+│        └─ widgets/
 └─ pyproject.toml
 ```
 
@@ -209,6 +221,14 @@ R6TacticsBoard/
 <details>
 <summary>展开查看</summary>
 
+### v0.4.0
+
+- 重构源码目录，按 `domain / application / infrastructure / presentation` 分层并细分子目录
+- 将编辑器关键逻辑拆分到独立模块，包括会话服务、路径规划、时间轴控制、播放控制和状态容器
+- 将主窗口、页面、画布、面板、时间轴控件按职责重新归档，降低 `EditorPage` 的聚合复杂度
+- 将资源目录统一迁移到 `src/assets/`，同步修正文档、打包脚本和目录约定
+- 为主要目录补充结构 README，明确职责边界、依赖方向和新文件落点规则
+
 ### v0.3.0
 
 - 地图资源工作流升级为多楼层整图编辑，新增左侧悬浮楼层切换栏
@@ -226,7 +246,7 @@ R6TacticsBoard/
 
 ### v0.2.0
 
-- 新增地图与干员资源资产集，补齐 `assets/maps` 与 `assets/operators` 目录结构
+- 新增地图与干员资源资产集，补齐 `src/assets/maps` 与 `src/assets/operators` 目录结构
 - 地图加载流程升级为按整张地图资源导入，支持基于 `map.json` 读取楼层与元数据
 - 编辑页新增左侧悬浮楼层切换栏，可在多楼层地图间快速切换显示
 - 干员关键帧状态新增楼层属性，切换楼层时仅显示当前楼层对应的干员状态

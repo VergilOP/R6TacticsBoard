@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from r6_tactics_board.domain.models import MapInteractionPoint, MapInteractionType, Point2D
-from r6_tactics_board.infrastructure.asset_paths import (
+from r6_tactics_board.infrastructure.assets.asset_paths import (
     ATTACK_OPERATORS_DIR,
     DEFENSE_OPERATORS_DIR,
     MAPS_DIR,

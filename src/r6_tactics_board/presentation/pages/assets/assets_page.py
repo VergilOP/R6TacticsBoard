@@ -2,13 +2,13 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, PushButton, SubtitleLabel
 
-from r6_tactics_board.infrastructure.asset_paths import (
+from r6_tactics_board.infrastructure.assets.asset_paths import (
     ATTACK_OPERATORS_DIR,
     DEFENSE_OPERATORS_DIR,
     MAPS_DIR,
     ensure_asset_directories,
 )
-from r6_tactics_board.infrastructure.asset_registry import AssetRegistry
+from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry
 
 
 class AssetsPage(QWidget):

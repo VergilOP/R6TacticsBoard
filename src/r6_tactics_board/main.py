@@ -1,5 +1,5 @@
 from r6_tactics_board.app import create_app
-from r6_tactics_board.presentation.main_window import MainWindow
+from r6_tactics_board.presentation.shell.main_window import MainWindow
 
 
 def main() -> int:

@@ -1,10 +1,10 @@
 from PyQt6.QtGui import QCloseEvent
 from qfluentwidgets import FluentIcon, FluentWindow, NavigationItemPosition
 
-from r6_tactics_board.presentation.pages.assets_page import AssetsPage
-from r6_tactics_board.presentation.pages.debug_page import DebugPage
-from r6_tactics_board.presentation.pages.editor_page import EditorPage
-from r6_tactics_board.presentation.pages.settings_page import SettingsPage
+from r6_tactics_board.presentation.pages.assets.assets_page import AssetsPage
+from r6_tactics_board.presentation.pages.debug.debug_page import DebugPage
+from r6_tactics_board.presentation.pages.editor.editor_page import EditorPage
+from r6_tactics_board.presentation.pages.settings.settings_page import SettingsPage
 
 
 class MainWindow(FluentWindow):

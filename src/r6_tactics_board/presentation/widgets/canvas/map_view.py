@@ -2,7 +2,7 @@ from PyQt6.QtCore import QPoint, QPointF, Qt, pyqtSignal
 from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QGraphicsView
 
-from r6_tactics_board.presentation.widgets.map_scene import MapScene
+from r6_tactics_board.presentation.widgets.canvas.map_scene import MapScene
 
 
 class MapView(QGraphicsView):

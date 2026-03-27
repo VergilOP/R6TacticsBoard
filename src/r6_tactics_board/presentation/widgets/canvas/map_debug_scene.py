@@ -5,7 +5,7 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QTransform
 from PyQt6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene
 
 from r6_tactics_board.domain.models import MapInteractionPoint
-from r6_tactics_board.presentation.widgets.map_interaction_item import MapInteractionItem
+from r6_tactics_board.presentation.widgets.canvas.map_interaction_item import MapInteractionItem
 
 
 class MapDebugScene(QGraphicsScene):

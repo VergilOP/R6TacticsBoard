@@ -9,7 +9,7 @@ from threading import Lock
 
 from PyQt6.QtCore import QtMsgType, qInstallMessageHandler
 
-from r6_tactics_board.infrastructure.asset_paths import PROJECT_ROOT
+from r6_tactics_board.infrastructure.assets.asset_paths import PROJECT_ROOT
 
 
 _LOG_DIR = PROJECT_ROOT / ".tmp" / "logs"

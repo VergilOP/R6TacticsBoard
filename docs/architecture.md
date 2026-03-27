@@ -29,6 +29,8 @@
 负责业务流程与状态变换。
 
 - `PlaybackController`: 控制播放、暂停、跳转
+- `InteractionRoutePlanner`: 负责跨楼层互动点寻路、手动互动点前缀拼接与路径插值
+- `UndoRedoHistory`: 通用撤销 / 重做历史栈，供编辑页这类状态型页面复用
 - `InterpolationService`: 计算关键帧之间的插值状态
 - `EditorSession`: 当前编辑上下文
 
@@ -118,20 +120,20 @@
 ### 第一批
 
 - `domain/models.py`
-- `presentation/main_window.py`
-- `presentation/widgets/map_view.py`
-- `presentation/widgets/map_scene.py`
+- `presentation/shell/main_window.py`
+- `presentation/widgets/canvas/map_view.py`
+- `presentation/widgets/canvas/map_scene.py`
 
 ### 第二批
 
-- `presentation/widgets/operator_item.py`
-- `presentation/pages/editor_page.py`
-- `application/playback.py`
+- `presentation/widgets/canvas/operator_item.py`
+- `presentation/pages/editor/editor_page.py`
+- `application/playback/controller.py`
 
 ### 第三批
 
-- `presentation/widgets/timeline_widget.py`
-- `infrastructure/project_store.py`
+- `presentation/widgets/timeline/timeline_widget.py`
+- `infrastructure/persistence/project_store.py`
 
 ## 风险点
 
@@ -146,6 +148,12 @@
 如果直接把状态塞进 `QGraphicsItem`，后面序列化和回放会变得难维护。
 
 结论：场景 item 只负责显示，业务状态以 `domain` 模型为准。
+
+### 2.5 页面类过度膨胀
+
+如果把路径规划、撤销重做、楼层互动规则都继续堆在 `EditorPage`，后续每加一种互动点或回放规则都会放大耦合。
+
+结论：可复用的编辑逻辑优先下沉到 `application`，页面类只负责组装 UI、转发意图和同步视图。
 
 ### 3. 资源标识不稳定
 

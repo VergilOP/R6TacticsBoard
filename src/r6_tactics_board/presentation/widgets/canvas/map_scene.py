@@ -6,8 +6,8 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QTransform
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPixmapItem, QGraphicsScene
 
 from r6_tactics_board.domain.models import MapInteractionPoint, OperatorDisplayMode, OperatorState, Point2D, TeamSide
-from r6_tactics_board.presentation.widgets.map_interaction_item import MapInteractionItem
-from r6_tactics_board.presentation.widgets.operator_item import OperatorItem
+from r6_tactics_board.presentation.widgets.canvas.map_interaction_item import MapInteractionItem
+from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
 
 
 class MapScene(QGraphicsScene):
