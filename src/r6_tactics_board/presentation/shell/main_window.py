@@ -4,6 +4,7 @@ from qfluentwidgets import FluentIcon, FluentWindow, NavigationItemPosition
 from r6_tactics_board.presentation.pages.assets.assets_page import AssetsPage
 from r6_tactics_board.presentation.pages.debug.debug_page import DebugPage
 from r6_tactics_board.presentation.pages.editor.editor_page import EditorPage
+from r6_tactics_board.presentation.pages.esports.esports_page import EsportsPage
 from r6_tactics_board.presentation.pages.settings.settings_page import SettingsPage
 
 
@@ -13,11 +14,13 @@ class MainWindow(FluentWindow):
 
         self.editor_page = EditorPage()
         self.assets_page = AssetsPage()
+        self.esports_page = EsportsPage()
         self.debug_page = DebugPage()
         self.settings_page = SettingsPage()
 
         self.editor_page.setObjectName("editor-page")
         self.assets_page.setObjectName("assets-page")
+        self.esports_page.setObjectName("esports-page")
         self.debug_page.setObjectName("debug-page")
         self.settings_page.setObjectName("settings-page")
 
@@ -26,6 +29,7 @@ class MainWindow(FluentWindow):
 
         self.addSubInterface(self.editor_page, FluentIcon.EDIT, "战术编辑")
         self.addSubInterface(self.assets_page, FluentIcon.FOLDER, "资源管理")
+        self.addSubInterface(self.esports_page, FluentIcon.HISTORY, "电竞历史")
         self.addSubInterface(self.debug_page, FluentIcon.DEVELOPER_TOOLS, "测试调试")
         self.addSubInterface(
             self.settings_page,

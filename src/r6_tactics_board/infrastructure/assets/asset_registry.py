@@ -1,4 +1,6 @@
 import json
+import re
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -7,6 +9,7 @@ from r6_tactics_board.infrastructure.assets.asset_paths import (
     ATTACK_OPERATORS_DIR,
     DEFENSE_OPERATORS_DIR,
     MAPS_DIR,
+    OPERATORS_DIR,
     PROJECT_ROOT,
     ensure_asset_directories,
 )
@@ -20,6 +23,16 @@ class OperatorAsset:
     key: str
     side: str
     path: str
+
+
+@dataclass(slots=True)
+class OperatorCatalogEntry:
+    key: str
+    side: str
+    name: str
+    icon_path: str
+    portrait_path: str = ""
+    ability_icon_path: str = ""
 
 
 @dataclass(slots=True)
@@ -151,6 +164,68 @@ class AssetRegistry:
                 return asset
         return None
 
+    def list_operator_catalog(self, side: str | None = None) -> list[OperatorCatalogEntry]:
+        index_path = OPERATORS_DIR / "index.json"
+        if index_path.is_file():
+            try:
+                raw_items = json.loads(index_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                raw_items = []
+
+            entries: list[OperatorCatalogEntry] = []
+            for item in raw_items:
+                entry_side = str(item.get("side", ""))
+                if side is not None and entry_side != side:
+                    continue
+                entries.append(
+                    OperatorCatalogEntry(
+                        key=str(item.get("key", "")),
+                        side=entry_side,
+                        name=str(item.get("name", "")),
+                        icon_path=str(
+                            self._resolve_asset_path(index_path.parent, str(item.get("icon_path", "")))
+                        ),
+                        portrait_path=str(
+                            self._resolve_asset_path(index_path.parent, str(item.get("portrait_path", "")))
+                        ),
+                        ability_icon_path=str(
+                            self._resolve_asset_path(
+                                index_path.parent,
+                                str(item.get("ability_icon_path", "")),
+                            )
+                        ),
+                    )
+                )
+            if entries:
+                return sorted(entries, key=lambda item: (item.side, item.key))
+
+        return [
+            OperatorCatalogEntry(
+                key=asset.key,
+                side=asset.side,
+                name=asset.key,
+                icon_path=asset.path,
+            )
+            for asset in self.list_operator_assets(side)
+        ]
+
+    def find_operator_catalog_entry(
+        self,
+        value: str,
+        side: str | None = None,
+    ) -> OperatorCatalogEntry | None:
+        normalized = self._normalize_operator_lookup(value)
+        if not normalized:
+            return None
+
+        for entry in self.list_operator_catalog(side):
+            if normalized in {
+                self._normalize_operator_lookup(entry.key),
+                self._normalize_operator_lookup(entry.name),
+            }:
+                return entry
+        return None
+
     def _fallback_map_assets(self) -> list[MapAsset]:
         assets: list[MapAsset] = []
         for item in sorted(MAPS_DIR.iterdir()):
@@ -244,3 +319,9 @@ class AssetRegistry:
             "label": item.label,
             "note": item.note,
         }
+
+    @staticmethod
+    def _normalize_operator_lookup(value: str) -> str:
+        normalized = unicodedata.normalize("NFKD", value)
+        ascii_like = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+        return re.sub(r"[^a-z0-9]+", "", ascii_like.lower())

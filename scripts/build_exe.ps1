@@ -22,6 +22,7 @@ if (-not $python) {
     --name R6TacticsBoard `
     --paths src `
     --add-data "src/assets;assets" `
+    --add-data "data/esports;data/esports" `
     --collect-all qfluentwidgets `
     --collect-all qframelesswindow `
     src/r6_tactics_board/__main__.py
