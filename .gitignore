@@ -19,3 +19,5 @@ dist/
 
 src/assets/generated/
 /saves/
+data/esports/logs/
+data/esports/state/processed_events.log
