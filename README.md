@@ -1,5 +1,8 @@
 # R6 Tactics Board
 
+[![Bilibili](https://img.shields.io/badge/Bilibili-89590088-00A1D6?logo=bilibili&logoColor=white)](https://space.bilibili.com/89590088)
+![Bilibili Followers](https://img.shields.io/badge/dynamic/json?color=00A1D6&label=%E7%B2%89%E4%B8%9D&query=%24.data.follower&url=https%3A%2F%2Fapi.bilibili.com%2Fx%2Frelation%2Fstat%3Fvmid%3D89590088&logo=bilibili&logoColor=white)
+
 一个基于 `PyQt6` 与 `PyQt6-Fluent-Widgets` 的《彩虹六号：围攻》战术板桌面工具，用于地图摆位、阶段式跑位编排与关键帧回放。
 
 ## 项目简介
