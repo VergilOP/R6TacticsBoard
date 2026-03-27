@@ -163,6 +163,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_exe.ps1
 ```text
 R6TacticsBoard/
 ├─ docs/
+│  ├─ README.md
+│  ├─ architecture/
+│  ├─ resources/
+│  └─ distribution/
 ├─ scripts/
 ├─ src/
 │  ├─ assets/

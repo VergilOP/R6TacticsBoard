@@ -5,7 +5,7 @@
 ## 总目录
 
 ```text
-assets/
+src/assets/
 ├─ maps/
 └─ operators/
    ├─ index.json
@@ -25,7 +25,7 @@ assets/
 地图资源按“单地图目录 + 单地图元数据”的方式组织：
 
 ```text
-assets/maps/
+src/assets/maps/
 ├─ index.json
 ├─ download_all.sh
 ├─ download_maps.sh
@@ -42,7 +42,7 @@ assets/maps/
 
 - `<map_key>` 当前使用英文小写短横线命名
 - 每张地图必须单独存在一个 `map.json`
-- `assets/maps/index.json` 作为地图资源总索引
+- `src/assets/maps/index.json` 作为地图资源总索引
 
 ## 地图元数据约定
 
@@ -68,7 +68,7 @@ assets/maps/
 进攻方与防守方使用同一套目录约定：
 
 ```text
-assets/operators/<side>/
+src/assets/operators/<side>/
 ├─ icons/
 │  └─ <operator_key>.png
 ├─ portraits/
@@ -88,7 +88,7 @@ assets/operators/<side>/
 ## 命名与格式约定
 
 - 地图目录使用 `<map_key>`
-- 地图资源总索引使用 `assets/maps/index.json`
+- 地图资源总索引使用 `src/assets/maps/index.json`
 - 地图元数据文件统一命名为 `map.json`
 - 楼层图按 `1f` / `2f` / `3f` / `b1` / `roof` 规则命名
 - 图标文件使用 `png`
@@ -101,13 +101,13 @@ assets/operators/<side>/
 
 ## 索引文件
 
-`assets/maps/index.json` 作为地图资源总索引，建议每个条目至少包含：
+`src/assets/maps/index.json` 作为地图资源总索引，建议每个条目至少包含：
 
 - `key`
 - `name`
 - `path`
 
-`assets/operators/index.json` 作为干员资源总索引，建议每个条目至少包含：
+`src/assets/operators/index.json` 作为干员资源总索引，建议每个条目至少包含：
 
 - `key`
 - `side`
@@ -122,8 +122,8 @@ assets/operators/<side>/
 
 当前版本已经直接使用：
 
-- `maps/` 作为地图资源来源
-- `icons/` 作为干员图标资源来源
+- `src/assets/maps/` 作为地图资源来源
+- `src/assets/operators/*/icons/` 作为干员图标资源来源
 
 后续计划接入：
 

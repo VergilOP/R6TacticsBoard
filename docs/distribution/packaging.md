@@ -24,5 +24,5 @@ Build output:
 ## Notes
 
 - The build script uses `--windowed`, so the packaged app does not open a console window.
-- `assets/` is bundled into the output directory and remains editable after packaging.
+- `src/assets/` is bundled into the output directory as `assets/` and remains editable after packaging.
 - Project files now save map paths relative to the project file when possible, which makes moving a project folder easier.

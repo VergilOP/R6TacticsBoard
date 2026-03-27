@@ -31,8 +31,8 @@
 - `PlaybackController`: 控制播放、暂停、跳转
 - `InteractionRoutePlanner`: 负责跨楼层互动点寻路、手动互动点前缀拼接与路径插值
 - `UndoRedoHistory`: 通用撤销 / 重做历史栈，供编辑页这类状态型页面复用
-- `InterpolationService`: 计算关键帧之间的插值状态
 - `EditorSession`: 当前编辑上下文
+- `TimelineEditorController`: 负责关键帧列、单元格和行顺序等纯数据编辑
 
 ### `infrastructure`
 
@@ -40,6 +40,7 @@
 
 - `ProjectStore`: 项目保存/读取
 - `AssetRegistry`: 地图和干员资源索引
+- `AssetPaths`: 运行时资源根目录与路径定位
 
 ### `presentation`
 
@@ -51,6 +52,24 @@
 - `MapView`: 缩放与平移容器
 - `OperatorItem`: 干员场景图元
 - `TimelineWidget`: 时间轴组件
+- `EditorPanels`: 属性侧栏、楼层浮层、播放浮层
+
+## 当前目录映射
+
+当前源码按以下目录组织：
+
+- `src/r6_tactics_board/domain/`
+- `src/r6_tactics_board/application/services/`
+- `src/r6_tactics_board/application/routing/`
+- `src/r6_tactics_board/application/timeline/`
+- `src/r6_tactics_board/application/state/`
+- `src/r6_tactics_board/application/playback/`
+- `src/r6_tactics_board/infrastructure/assets/`
+- `src/r6_tactics_board/infrastructure/persistence/`
+- `src/r6_tactics_board/infrastructure/diagnostics/`
+- `src/r6_tactics_board/presentation/shell/`
+- `src/r6_tactics_board/presentation/pages/`
+- `src/r6_tactics_board/presentation/widgets/`
 
 ## 关键数据流
 
@@ -134,6 +153,8 @@
 
 - `presentation/widgets/timeline/timeline_widget.py`
 - `infrastructure/persistence/project_store.py`
+
+上述顺序是早期实现路径，当前代码已经超出该阶段。后续扩展应优先遵循目录职责，而不是回到单文件堆叠。
 
 ## 风险点
 
