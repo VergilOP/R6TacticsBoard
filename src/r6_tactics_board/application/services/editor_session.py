@@ -45,6 +45,13 @@ class EditorSessionService:
     def normalize_project_path(file_path: str) -> str:
         return file_path if file_path.endswith(".r6tb.json") else f"{file_path}.r6tb.json"
 
+    @staticmethod
+    def project_name_from_path(file_path: str) -> str:
+        file_name = Path(file_path).name
+        if file_name.endswith(".r6tb.json"):
+            return file_name[: -len(".r6tb.json")]
+        return Path(file_name).stem
+
     def list_operator_assets(self, side: str) -> list[OperatorAsset]:
         return self._asset_registry.list_operator_assets(side)
 
@@ -54,7 +61,7 @@ class EditorSessionService:
     def build_project(
         self,
         *,
-        current_project_path: str,
+        project_path: str,
         current_map_asset: MapAsset | None,
         current_map_asset_path: str,
         current_map_floor_key: str,
@@ -100,7 +107,15 @@ class EditorSessionService:
             for index, frame in enumerate(keyframe_columns)
         ]
         return TacticProject(
-            name=Path(current_project_path).stem if current_project_path else "untitled",
+            name=(
+                self.project_name_from_path(project_path)
+                if project_path
+                else current_map_asset.name
+                if current_map_asset is not None
+                else map_path.stem
+                if map_image_path
+                else "untitled"
+            ),
             map_info=map_info,
             operators=operators,
             timeline=Timeline(keyframes=keyframes),

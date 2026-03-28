@@ -18,3 +18,14 @@ class EditorHistoryState:
     current_keyframe_index: int
     current_timeline_row: int
     transition_duration_ms: int
+
+
+@dataclass(slots=True)
+class EditorProjectState:
+    map_reference_path: str
+    operator_order: list[str]
+    operator_definitions: dict[str, OperatorDefinition]
+    keyframe_columns: list[dict[str, OperatorFrameState]]
+    keyframe_names: list[str]
+    keyframe_notes: list[str]
+    transition_duration_ms: int

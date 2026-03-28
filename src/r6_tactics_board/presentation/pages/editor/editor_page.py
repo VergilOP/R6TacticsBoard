@@ -34,7 +34,7 @@ from r6_tactics_board.domain.models import (
 from r6_tactics_board.infrastructure.assets.asset_paths import MAPS_DIR
 from r6_tactics_board.infrastructure.assets.asset_registry import MapAsset
 from r6_tactics_board.infrastructure.diagnostics.debug_logging import debug_log
-from r6_tactics_board.presentation.pages.editor.editor_models import EditorHistoryState
+from r6_tactics_board.presentation.pages.editor.editor_models import EditorHistoryState, EditorProjectState
 from r6_tactics_board.presentation.widgets.editor.editor_panels import (
     EditorPropertyPanel,
     FloorOverlayPanel,
@@ -81,6 +81,7 @@ class EditorPage(QWidget):
         self.current_map_asset_path = ""
         self.current_map_floor_key = ""
         self._current_map_asset: MapAsset | None = None
+        self._clean_project_state: EditorProjectState | None = None
 
         self.session_service = EditorSessionService()
         self.playback_timer = QTimer(self)
@@ -140,7 +141,7 @@ class EditorPage(QWidget):
         self._sync_operator_registry()
         self._refresh_property_panel()
         self._refresh_timeline()
-        self._reset_history()
+        self._reset_history(mark_clean=True)
 
     def _init_ui(self) -> None:
         layout = QHBoxLayout(self)
@@ -241,36 +242,39 @@ class EditorPage(QWidget):
         if scene is None:
             return
         before = self._capture_history_state()
+        previous_project_path = self.current_project_path
+        self._pause_column_playback()
+        self._reset_template_state()
         if scene.load_map_image(file_path):
-            self._pause_column_playback()
             self.map_status_label.setText(f"当前地图：{Path(file_path).name}")
             self.map_view.fit_scene()
+            self.current_project_path = ""
             self.current_map_asset_path = ""
             self.current_map_floor_key = ""
             self._current_map_asset = None
             self._rebuild_floor_panel()
-            self._refresh_property_panel()
-            self._commit_history(before)
+            self._apply_timeline_column(self.current_keyframe_index)
+            self._reset_history(mark_clean=True)
+            return
+
+        self.current_project_path = previous_project_path
+        self._restore_history_state(before)
 
     def load_map_from_path(self, file_path: str) -> None:
         self._load_map_asset_with_history(file_path)
 
     def _load_map_asset_with_history(self, map_asset_path: str) -> bool:
         before = self._capture_history_state()
-        preferred_floor_key = self.current_map_floor_key
+        previous_project_path = self.current_project_path
         self._pause_column_playback()
-        self.operator_order = []
-        self.operator_definitions = {}
-        self.keyframe_columns = [{}]
-        self.keyframe_names = [""]
-        self.keyframe_notes = [""]
-        self.current_keyframe_index = 0
-        self.current_timeline_row = -1
-        if not self._load_map_asset(map_asset_path, floor_key=preferred_floor_key):
+        self._reset_template_state()
+        if not self._load_map_asset(map_asset_path):
+            self.current_project_path = previous_project_path
             self._restore_history_state(before)
             return False
+        self.current_project_path = ""
         self._apply_timeline_column(self.current_keyframe_index)
-        self._commit_history(before)
+        self._reset_history(mark_clean=True)
         return True
 
     def _load_map_asset(
@@ -307,10 +311,8 @@ class EditorPage(QWidget):
     def _switch_map_floor(self, floor_key: str) -> None:
         if not self.current_map_asset_path or floor_key == self.current_map_floor_key:
             return
-        before = self._capture_history_state()
         if self._load_map_asset(self.current_map_asset_path, floor_key=floor_key, fit_view=False):
             self._apply_timeline_column(self.current_keyframe_index)
-            self._commit_history(before)
 
     def _open_project(self) -> None:
         if not self.confirm_discard_changes("打开工程"):
@@ -327,7 +329,7 @@ class EditorPage(QWidget):
         project = self.session_service.load_project(file_path)
         self._apply_project(project)
         self.current_project_path = file_path
-        self._reset_history()
+        self._reset_history(mark_clean=True)
 
     def _save_project(self) -> None:
         self._save_project_to_current_path()
@@ -343,10 +345,9 @@ class EditorPage(QWidget):
             )
         if not file_path:
             return False
-        file_path = self.session_service.save_project(file_path, self._build_project())
+        file_path = self.session_service.save_project(file_path, self._build_project(file_path))
         self.current_project_path = file_path
-        self._history.mark_clean(self._capture_history_state())
-        self._update_dirty_state()
+        self._mark_clean()
         return True
 
     def _add_operator(self) -> None:
@@ -1998,10 +1999,10 @@ class EditorPage(QWidget):
             operator.set_operator_key(definition.operator_key)
             self._update_operator_icon(operator)
 
-    def _build_project(self) -> TacticProject:
+    def _build_project(self, project_path: str = "") -> TacticProject:
         scene = self._map_scene()
         return self.session_service.build_project(
-            current_project_path=self.current_project_path,
+            project_path=project_path or self.current_project_path,
             current_map_asset=self._current_map_asset,
             current_map_asset_path=self.current_map_asset_path,
             current_map_floor_key=self.current_map_floor_key,
@@ -2077,6 +2078,32 @@ class EditorPage(QWidget):
         self._apply_timeline_column(self.current_keyframe_index)
         self._refresh_timeline()
 
+    def _reset_template_state(self) -> None:
+        self.operator_order = []
+        self.operator_definitions = {}
+        self.keyframe_columns = [{}]
+        self.keyframe_names = [""]
+        self.keyframe_notes = [""]
+        self.current_keyframe_index = 0
+        self.current_timeline_row = -1
+        self._transition_duration_ms = 700
+        self.playback_duration_slider.setValue(self._transition_duration_ms)
+
+    def _capture_project_state(self) -> EditorProjectState:
+        scene = self._map_scene()
+        map_reference_path = self.current_map_asset_path
+        if not map_reference_path and scene is not None:
+            map_reference_path = scene.current_map_path
+        return EditorProjectState(
+            map_reference_path=map_reference_path,
+            operator_order=list(self.operator_order),
+            operator_definitions=deepcopy(self.operator_definitions),
+            keyframe_columns=deepcopy(self.keyframe_columns),
+            keyframe_names=list(self.keyframe_names),
+            keyframe_notes=list(self.keyframe_notes),
+            transition_duration_ms=self._transition_duration_ms,
+        )
+
     def _capture_history_state(self) -> EditorHistoryState:
         scene = self._map_scene()
         selected = self._current_operator()
@@ -2103,9 +2130,17 @@ class EditorPage(QWidget):
         if self._history.commit(before, after):
             self._refresh_timeline()
 
-    def _reset_history(self) -> None:
-        self._history.reset(self._capture_history_state())
+    def _reset_history(self, *, mark_clean: bool = False) -> None:
+        history_snapshot = self._capture_history_state()
+        self._history.reset(history_snapshot)
+        if mark_clean or self._clean_project_state is None:
+            self._clean_project_state = self._capture_project_state()
         self._refresh_timeline()
+
+    def _mark_clean(self) -> None:
+        self._history.mark_clean(self._capture_history_state())
+        self._clean_project_state = self._capture_project_state()
+        self._update_dirty_state()
 
     def undo(self) -> None:
         current = self._capture_history_state()
@@ -2199,8 +2234,10 @@ class EditorPage(QWidget):
             window.setWindowTitle(title)
 
     def is_dirty(self) -> bool:
-        current = self._capture_history_state()
-        return self._history.is_dirty(current)
+        if self._clean_project_state is None:
+            return False
+        current = self._capture_project_state()
+        return current != self._clean_project_state
 
     def confirm_discard_changes(self, action_name: str) -> bool:
         if not self.is_dirty():
