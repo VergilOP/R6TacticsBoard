@@ -12,6 +12,7 @@ dependencies = [
     "PyQt6",
     "PyQt6-Frameless-Window",
     "PyQt6-Fluent-Widgets",
+    "numpy",
     "pyqtgraph",
     "PyOpenGL",
 ]
