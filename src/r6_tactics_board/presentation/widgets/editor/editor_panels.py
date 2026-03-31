@@ -14,6 +14,11 @@ from qfluentwidgets import (
 
 from r6_tactics_board.domain.models import OperatorDisplayMode, OperatorTransitionMode
 from r6_tactics_board.infrastructure.assets.asset_registry import MapFloorAsset
+from r6_tactics_board.presentation.styles.theme import (
+    card_stylesheet,
+    floating_panel_stylesheet,
+    popup_combo_stylesheet,
+)
 from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
 
 
@@ -22,50 +27,24 @@ class PopupAwareComboBox(QComboBox):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setStyleSheet(
-            """
-            QComboBox {
-                background-color: rgba(24, 28, 34, 220);
-                color: #F3F4F6;
-                border: 1px solid rgba(255, 255, 255, 0.10);
-                border-radius: 8px;
-                padding: 6px 32px 6px 10px;
-                min-height: 34px;
-            }
-            QComboBox:hover {
-                border: 1px solid rgba(96, 165, 250, 0.9);
-            }
-            QComboBox:focus {
-                border: 1px solid rgba(96, 165, 250, 1.0);
-            }
-            QComboBox:disabled {
-                color: rgba(243, 244, 246, 0.45);
-                background-color: rgba(24, 28, 34, 140);
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 24px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: rgba(24, 28, 34, 235);
-                color: #F3F4F6;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                outline: none;
-                padding: 4px;
-                selection-background-color: rgba(96, 165, 250, 0.28);
-                selection-color: #FFFFFF;
-            }
-            """
-        )
+        self._apply_theme()
 
     def hidePopup(self) -> None:  # noqa: N802
         super().hidePopup()
         self.popupHidden.emit()
 
+    def _apply_theme(self) -> None:
+        self.setStyleSheet(popup_combo_stylesheet())
+
+    def refresh_theme(self) -> None:
+        self._apply_theme()
+
 
 class EditorPropertyPanel(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setObjectName("editor-property-panel")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self.property_title = SubtitleLabel("属性面板")
         self.property_hint = BodyLabel("名称、阵营、图标是全局属性；位置、朝向、显示模式、楼层跟随当前时间点。")
@@ -96,8 +75,8 @@ class EditorPropertyPanel(QWidget):
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(14)
 
         property_grid = QGridLayout()
         property_grid.setHorizontalSpacing(12)
@@ -149,10 +128,7 @@ class EditorPropertyPanel(QWidget):
         manual_selection_layout.setSpacing(8)
         manual_selection_layout.addWidget(self.manual_interaction_combo, 1)
         property_grid.addLayout(manual_selection_layout, 8, 1)
-        property_grid.addWidget(self.manual_interactions_value_label, 10, 1)
         property_grid.addWidget(BodyLabel("手动互动点"), 8, 0)
-        property_grid.addWidget(self.manual_interactions_edit, 8, 1)
-        property_grid.addWidget(self.manual_interactions_hint, 9, 1)
 
         self.manual_interactions_edit.hide()
         self.manual_interactions_value_label.hide()
@@ -173,6 +149,14 @@ class EditorPropertyPanel(QWidget):
         layout.addWidget(self.keyframe_hint)
         layout.addLayout(keyframe_grid)
         layout.addStretch(1)
+        self._apply_theme()
+
+    def refresh_theme(self) -> None:
+        self._apply_theme()
+        self.manual_interaction_combo.refresh_theme()
+
+    def _apply_theme(self) -> None:
+        self.setStyleSheet(card_stylesheet(self.objectName()))
 
 
 class FloorOverlayPanel(QWidget):
@@ -181,13 +165,7 @@ class FloorOverlayPanel(QWidget):
         self._layout = QVBoxLayout(self)
         self.setObjectName("floor-panel")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet(
-            "#floor-panel {"
-            "background-color: rgba(24, 28, 34, 215);"
-            "border: 1px solid rgba(255, 255, 255, 24);"
-            "border-radius: 10px;"
-            "}"
-        )
+        self._apply_theme()
         self._layout.setContentsMargins(10, 10, 10, 10)
         self._layout.setSpacing(8)
         self.hide()
@@ -236,6 +214,12 @@ class FloorOverlayPanel(QWidget):
         self.move(x, y)
         self.raise_()
 
+    def _apply_theme(self) -> None:
+        self.setStyleSheet(floating_panel_stylesheet("floor-panel"))
+
+    def refresh_theme(self) -> None:
+        self._apply_theme()
+
 
 class PlaybackOverlayPanel(QWidget):
     def __init__(self, *, initial_duration_ms: int, parent=None) -> None:
@@ -257,13 +241,7 @@ class PlaybackOverlayPanel(QWidget):
         layout = QHBoxLayout(self)
         self.setObjectName("playback-panel")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet(
-            "#playback-panel {"
-            "background-color: rgba(24, 28, 34, 215);"
-            "border: 1px solid rgba(255, 255, 255, 24);"
-            "border-radius: 10px;"
-            "}"
-        )
+        self._apply_theme()
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(10)
 
@@ -307,3 +285,9 @@ class PlaybackOverlayPanel(QWidget):
         y = map_rect.bottom() - self.height() - 12
         self.move(x, y)
         self.raise_()
+
+    def _apply_theme(self) -> None:
+        self.setStyleSheet(floating_panel_stylesheet("playback-panel"))
+
+    def refresh_theme(self) -> None:
+        self._apply_theme()

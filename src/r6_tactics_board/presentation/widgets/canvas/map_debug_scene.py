@@ -5,6 +5,7 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QTransform
 from PyQt6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene
 
 from r6_tactics_board.domain.models import MapInteractionPoint
+from r6_tactics_board.presentation.styles.theme import canvas_background_color, canvas_grid_color
 from r6_tactics_board.presentation.widgets.canvas.map_interaction_item import MapInteractionItem
 
 
@@ -18,12 +19,13 @@ class MapDebugScene(QGraphicsScene):
         self._map_item: QGraphicsPixmapItem | None = None
         self._items_by_id: dict[str, MapInteractionItem] = {}
         self._interactions: list[MapInteractionPoint] = []
+        self._grid_items = []
         self._current_floor_key = ""
         self._place_mode = False
         self.current_map_path = ""
 
         self.setSceneRect(QRectF(0, 0, 4000, 4000))
-        self.setBackgroundBrush(QBrush(QColor("#202020")))
+        self.setBackgroundBrush(QBrush(canvas_background_color()))
         self._add_grid(4000, 4000)
 
     def load_map_image(self, path: str) -> bool:
@@ -85,8 +87,9 @@ class MapDebugScene(QGraphicsScene):
         self._map_item = None
         self.current_map_path = ""
         self._items_by_id.clear()
+        self._grid_items = []
         self.setSceneRect(QRectF(0, 0, width, height))
-        self.setBackgroundBrush(QBrush(QColor("#202020")))
+        self.setBackgroundBrush(QBrush(canvas_background_color()))
         self._add_grid(width, height)
 
     def _rebuild_interaction_items(self) -> None:
@@ -116,11 +119,25 @@ class MapDebugScene(QGraphicsScene):
         return interaction.is_bidirectional and self._current_floor_key in interaction.linked_floor_keys
 
     def _add_grid(self, width: int, height: int) -> None:
-        grid_pen = QPen(QColor("#2C2C2C"))
+        grid_pen = QPen(canvas_grid_color())
         grid_pen.setWidth(1)
 
         for x in range(0, width + 1, 100):
-            self.addLine(x, 0, x, height, grid_pen)
+            item = self.addLine(x, 0, x, height, grid_pen)
+            item.setZValue(-90)
+            self._grid_items.append(item)
 
         for y in range(0, height + 1, 100):
-            self.addLine(0, y, width, y, grid_pen)
+            item = self.addLine(0, y, width, y, grid_pen)
+            item.setZValue(-90)
+            self._grid_items.append(item)
+
+    def refresh_theme(self) -> None:
+        self.setBackgroundBrush(QBrush(canvas_background_color()))
+        grid_pen = QPen(canvas_grid_color())
+        grid_pen.setWidth(1)
+        for item in self._grid_items:
+            item.setPen(grid_pen)
+        for item in self._items_by_id.values():
+            item.update()
+        self.update()

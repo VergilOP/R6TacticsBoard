@@ -1,4 +1,4 @@
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, PushButton, SubtitleLabel
 
@@ -9,6 +9,7 @@ from r6_tactics_board.infrastructure.assets.asset_paths import (
     ensure_asset_directories,
 )
 from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry
+from r6_tactics_board.presentation.styles.theme import page_stylesheet
 
 
 class AssetsPage(QWidget):
@@ -32,9 +33,13 @@ class AssetsPage(QWidget):
         self.attack_list = QListWidget()
         self.defense_list = QListWidget()
 
+        self.setObjectName("assets-page")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setProperty("themePage", True)
         self._init_ui()
         self._init_signals()
         self._refresh_summary()
+        self.refresh_theme()
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -44,7 +49,7 @@ class AssetsPage(QWidget):
         layout.addWidget(SubtitleLabel("资源管理"))
         layout.addWidget(
             BodyLabel(
-                "双击地图可直接载入整张地图资源，双击干员图标可在编辑区快速创建干员节点。"
+                "双击地图可直接加载整张地图资源，双击干员图标可在编辑区快速创建干员节点。"
             )
         )
 
@@ -139,3 +144,6 @@ class AssetsPage(QWidget):
         operator_key = item.data(0x0100)
         if operator_key:
             self.operator_requested.emit(side, operator_key)
+
+    def refresh_theme(self) -> None:
+        self.setStyleSheet(page_stylesheet(self.objectName()))

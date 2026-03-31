@@ -1,8 +1,18 @@
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QPolygonF, QVector4D
+from PyQt6.QtGui import QFont, QPainter, QPainterPath, QPen, QPolygonF, QVector4D
 from pyqtgraph.opengl import GLViewWidget
 
 from r6_tactics_board.infrastructure.assets.asset_registry import MapAsset
+from r6_tactics_board.presentation.styles.theme import (
+    operator_arrow_color,
+    operator_icon_background_color,
+    operator_icon_fill_color,
+    operator_name_fill_color,
+    operator_name_text_color,
+    operator_pen_color,
+    operator_text_color,
+    overview_background_color,
+)
 from r6_tactics_board.presentation.widgets.canvas.overview_scene import OverviewScene
 
 
@@ -11,7 +21,8 @@ class OverviewView(GLViewWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setBackgroundColor("#202020")
+        self._pending_theme_refresh = False
+        self.setBackgroundColor(overview_background_color())
         self._overview_scene = OverviewScene(self)
         self._last_mouse_pos = None
 
@@ -37,6 +48,10 @@ class OverviewView(GLViewWidget):
         self._overview_scene.set_preview_routes(routes)
 
     def paintGL(self) -> None:  # noqa: N802
+        if self._pending_theme_refresh:
+            self.setBackgroundColor(overview_background_color())
+            self._overview_scene.refresh_theme()
+            self._pending_theme_refresh = False
         super().paintGL()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
@@ -128,12 +143,10 @@ class OverviewView(GLViewWidget):
         operator_key: str,
         selected: bool,
     ) -> None:
-        pen = QPen(QColor("#F5F5F5"), 2)
-        fill = QColor("#2B88D8")
+        pen = QPen(operator_pen_color(selected), 2)
+        fill = operator_icon_fill_color(selected)
         if selected:
-            pen.setColor(QColor("#FFD54F"))
             pen.setWidth(3)
-            fill = QColor("#3598EB")
 
         direction = forward - center
         length = max((direction.x() ** 2 + direction.y() ** 2) ** 0.5, 1.0)
@@ -146,7 +159,7 @@ class OverviewView(GLViewWidget):
         arrow_left = QPointF(center.x() + px * 4.0 + ux * 8.0, center.y() + py * 4.0 + uy * 8.0)
         arrow_right = QPointF(center.x() - px * 4.0 + ux * 8.0, center.y() - py * 4.0 + uy * 8.0)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor("#FFFFFF"))
+        painter.setBrush(operator_arrow_color())
         painter.drawPolygon(QPolygonF([arrow_tip, arrow_left, arrow_right]))
 
         icon_rect = QRectF(center.x() - 12.0, center.y() - 12.0, 24.0, 24.0)
@@ -155,7 +168,7 @@ class OverviewView(GLViewWidget):
             painter.setBrush(fill)
             painter.drawEllipse(icon_rect)
         else:
-            painter.setBrush(QColor("#101214"))
+            painter.setBrush(operator_icon_background_color())
             painter.drawEllipse(icon_rect)
             clip_path = QPainterPath()
             clip_path.addEllipse(icon_rect)
@@ -164,7 +177,7 @@ class OverviewView(GLViewWidget):
             painter.drawPixmap(icon_rect.toRect(), icon_pixmap)
             painter.restore()
 
-        painter.setPen(QColor(255, 255, 255, 190))
+        painter.setPen(operator_text_color())
         painter.setFont(QFont("Microsoft YaHei UI", 6))
         painter.drawText(
             QRectF(center.x() - 10.0, center.y() - 7.0, 20.0, 14.0),
@@ -180,12 +193,10 @@ class OverviewView(GLViewWidget):
         custom_name: str,
         selected: bool,
     ) -> None:
-        pen = QPen(QColor("#F5F5F5"), 2)
-        fill = QColor("#1F5E8C")
+        pen = QPen(operator_pen_color(selected), 2)
+        fill = operator_name_fill_color(selected)
         if selected:
-            pen.setColor(QColor("#FFD54F"))
             pen.setWidth(3)
-            fill = QColor("#266E9F")
 
         direction = forward - center
         length = max((direction.x() ** 2 + direction.y() ** 2) ** 0.5, 1.0)
@@ -198,13 +209,17 @@ class OverviewView(GLViewWidget):
         arrow_left = QPointF(center.x() + px * 6.0 + ux * 10.0, center.y() + py * 6.0 + uy * 10.0)
         arrow_right = QPointF(center.x() - px * 6.0 + ux * 10.0, center.y() - py * 6.0 + uy * 10.0)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor("#FFFFFF"))
+        painter.setBrush(operator_arrow_color())
         painter.drawPolygon(QPolygonF([arrow_tip, arrow_left, arrow_right]))
 
         rect = QRectF(center.x() - 52.0, center.y() - 18.0, 104.0, 36.0)
         painter.setPen(pen)
         painter.setBrush(fill)
         painter.drawRoundedRect(rect, 10.0, 10.0)
-        painter.setPen(QColor("#FFFFFF"))
+        painter.setPen(operator_name_text_color())
         painter.setFont(QFont("Microsoft YaHei UI", 9))
         painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), custom_name)
+
+    def refresh_theme(self) -> None:
+        self._pending_theme_refresh = True
+        self.update()

@@ -2,6 +2,16 @@ from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPixmap, QPolygonF
 from PyQt6.QtWidgets import QGraphicsItem
 
+from r6_tactics_board.presentation.styles.theme import (
+    operator_arrow_color,
+    operator_icon_background_color,
+    operator_icon_fill_color,
+    operator_name_fill_color,
+    operator_name_text_color,
+    operator_pen_color,
+    operator_text_color,
+)
+
 
 class OperatorItem(QGraphicsItem):
     """Map operator item with direction indicator and icon/name display modes."""
@@ -60,12 +70,10 @@ class OperatorItem(QGraphicsItem):
         self.update()
 
     def _paint_icon_mode(self, painter: QPainter) -> None:
-        pen = QPen(QColor("#F5F5F5"), 2)
-        fill = QColor("#2B88D8")
+        pen = QPen(operator_pen_color(self.isSelected()), 2)
+        fill = operator_icon_fill_color(self.isSelected())
         if self.isSelected():
-            pen.setColor(QColor("#FFD54F"))
             pen.setWidth(3)
-            fill = QColor("#3598EB")
 
         triangle = QPolygonF(
             [
@@ -75,7 +83,7 @@ class OperatorItem(QGraphicsItem):
             ]
         )
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(QColor("#FFFFFF")))
+        painter.setBrush(QBrush(operator_arrow_color()))
         painter.drawPolygon(triangle)
 
         painter.save()
@@ -83,7 +91,7 @@ class OperatorItem(QGraphicsItem):
         painter.setPen(pen)
         icon_rect = QRectF(-6, -6, 12, 12)
         if not self.icon_pixmap.isNull():
-            painter.setBrush(QBrush(QColor("#101214")))
+            painter.setBrush(QBrush(operator_icon_background_color()))
             painter.drawEllipse(icon_rect)
             clip_path = QPainterPath()
             clip_path.addEllipse(icon_rect)
@@ -95,7 +103,7 @@ class OperatorItem(QGraphicsItem):
             painter.setBrush(QBrush(fill))
             painter.drawEllipse(icon_rect)
 
-        painter.setPen(QColor(255, 255, 255, 190))
+        painter.setPen(operator_text_color())
         painter.setFont(QFont("Microsoft YaHei UI", 5))
         painter.drawText(
             QRectF(-6, -4, 12, 8),
@@ -105,12 +113,10 @@ class OperatorItem(QGraphicsItem):
         painter.restore()
 
     def _paint_name_mode(self, painter: QPainter) -> None:
-        pen = QPen(QColor("#F5F5F5"), 2)
-        fill = QColor("#1F5E8C")
+        pen = QPen(operator_pen_color(self.isSelected()), 2)
+        fill = operator_name_fill_color(self.isSelected())
         if self.isSelected():
-            pen.setColor(QColor("#FFD54F"))
             pen.setWidth(3)
-            fill = QColor("#266E9F")
 
         painter.setPen(pen)
         painter.setBrush(QBrush(fill))
@@ -123,10 +129,10 @@ class OperatorItem(QGraphicsItem):
                 QPointF(8, -14),
             ]
         )
-        painter.setBrush(QBrush(QColor("#FFFFFF")))
+        painter.setBrush(QBrush(operator_arrow_color()))
         painter.drawPolygon(arrow)
 
-        painter.setPen(QColor("#FFFFFF"))
+        painter.setPen(operator_name_text_color())
         painter.setFont(QFont("Microsoft YaHei UI", 9))
         painter.save()
         painter.rotate(-self.rotation())

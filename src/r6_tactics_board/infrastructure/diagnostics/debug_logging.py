@@ -78,3 +78,44 @@ def install_runtime_debug_logging() -> None:
         qInstallMessageHandler(_qt_message_handler)
         debug_log("Runtime debug logging enabled")
         _installed = True
+
+
+def install_qfluent_theme_debug_logging() -> None:
+    try:
+        from qfluentwidgets.common import style_sheet as qss_module
+    except Exception:
+        return
+
+    if getattr(qss_module, "_r6tb_theme_debug_installed", False):
+        return
+
+    original_set_style_sheet = qss_module.setStyleSheet
+    original_update_style_sheet = qss_module.updateStyleSheet
+
+    def _describe_widget(widget) -> str:
+        try:
+            object_name = widget.objectName() or "-"
+        except Exception:
+            object_name = "-"
+        try:
+            visible = widget.isVisible()
+        except Exception:
+            visible = "?"
+        return f"{widget.__class__.__name__}(objectName={object_name}, visible={visible})"
+
+    def _logged_set_style_sheet(widget, source, theme=qss_module.Theme.AUTO, register=True):
+        debug_log(f"qfluent: setStyleSheet start -> {_describe_widget(widget)}")
+        result = original_set_style_sheet(widget, source, theme, register)
+        debug_log(f"qfluent: setStyleSheet done -> {_describe_widget(widget)}")
+        return result
+
+    def _logged_update_style_sheet(lazy=False):
+        debug_log(f"qfluent: updateStyleSheet start lazy={lazy}")
+        result = original_update_style_sheet(lazy)
+        debug_log("qfluent: updateStyleSheet done")
+        return result
+
+    qss_module.setStyleSheet = _logged_set_style_sheet
+    qss_module.updateStyleSheet = _logged_update_style_sheet
+    qss_module._r6tb_theme_debug_installed = True
+    debug_log("QFluentWidgets theme debug logging enabled")

@@ -9,6 +9,7 @@ from pyqtgraph.opengl import GLImageItem, GLLinePlotItem, GLTextItem
 from r6_tactics_board.application.routing.interaction_routing import PlaybackRouteSegment
 from r6_tactics_board.domain.models import OperatorDisplayMode, OperatorState, Point2D
 from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry, MapAsset, MapFloorAsset
+from r6_tactics_board.presentation.styles.theme import overview_label_color, overview_route_rgba
 from r6_tactics_board.presentation.widgets.canvas.overview_projection import (
     FloorOverviewLayout,
     OverviewProjection,
@@ -41,6 +42,7 @@ class OverviewScene:
         self._visible_floor_keys: set[str] = set()
         self._render_position_overrides: dict[str, tuple[float, float, float]] = {}
         self._route_items: dict[str, GLLinePlotItem] = {}
+        self._routes: dict[str, list[PlaybackRouteSegment]] = {}
         self._icon_cache: dict[tuple[str, str], QPixmap] = {}
 
     @property
@@ -58,6 +60,7 @@ class OverviewScene:
         self._floor_labels = {}
         self._floor_layouts = {}
         self._route_items = {}
+        self._routes = {}
         self._states = {}
         self._selected_operator_id = ""
         self._visible_floor_keys = set()
@@ -107,7 +110,7 @@ class OverviewScene:
 
             label = GLTextItem(
                 pos=(-(width / 2.0) + 24.0, (height / 2.0) - 24.0, layout.z + 4.0),
-                color=QColor("#F3F4F6"),
+                color=overview_label_color(),
                 text=floor.name,
                 font=QFont("Microsoft YaHei UI", 11),
             )
@@ -152,6 +155,10 @@ class OverviewScene:
                     item.hide()
 
     def set_preview_routes(self, routes: dict[str, list[PlaybackRouteSegment]]) -> None:
+        self._routes = {
+            operator_id: list(segments)
+            for operator_id, segments in routes.items()
+        }
         existing_ids = set(self._route_items)
         incoming_ids = {
             operator_id
@@ -175,7 +182,7 @@ class OverviewScene:
             selected = operator_id == self._selected_operator_id
             item.setData(
                 pos=points,
-                color=(0.98, 0.8, 0.08, 0.95) if selected else (1.0, 1.0, 1.0, 0.7),
+                color=overview_route_rgba(selected),
                 width=3.0 if selected else 1.5,
             )
             item.setVisible(points.shape[0] >= 2)
@@ -288,3 +295,23 @@ class OverviewScene:
             return None
         wx, wy, wz = self._projection.point_to_world(layout, Point2D(x=x, y=y))
         return (wx, wy, wz + z_offset)
+
+    def refresh_theme(self) -> None:
+        if self._asset is None:
+            return
+
+        asset = self._asset
+        states = list(self._states.values())
+        selected_operator_id = self._selected_operator_id
+        visible_floor_keys = set(self._visible_floor_keys)
+        render_position_overrides = dict(self._render_position_overrides)
+        routes = {
+            operator_id: list(segments)
+            for operator_id, segments in self._routes.items()
+        }
+
+        self.set_map_asset(asset)
+        self.sync_operator_states(states, selected_operator_id=selected_operator_id)
+        self.set_visible_floors(visible_floor_keys)
+        self.set_render_position_overrides(render_position_overrides)
+        self.set_preview_routes(routes)

@@ -6,6 +6,7 @@ from qfluentwidgets import BodyLabel, ComboBox, LineEdit, PrimaryPushButton, Pus
 
 from r6_tactics_board.domain.models import MapInteractionPoint, MapInteractionType, Point2D
 from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry, MapAsset
+from r6_tactics_board.presentation.styles.theme import page_stylesheet
 from r6_tactics_board.presentation.widgets.canvas.map_debug_scene import MapDebugScene
 from r6_tactics_board.presentation.widgets.canvas.map_view import MapView
 
@@ -13,6 +14,9 @@ from r6_tactics_board.presentation.widgets.canvas.map_view import MapView
 class DebugPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
+        self.setObjectName("debug-page")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setProperty("themePage", True)
         self.asset_registry = AssetRegistry()
         self._syncing_panel = False
         self._current_map_asset: MapAsset | None = None
@@ -445,6 +449,9 @@ class DebugPage(QWidget):
         if index - 1 >= 0:
             return [floor_keys[index - 1]]
         return []
+
+    def refresh_theme(self) -> None:
+        self.setStyleSheet(page_stylesheet(self.objectName()))
 
     def _scene(self) -> MapDebugScene | None:
         scene = self.map_view.scene()

@@ -13,6 +13,7 @@ dist/
 *.egg-info/
 *.spec
 .tmp/
+config/
 
 .pytest_cache/
 .mypy_cache/

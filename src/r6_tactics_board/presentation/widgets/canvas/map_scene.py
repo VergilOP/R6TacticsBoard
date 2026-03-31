@@ -6,6 +6,12 @@ from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QTransform
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPixmapItem, QGraphicsScene
 
 from r6_tactics_board.domain.models import MapInteractionPoint, OperatorDisplayMode, OperatorState, Point2D, TeamSide
+from r6_tactics_board.presentation.styles.theme import (
+    canvas_background_color,
+    canvas_grid_color,
+    preview_path_color,
+    preview_route_color,
+)
 from r6_tactics_board.presentation.widgets.canvas.map_interaction_item import MapInteractionItem
 from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
 
@@ -24,6 +30,7 @@ class MapScene(QGraphicsScene):
         self._placement_operator_id = ""
         self._placement_anchor = QPointF()
         self._path_items: dict[str, QGraphicsLineItem] = {}
+        self._grid_items: list[QGraphicsLineItem] = []
         self._interaction_items: dict[str, MapInteractionItem] = {}
         self._interaction_link_items: list[QGraphicsLineItem] = []
         self._interactions: list[MapInteractionPoint] = []
@@ -34,7 +41,7 @@ class MapScene(QGraphicsScene):
         self._hovered_interaction_id = ""
 
         self.setSceneRect(QRectF(0, 0, 4000, 4000))
-        self.setBackgroundBrush(QBrush(QColor("#202020")))
+        self.setBackgroundBrush(QBrush(canvas_background_color()))
 
         self._add_grid(4000, 4000)
 
@@ -98,7 +105,7 @@ class MapScene(QGraphicsScene):
             self.removeItem(item)
         self._path_items.clear()
 
-        dash_pen = QPen(QColor(255, 255, 255, 150))
+        dash_pen = QPen(preview_path_color())
         dash_pen.setStyle(Qt.PenStyle.DashLine)
         dash_pen.setWidth(2)
 
@@ -270,10 +277,11 @@ class MapScene(QGraphicsScene):
         self._map_item = None
         self.current_map_path = ""
         self._path_items = {}
+        self._grid_items = []
         self._interaction_items = {}
         self._interaction_link_items = []
         self.setSceneRect(QRectF(0, 0, width, height))
-        self.setBackgroundBrush(QBrush(QColor("#202020")))
+        self.setBackgroundBrush(QBrush(canvas_background_color()))
         self._add_grid(width, height)
 
         for state in operator_states:
@@ -290,14 +298,18 @@ class MapScene(QGraphicsScene):
         self._operator_count = len(operator_states)
 
     def _add_grid(self, width: int, height: int) -> None:
-        grid_pen = QPen(QColor("#2C2C2C"))
+        grid_pen = QPen(canvas_grid_color())
         grid_pen.setWidth(1)
 
         for x in range(0, width + 1, 100):
-            self.addLine(x, 0, x, height, grid_pen)
+            item = self.addLine(x, 0, x, height, grid_pen)
+            item.setZValue(-90)
+            self._grid_items.append(item)
 
         for y in range(0, height + 1, 100):
-            self.addLine(0, y, width, y, grid_pen)
+            item = self.addLine(0, y, width, y, grid_pen)
+            item.setZValue(-90)
+            self._grid_items.append(item)
 
     @staticmethod
     def _operator_sort_key(operator_id: str) -> int:
@@ -380,7 +392,7 @@ class MapScene(QGraphicsScene):
             if item_id in self._interaction_items
         ]
         if len(ordered_items) >= 2:
-            route_pen = QPen(QColor(250, 204, 21, 180))
+            route_pen = QPen(preview_route_color())
             route_pen.setWidth(2)
             route_pen.setStyle(Qt.PenStyle.DashLine)
             for start_item, end_item in zip(ordered_items, ordered_items[1:]):
@@ -400,3 +412,29 @@ class MapScene(QGraphicsScene):
         if interaction.floor_key == self._interaction_floor_key:
             return True
         return interaction.is_bidirectional and self._interaction_floor_key in interaction.linked_floor_keys
+
+    def refresh_theme(self) -> None:
+        self.setBackgroundBrush(QBrush(canvas_background_color()))
+
+        grid_pen = QPen(canvas_grid_color())
+        grid_pen.setWidth(1)
+        for item in self._grid_items:
+            item.setPen(grid_pen)
+
+        path_pen = QPen(preview_path_color())
+        path_pen.setStyle(Qt.PenStyle.DashLine)
+        path_pen.setWidth(2)
+        for item in self._path_items.values():
+            item.setPen(path_pen)
+
+        route_pen = QPen(preview_route_color())
+        route_pen.setWidth(2)
+        route_pen.setStyle(Qt.PenStyle.DashLine)
+        for item in self._interaction_link_items:
+            item.setPen(route_pen)
+
+        for operator in self.operator_items():
+            operator.update()
+        for interaction in self._interaction_items.values():
+            interaction.update()
+        self.update()

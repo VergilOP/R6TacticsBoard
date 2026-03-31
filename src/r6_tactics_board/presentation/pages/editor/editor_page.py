@@ -35,6 +35,7 @@ from r6_tactics_board.infrastructure.assets.asset_paths import MAPS_DIR
 from r6_tactics_board.infrastructure.assets.asset_registry import MapAsset
 from r6_tactics_board.infrastructure.diagnostics.debug_logging import debug_log
 from r6_tactics_board.presentation.pages.editor.editor_models import EditorHistoryState, EditorProjectState
+from r6_tactics_board.presentation.styles.theme import page_stylesheet
 from r6_tactics_board.presentation.widgets.editor.editor_panels import (
     EditorPropertyPanel,
     FloorOverlayPanel,
@@ -51,6 +52,9 @@ from r6_tactics_board.presentation.widgets.timeline.timeline_widget import Timel
 class EditorPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
+        self.setObjectName("editor-page")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setProperty("themePage", True)
 
         self._syncing_panel = False
         self._syncing_keyframe_panel = False
@@ -2665,6 +2669,13 @@ class EditorPage(QWidget):
         if clicked is discard_button:
             return True
         return clicked is not cancel_button
+
+    def refresh_theme(self) -> None:
+        self.setStyleSheet(page_stylesheet(self.objectName()))
+        self.property_panel.refresh_theme()
+        self.floor_panel.refresh_theme()
+        self.playback_panel.refresh_theme()
+        self.timeline.refresh_theme()
 
     @staticmethod
     def _sort_operator_id(operator_id: str) -> int:

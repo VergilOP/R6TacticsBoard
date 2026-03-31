@@ -3,6 +3,16 @@ from PyQt6.QtGui import QColor, QFont, QPainter, QPen
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsObject, QStyleOptionGraphicsItem, QWidget
 
 from r6_tactics_board.domain.models import MapInteractionPoint, MapInteractionType
+from r6_tactics_board.presentation.styles.theme import (
+    interaction_badge_background_color,
+    interaction_badge_border_color,
+    interaction_badge_text_color,
+    interaction_border_color,
+    interaction_emphasis_ring_color,
+    interaction_fill_color,
+    interaction_hover_ring_color,
+    interaction_text_color,
+)
 
 
 class MapInteractionItem(QGraphicsObject):
@@ -49,18 +59,18 @@ class MapInteractionItem(QGraphicsObject):
     ) -> None:
         del option, widget
 
-        fill = QColor("#3B82F6") if self.interaction.kind == MapInteractionType.STAIRS else QColor("#F97316")
+        fill = interaction_fill_color(self.interaction.kind)
         fill.setAlpha(240 if self._emphasized else 190)
-        border = QColor("#FACC15") if (self.isSelected() or self._emphasized) else QColor(255, 255, 255, 140)
+        border = interaction_border_color(self.isSelected(), self._emphasized)
         text = "S" if self.interaction.kind == MapInteractionType.STAIRS else "H"
 
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         if self._emphasized:
-            painter.setPen(QPen(QColor(250, 204, 21, 190), 3))
+            painter.setPen(QPen(interaction_emphasis_ring_color(), 3))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(QPointF(0, 0), self._radius + 6, self._radius + 6)
         elif self._hovered:
-            painter.setPen(QPen(QColor(96, 165, 250, 190), 3))
+            painter.setPen(QPen(interaction_hover_ring_color(), 3))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(QPointF(0, 0), self._radius + 5, self._radius + 5)
         painter.setPen(QPen(border, 2))
@@ -71,20 +81,20 @@ class MapInteractionItem(QGraphicsObject):
         font.setBold(True)
         font.setPointSize(9)
         painter.setFont(font)
-        painter.setPen(QColor("#0B1220"))
+        painter.setPen(interaction_text_color())
         painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, text)
 
         if self._sequence_index is not None:
             badge_rect = QRectF(self._radius - 2, -self._radius - 8, 18, 18)
-            painter.setPen(QPen(QColor("#FFF7CC"), 1))
-            painter.setBrush(QColor("#111827"))
+            painter.setPen(QPen(interaction_badge_border_color(), 1))
+            painter.setBrush(interaction_badge_background_color())
             painter.drawEllipse(badge_rect)
 
             badge_font = QFont()
             badge_font.setBold(True)
             badge_font.setPointSize(8)
             painter.setFont(badge_font)
-            painter.setPen(QColor("#FACC15"))
+            painter.setPen(interaction_badge_text_color())
             painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, str(self._sequence_index + 1))
 
     def mousePressEvent(self, event) -> None:  # noqa: N802

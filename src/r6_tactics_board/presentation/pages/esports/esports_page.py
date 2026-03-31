@@ -23,11 +23,13 @@ from qfluentwidgets import BodyLabel, ComboBox, PushButton, StrongBodyLabel, Sub
 from r6_tactics_board.domain.esports_models import EsportsMapDataset, EsportsMatchRecord
 from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry, OperatorCatalogEntry
 from r6_tactics_board.infrastructure.esports.esports_store import EsportsStore
+from r6_tactics_board.presentation.styles.theme import card_stylesheet, page_stylesheet
 
 
 class SummaryStatCard(QFrame):
     def __init__(self, title: str) -> None:
         super().__init__()
+        self.setObjectName("esports-summary-card")
 
         self.title_label = BodyLabel(title)
         self.value_label = StrongBodyLabel("-")
@@ -37,9 +39,13 @@ class SummaryStatCard(QFrame):
         layout.setSpacing(4)
         layout.addWidget(self.title_label)
         layout.addWidget(self.value_label)
+        self.refresh_theme()
 
     def set_value(self, value: str) -> None:
         self.value_label.setText(value)
+
+    def refresh_theme(self) -> None:
+        self.setStyleSheet(card_stylesheet(self.objectName()))
 
 
 class OperatorIconStrip(QWidget):
@@ -138,6 +144,9 @@ class OperatorIconStrip(QWidget):
 class EsportsPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
+        self.setObjectName("esports-page")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setProperty("themePage", True)
 
         self.store = EsportsStore()
         self.asset_registry = AssetRegistry()
@@ -176,6 +185,7 @@ class EsportsPage(QWidget):
         self._init_ui()
         self._init_signals()
         self._reload_maps()
+        self.refresh_theme()
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -505,3 +515,8 @@ class EsportsPage(QWidget):
             ]
             if part
         )
+
+    def refresh_theme(self) -> None:
+        self.setStyleSheet(page_stylesheet(self.objectName()) + card_stylesheet("esports-summary-card"))
+        for card in (self.matches_stat_card, self.flawless_stat_card, self.updated_stat_card):
+            card.refresh_theme()

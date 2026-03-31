@@ -1,7 +1,9 @@
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QBrush, QFont
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QHeaderView, QHBoxLayout, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, PushButton
+
+from r6_tactics_board.presentation.styles.theme import card_stylesheet, timeline_table_stylesheet
 
 
 class TimelineWidget(QWidget):
@@ -18,6 +20,8 @@ class TimelineWidget(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
+        self.setObjectName("timeline-panel")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._selected_cell: tuple[int, int] | None = None
 
         self.title_label = BodyLabel("时间轴 / 轨道表格")
@@ -68,13 +72,7 @@ class TimelineWidget(QWidget):
         self.table.verticalHeader().setHighlightSections(True)
         self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         self.table.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.table.setStyleSheet(
-            "QTableWidget::item:selected {"
-            "background-color: #3A6D95;"
-            "color: #FFFFFF;"
-            "border: 2px solid #FFD54F;"
-            "}"
-        )
+        self._apply_theme()
 
         layout.addLayout(toolbar)
         layout.addWidget(self.table)
@@ -122,8 +120,6 @@ class TimelineWidget(QWidget):
                 item = QTableWidgetItem("●" if (row, column) in explicit_cells else "")
                 item.setTextAlignment(int(Qt.AlignmentFlag.AlignCenter))
                 if row == current_row and column == current_column:
-                    item.setBackground(QBrush(QColor("#3A6D95")))
-                    item.setForeground(QColor("#FFFFFF"))
                     font = QFont()
                     font.setBold(True)
                     item.setFont(font)
@@ -178,3 +174,10 @@ class TimelineWidget(QWidget):
             current_visual_index = header.visualIndex(logical_index)
             if current_visual_index != logical_index:
                 header.moveSection(current_visual_index, logical_index)
+
+    def _apply_theme(self) -> None:
+        self.setStyleSheet(card_stylesheet(self.objectName()))
+        self.table.setStyleSheet(timeline_table_stylesheet())
+
+    def refresh_theme(self) -> None:
+        self._apply_theme()

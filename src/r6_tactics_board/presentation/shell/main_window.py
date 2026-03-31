@@ -1,16 +1,21 @@
+from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QCloseEvent
-from qfluentwidgets import FluentIcon, FluentWindow, NavigationItemPosition
+from qfluentwidgets import FluentIcon, FluentWindow, NavigationItemPosition, qconfig
 
+from r6_tactics_board.infrastructure.diagnostics.debug_logging import debug_log
 from r6_tactics_board.presentation.pages.assets.assets_page import AssetsPage
 from r6_tactics_board.presentation.pages.debug.debug_page import DebugPage
 from r6_tactics_board.presentation.pages.editor.editor_page import EditorPage
 from r6_tactics_board.presentation.pages.esports.esports_page import EsportsPage
 from r6_tactics_board.presentation.pages.settings.settings_page import SettingsPage
+from r6_tactics_board.presentation.styles.theme import main_window_stylesheet
 
 
 class MainWindow(FluentWindow):
     def __init__(self) -> None:
         super().__init__()
+        self.setObjectName("main-window")
+        self.stackedWidget.setObjectName("main-window-stack")
 
         self.editor_page = EditorPage()
         self.assets_page = AssetsPage()
@@ -42,6 +47,8 @@ class MainWindow(FluentWindow):
         self.setWindowTitle("R6 Tactics Board")
         self.setMinimumSize(1280, 720)
         self.resize(1440, 900)
+        self._theme_initialized = False
+        qconfig.themeChangedFinished.connect(self._schedule_theme_refresh)
 
     def _open_map_in_editor(self, file_path: str) -> None:
         if not self.editor_page.confirm_discard_changes("加载地图"):
@@ -59,3 +66,23 @@ class MainWindow(FluentWindow):
             return
 
         super().closeEvent(event)
+
+    def refresh_theme(self) -> None:
+        debug_log("theme: main window refresh start")
+        self.setStyleSheet(main_window_stylesheet(self.objectName(), self.stackedWidget.objectName()))
+        self.editor_page.refresh_theme()
+        self.assets_page.refresh_theme()
+        self.esports_page.refresh_theme()
+        self.debug_page.refresh_theme()
+        self.settings_page.refresh_theme()
+        debug_log("theme: main window refresh done")
+
+    def _schedule_theme_refresh(self) -> None:
+        debug_log("theme: schedule main window refresh")
+        QTimer.singleShot(0, self.refresh_theme)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        if not self._theme_initialized:
+            self._theme_initialized = True
+            self.refresh_theme()
