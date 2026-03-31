@@ -169,3 +169,55 @@ src/assets/operators/<side>/
 - `hatch` 默认单向联通，只在源楼层显示
 
 当前地图 Debug 页面已支持对上述互动点进行放置、移动、删除和保存。
+
+## 2.5D 总览预留字段
+
+为后续的 `2.5D 全楼层总览` 提供地图级调优能力，`map.json` 可以预留一个可选的 `overview_2_5d` 配置块。
+
+推荐结构：
+
+```json
+"overview_2_5d": {
+  "enabled": true,
+  "default_yaw": 35.0,
+  "default_zoom": 1.0,
+  "pitch_factor": 0.65,
+  "floor_height": 180,
+  "draw_order": ["b1", "1f", "2f", "roof"],
+  "floor_overrides": {
+    "roof": {
+      "height": 560
+    }
+  }
+}
+```
+
+字段说明：
+
+- `enabled`：是否允许该地图进入 2.5D 总览
+- `default_yaw`：默认观察角度
+- `default_zoom`：默认缩放
+- `pitch_factor`：俯视压缩系数
+- `floor_height`：默认楼层高度差
+- `draw_order`：楼层绘制顺序
+- `floor_overrides`：针对个别楼层的高度微调
+
+楼层节点也可预留：
+
+```json
+{
+  "key": "2f",
+  "name": "Second Floor",
+  "image": "assets/maps/bank/2f.png",
+  "overview": {
+    "height": 360
+  }
+}
+```
+
+说明：
+
+- 当前资源层已经会读取 `enabled`、`default_yaw`、`default_zoom`、`pitch_factor`、`floor_height`、`draw_order` 和 `floor_overrides.<floor_key>.height`
+- 上述字段仍然是可选项，不要求现有地图立即补齐
+- 缺省时会按楼层顺序自动推导高度，默认朝向以当前实现为准
+- 后续若加入互动点专用显示点，也应优先写在 `map.json` 内，由资源层统一读取

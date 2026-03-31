@@ -6,6 +6,9 @@
 
 - `map_view.py`: 缩放与平移视图容器。
 - `map_scene.py`: 主编辑场景。
+- `overview_projection.py`: 2.5D/3D 总览的楼层布局和坐标换算。
+- `overview_scene.py`: 基于 OpenGL 的总览内容控制器，负责楼层贴图、干员覆盖层、可见楼层和路线。
+- `overview_view.py`: 基于 `pyqtgraph.opengl.GLViewWidget` 的总览视图，负责 orbit / pan / zoom 交互和屏幕覆盖层绘制。
 - `map_debug_scene.py`: 地图互动点调试场景。
 - `map_interaction_item.py`: 地图互动点图元。
 - `operator_item.py`: 干员图元。

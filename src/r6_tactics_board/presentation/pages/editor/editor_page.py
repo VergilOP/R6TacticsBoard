@@ -1,9 +1,9 @@
 from copy import deepcopy
 from pathlib import Path
 
-from PyQt6.QtCore import QPointF, Qt, QTimer
+from PyQt6.QtCore import QPoint, QPointF, QRect, Qt, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
-from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QMessageBox, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QMessageBox, QStackedWidget, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
     ComboBox,
@@ -43,6 +43,8 @@ from r6_tactics_board.presentation.widgets.editor.editor_panels import (
 from r6_tactics_board.presentation.widgets.canvas.map_scene import MapScene
 from r6_tactics_board.presentation.widgets.canvas.map_view import MapView
 from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
+from r6_tactics_board.presentation.widgets.canvas.overview_scene import OverviewScene
+from r6_tactics_board.presentation.widgets.canvas.overview_view import OverviewView
 from r6_tactics_board.presentation.widgets.timeline.timeline_widget import TimelineWidget
 
 
@@ -60,6 +62,7 @@ class EditorPage(QWidget):
         self._playback_from_column = -1
         self._playback_to_column = -1
         self._playback_elapsed_ms = 0.0
+        self._playback_effective_duration_ms = 700.0
         self._playback_speed = 1.0
         self._scrubbing_playback_slider = False
         self._hovered_manual_interaction_id = ""
@@ -81,13 +84,17 @@ class EditorPage(QWidget):
         self.current_map_asset_path = ""
         self.current_map_floor_key = ""
         self._current_map_asset: MapAsset | None = None
+        self._overview_visible_floor_keys: set[str] = set()
         self._clean_project_state: EditorProjectState | None = None
 
         self.session_service = EditorSessionService()
         self.playback_timer = QTimer(self)
         self.playback_timer.setInterval(16)
 
+        self._view_mode = "single_floor"
         self.map_view = MapView()
+        self.overview_view = OverviewView()
+        self.canvas_stack = QStackedWidget()
         self.timeline = TimelineWidget()
         self.undo_button = PushButton("撤销")
         self.redo_button = PushButton("重做")
@@ -97,6 +104,8 @@ class EditorPage(QWidget):
         self.add_operator_button = PushButton("添加干员")
         self.reset_view_button = PushButton("重置视图")
         self.map_status_label = BodyLabel("当前地图：未加载")
+        self.view_mode_label = BodyLabel("视图")
+        self.view_mode_combo = ComboBox()
         self.undo_shortcut = QShortcut(QKeySequence.StandardKey.Undo, self)
         self.redo_shortcut = QShortcut(QKeySequence.StandardKey.Redo, self)
         self.property_panel = EditorPropertyPanel()
@@ -135,6 +144,12 @@ class EditorPage(QWidget):
         self.playback_speed_combo = self.playback_panel.speed_combo
         self.playback_duration_label = self.playback_panel.duration_label
         self.playback_duration_slider = self.playback_panel.duration_slider
+        self.view_mode_combo.addItem("单楼层")
+        self.view_mode_combo.setItemData(0, "single_floor")
+        self.view_mode_combo.addItem("2.5D 总览")
+        self.view_mode_combo.setItemData(1, "overview_2p5d")
+        self.view_mode_combo.setCurrentIndex(0)
+        self.view_mode_combo.setEnabled(False)
 
         self._init_ui()
         self._init_signals()
@@ -160,10 +175,14 @@ class EditorPage(QWidget):
         toolbar_layout.addWidget(self.load_map_button)
         toolbar_layout.addWidget(self.add_operator_button)
         toolbar_layout.addWidget(self.reset_view_button)
+        toolbar_layout.addWidget(self.view_mode_label)
+        toolbar_layout.addWidget(self.view_mode_combo)
         toolbar_layout.addWidget(self.map_status_label, 1)
 
+        self.canvas_stack.addWidget(self.map_view)
+        self.canvas_stack.addWidget(self.overview_view)
         center_layout.addLayout(toolbar_layout)
-        center_layout.addWidget(self.map_view, 1)
+        center_layout.addWidget(self.canvas_stack, 1)
         center_layout.addWidget(self.timeline)
 
         layout.addLayout(center_layout, 1)
@@ -178,7 +197,7 @@ class EditorPage(QWidget):
         self.open_project_button.clicked.connect(self._open_project)
         self.save_project_button.clicked.connect(self._save_project)
         self.add_operator_button.clicked.connect(self._add_operator)
-        self.reset_view_button.clicked.connect(self.map_view.reset_view)
+        self.reset_view_button.clicked.connect(self._reset_active_view)
         self.delete_operator_button.clicked.connect(self._delete_selected_operator)
         self.name_edit.editingFinished.connect(self._apply_name_edit)
         self.side_combo.currentIndexChanged.connect(self._update_selected_side)
@@ -207,6 +226,8 @@ class EditorPage(QWidget):
         self.timeline.operator_row_moved.connect(self._move_operator_row)
         self.playback_timer.timeout.connect(self._advance_playback)
         self.map_view.viewport_resized.connect(self._position_overlay_panels)
+        self.overview_view.viewport_resized.connect(self._position_overlay_panels)
+        self.view_mode_combo.currentIndexChanged.connect(self._on_view_mode_changed)
         self.playback_previous_button.clicked.connect(self._go_to_previous_column)
         self.playback_next_button.clicked.connect(self._go_to_next_column)
         self.playback_play_button.clicked.connect(self._toggle_column_playback)
@@ -252,7 +273,9 @@ class EditorPage(QWidget):
             self.current_map_asset_path = ""
             self.current_map_floor_key = ""
             self._current_map_asset = None
+            self._clear_overview_asset()
             self._rebuild_floor_panel()
+            self._update_view_mode_availability()
             self._apply_timeline_column(self.current_keyframe_index)
             self._reset_history(mark_clean=True)
             return
@@ -296,15 +319,23 @@ class EditorPage(QWidget):
         if not scene.load_map_image(selected_floor.image_path):
             return False
 
+        previous_asset_path = self._current_map_asset.path if self._current_map_asset is not None else ""
+        if not self._sync_overview_asset(asset, reset_camera=previous_asset_path != asset.path):
+            return False
+
         if pause_playback:
             self._pause_column_playback()
         self.current_map_asset_path = asset.path
         self.current_map_floor_key = selected_floor.key
         self._current_map_asset = asset
+        if previous_asset_path != asset.path or not self._overview_visible_floor_keys:
+            self._overview_visible_floor_keys = {floor.key for floor in asset.floors}
         self.map_status_label.setText(f"当前地图：{asset.name} / {selected_floor.name}")
+        self._update_view_mode_availability()
         self._rebuild_floor_panel()
+        self._apply_overview_floor_visibility()
         if fit_view:
-            self.map_view.fit_scene()
+            self._reset_active_view()
         self._refresh_property_panel()
         return True
 
@@ -357,7 +388,7 @@ class EditorPage(QWidget):
 
         before = self._capture_history_state()
         self._pause_column_playback()
-        operator = scene.add_operator(self.map_view.scene_center())
+        operator = scene.add_operator(self._default_operator_position())
         operator.set_floor_key(self._current_floor_key())
         scene.select_operator(operator)
         self._update_operator_icon(operator)
@@ -374,7 +405,7 @@ class EditorPage(QWidget):
 
         before = self._capture_history_state()
         self._pause_column_playback()
-        operator = scene.add_operator(self.map_view.scene_center())
+        operator = scene.add_operator(self._default_operator_position())
         operator.set_floor_key(self._current_floor_key())
         operator.set_side(side)
         operator.set_operator_key(operator_key)
@@ -491,20 +522,30 @@ class EditorPage(QWidget):
         if asset is None or len(asset.floors) <= 1:
             self.floor_panel.hide()
             return
+        ordered_floors = list(reversed(asset.floors))
 
-        self.floor_panel.set_floors(
-            asset.floors,
-            self.current_map_floor_key,
-            self._switch_map_floor,
-        )
+        if self._is_overview_mode():
+            self.floor_panel.set_floors(
+                ordered_floors,
+                self.current_map_floor_key,
+                self._toggle_overview_floor_visibility,
+                multi_select=True,
+                selected_floor_keys=self._overview_visible_floor_keys,
+            )
+        else:
+            self.floor_panel.set_floors(
+                ordered_floors,
+                self.current_map_floor_key,
+                self._switch_map_floor,
+            )
         self._position_floor_panel()
         QTimer.singleShot(0, self._position_floor_panel)
 
     def _position_floor_panel(self) -> None:
-        self.floor_panel.reposition(self.map_view.geometry())
+        self.floor_panel.reposition(self._active_canvas_rect())
 
     def _position_playback_panel(self) -> None:
-        self.playback_panel.reposition(self.map_view.geometry())
+        self.playback_panel.reposition(self._active_canvas_rect())
 
     def _position_overlay_panels(self) -> None:
         self._position_floor_panel()
@@ -1216,15 +1257,10 @@ class EditorPage(QWidget):
             return
 
         self._applying_timeline = True
-        resolved_states: list[OperatorState] = []
-        for operator_id in self.operator_order:
-            state = self._resolved_state(operator_id, column)
-            if state is not None and self._state_matches_current_floor(state):
-                resolved_states.append(deepcopy(state))
-
-        scene.sync_operator_states(resolved_states)
+        scene.sync_operator_states(self._resolved_states(column))
         for operator in scene.operator_items():
             self._update_operator_icon(operator)
+        self._sync_overview_scene_states(self._resolved_states(column, include_all_floors=True))
 
         self._sync_operator_registry()
         self._refresh_property_panel()
@@ -1289,7 +1325,10 @@ class EditorPage(QWidget):
         if self._scrubbing_playback_slider:
             progress_value = self.playback_progress_slider.value()
         elif self._is_playing and self._playback_from_column >= 0 and self._playback_to_column >= 0:
-            segment_progress = min(self._playback_elapsed_ms / max(self._transition_duration_ms, 1), 1.0)
+            segment_progress = min(
+                self._playback_elapsed_ms / max(self._current_playback_duration_ms(), 1),
+                1.0,
+            )
             progress_value = int((self._playback_from_column + segment_progress) * 1000)
         else:
             progress_value = max(self.current_keyframe_index, 0) * 1000
@@ -1417,6 +1456,7 @@ class EditorPage(QWidget):
         self._playback_from_column = -1
         self._playback_to_column = -1
         self._playback_elapsed_ms = 0
+        self._playback_effective_duration_ms = float(self._transition_duration_ms)
         self._playback_routes = {}
         self._refresh_timeline()
 
@@ -1430,11 +1470,14 @@ class EditorPage(QWidget):
             return
 
         self._playback_elapsed_ms += self.playback_timer.interval() * self._playback_speed
-        progress = min(self._playback_elapsed_ms / self._transition_duration_ms, 1.0)
+        progress = min(self._playback_elapsed_ms / max(self._current_playback_duration_ms(), 1), 1.0)
         self._sync_playback_focus_floor(progress)
         scene.sync_operator_states(self._interpolated_states(progress))
         for operator in scene.operator_items():
             self._update_operator_icon(operator)
+        self._sync_overview_scene_states(
+            self._interpolated_states(progress, include_all_floors=True)
+        )
         self._sync_scene_preview_paths()
         self._refresh_playback_panel()
 
@@ -1462,9 +1505,12 @@ class EditorPage(QWidget):
             self._playback_start_states,
             self._playback_end_states,
         )
+        self._playback_effective_duration_ms = self._effective_playback_duration_ms(self._playback_routes)
         self.playback_timer.start()
 
     def _sync_playback_focus_floor(self, progress: float) -> None:
+        if self._is_overview_mode():
+            return
         operator_id = self._target_operator_id()
         if operator_id is None or not self.current_map_asset_path:
             return
@@ -1488,6 +1534,8 @@ class EditorPage(QWidget):
         self._apply_timeline_column(column)
 
     def _sync_focus_floor_for_column(self, column: int) -> None:
+        if self._is_overview_mode():
+            return
         operator_id = self._target_operator_id()
         if operator_id is None or not self.current_map_asset_path:
             return
@@ -1505,11 +1553,18 @@ class EditorPage(QWidget):
                 pause_playback=False,
             )
 
-    def _interpolated_states(self, progress: float) -> list[OperatorState]:
+    def _interpolated_states(
+        self,
+        progress: float,
+        *,
+        include_all_floors: bool = False,
+    ) -> list[OperatorState]:
         states: list[OperatorState] = []
         for operator_id in self.operator_order:
             state = self._interpolated_state_for_operator(operator_id, progress)
-            if state is None or not self._state_matches_current_floor(state):
+            if state is None:
+                continue
+            if not include_all_floors and not self._state_matches_current_floor(state):
                 continue
             states.append(state)
         return states
@@ -1532,7 +1587,10 @@ class EditorPage(QWidget):
             end_state,
             self._playback_from_column,
         )
-        route_state = self._state_on_route(start_state, end_state, route, progress)
+        if self._is_overview_mode() and self._is_playing:
+            route_state = self._overview_state_on_route(start_state, end_state, route, progress)
+        else:
+            route_state = self._state_on_route(start_state, end_state, route, progress)
         if route_state is None:
             return None
 
@@ -1618,6 +1676,119 @@ class EditorPage(QWidget):
             progress,
             default_floor_key=self._current_floor_key(),
         )
+
+    def _current_playback_duration_ms(self) -> float:
+        if self._is_playing and self._playback_to_column >= 0:
+            return self._playback_effective_duration_ms
+        return float(self._transition_duration_ms)
+
+    def _effective_playback_duration_ms(
+        self,
+        routes: dict[str, list[PlaybackRouteSegment]],
+    ) -> float:
+        base = float(self._transition_duration_ms)
+        if not self._is_overview_mode():
+            return base
+        max_floor_changes = max(
+            (
+                self._route_floor_change_count(route)
+                for route in routes.values()
+            ),
+            default=0,
+        )
+        return base + max_floor_changes * self._overview_extra_vertical_duration_ms()
+
+    def _overview_extra_vertical_duration_ms(self) -> float:
+        return float(self._transition_duration_ms) * 0.5
+
+    @staticmethod
+    def _route_floor_change_count(route: list[PlaybackRouteSegment]) -> int:
+        return sum(
+            1
+            for segment in route
+            if segment.result_floor_key and segment.result_floor_key != segment.floor_key
+        )
+
+    def _route_total_duration_ms(self, route: list[PlaybackRouteSegment]) -> float:
+        return float(self._transition_duration_ms) + (
+            self._route_floor_change_count(route) * self._overview_extra_vertical_duration_ms()
+        )
+
+    def _route_phase_at_elapsed(
+        self,
+        route: list[PlaybackRouteSegment],
+        elapsed_ms: float,
+    ) -> tuple[str, PlaybackRouteSegment | None, float]:
+        if not route:
+            return ("final", None, 1.0)
+
+        base_duration = float(self._transition_duration_ms)
+        extra_vertical_ms = self._overview_extra_vertical_duration_ms()
+        total_horizontal = sum(self._route_planner().route_segment_length(segment) for segment in route)
+        horizontal_fallback_ms = base_duration / max(len(route), 1)
+        consumed = 0.0
+
+        for index, segment in enumerate(route):
+            segment_length = self._route_planner().route_segment_length(segment)
+            horizontal_ms = (
+                base_duration * (segment_length / total_horizontal)
+                if total_horizontal > 0.001
+                else horizontal_fallback_ms
+            )
+
+            if elapsed_ms <= consumed + horizontal_ms or (
+                index == len(route) - 1
+                and elapsed_ms < self._route_total_duration_ms(route)
+                and horizontal_ms <= 0.0
+            ):
+                local_progress = (
+                    max(0.0, min(1.0, (elapsed_ms - consumed) / horizontal_ms))
+                    if horizontal_ms > 0.0
+                    else 1.0
+                )
+                return ("horizontal", segment, local_progress)
+            consumed += horizontal_ms
+
+            if segment.result_floor_key and segment.result_floor_key != segment.floor_key:
+                if elapsed_ms <= consumed + extra_vertical_ms:
+                    local_progress = (
+                        max(0.0, min(1.0, (elapsed_ms - consumed) / extra_vertical_ms))
+                        if extra_vertical_ms > 0.0
+                        else 1.0
+                    )
+                    return ("vertical", segment, local_progress)
+                consumed += extra_vertical_ms
+
+        return ("final", route[-1], 1.0)
+
+    def _overview_state_on_route(
+        self,
+        start_state: OperatorState,
+        end_state: OperatorState,
+        route: list[PlaybackRouteSegment],
+        progress: float,
+    ) -> OperatorState:
+        if not route:
+            return deepcopy(end_state)
+
+        elapsed_ms = self._current_playback_duration_ms() * progress
+        phase, segment, local_progress = self._route_phase_at_elapsed(route, elapsed_ms)
+        if segment is None or phase == "final":
+            return deepcopy(end_state)
+
+        if phase == "horizontal":
+            position = Point2D(
+                x=segment.start.x + (segment.end.x - segment.start.x) * local_progress,
+                y=segment.start.y + (segment.end.y - segment.start.y) * local_progress,
+            )
+            return self._route_planner().copy_state_with_position(end_state, position, segment.floor_key)
+
+        floor_key = (
+            segment.floor_key
+            if local_progress < 0.5 or not segment.result_floor_key
+            else segment.result_floor_key
+        )
+        return self._route_planner().copy_state_with_position(end_state, segment.end, floor_key)
 
     def _set_transition_duration(self, value: int) -> None:
         self._transition_duration_ms = value
@@ -1728,10 +1899,40 @@ class EditorPage(QWidget):
             )
 
         scene.set_preview_paths(preview_paths)
+        overview_scene = self._overview_scene()
+        if overview_scene is not None:
+            overview_scene.set_preview_routes(self._current_preview_routes())
+
+    def _current_preview_routes(self) -> dict[str, list[PlaybackRouteSegment]]:
+        routes: dict[str, list[PlaybackRouteSegment]] = {}
+        if self._is_playing and self._playback_from_column >= 0 and self._playback_to_column >= 0:
+            from_column = self._playback_from_column
+            to_column = self._playback_to_column
+        else:
+            from_column = self.current_keyframe_index
+            to_column = self.current_keyframe_index + 1
+
+        if to_column >= len(self.keyframe_columns):
+            return {}
+
+        for operator_id in self.operator_order:
+            start_state = self._resolved_state(operator_id, from_column)
+            end_state = self._resolved_state(operator_id, to_column)
+            if start_state is None or end_state is None:
+                continue
+            route = self._build_transition_route_for_operator(
+                operator_id,
+                start_state,
+                end_state,
+                from_column,
+            )
+            if route:
+                routes[operator_id] = route
+        return routes
 
     def _current_preview_segments(self) -> dict[str, tuple[OperatorState, OperatorState]]:
         if self._is_playing and self._playback_from_column >= 0 and self._playback_to_column >= 0:
-            progress = min(self._playback_elapsed_ms / max(self._transition_duration_ms, 1), 1.0)
+            progress = min(self._playback_elapsed_ms / max(self._current_playback_duration_ms(), 1), 1.0)
             return self._preview_segments_for_columns(
                 self._playback_from_column,
                 self._playback_to_column,
@@ -1833,6 +2034,22 @@ class EditorPage(QWidget):
         if not state.floor_key:
             return True
         return state.floor_key == self._current_floor_key()
+
+    def _resolved_states(
+        self,
+        column: int,
+        *,
+        include_all_floors: bool = False,
+    ) -> list[OperatorState]:
+        resolved_states: list[OperatorState] = []
+        for operator_id in self.operator_order:
+            state = self._resolved_state(operator_id, column)
+            if state is None:
+                continue
+            if not include_all_floors and not self._state_matches_current_floor(state):
+                continue
+            resolved_states.append(deepcopy(state))
+        return resolved_states
 
     def _operator_label(self, operator_id: str) -> str:
         definition = self.operator_definitions.get(operator_id)
@@ -2032,6 +2249,7 @@ class EditorPage(QWidget):
                 self.current_map_asset_path = ""
                 self.current_map_floor_key = ""
                 self._current_map_asset = None
+                self._clear_overview_asset()
                 self._rebuild_floor_panel()
         elif project.map_info and project.map_info.image_path:
             if scene.load_map_image(project.map_info.image_path):
@@ -2040,6 +2258,7 @@ class EditorPage(QWidget):
                 self.current_map_asset_path = ""
                 self.current_map_floor_key = ""
                 self._current_map_asset = None
+                self._clear_overview_asset()
                 self._rebuild_floor_panel()
             else:
                 self.map_status_label.setText("当前地图：加载失败")
@@ -2049,6 +2268,7 @@ class EditorPage(QWidget):
             self.current_map_asset_path = ""
             self.current_map_floor_key = ""
             self._current_map_asset = None
+            self._clear_overview_asset()
             self._rebuild_floor_panel()
 
         self.operator_order = list(project.operator_order)
@@ -2066,6 +2286,7 @@ class EditorPage(QWidget):
         self.current_timeline_row = -1
         self._transition_duration_ms = project.transition_duration_ms
         self.playback_duration_slider.setValue(self._transition_duration_ms)
+        self._update_view_mode_availability()
 
         for operator_id in self.operator_definitions:
             if operator_id not in self.operator_order:
@@ -2170,6 +2391,7 @@ class EditorPage(QWidget):
                 self.current_map_asset_path = ""
                 self.current_map_floor_key = ""
                 self._current_map_asset = None
+                self._clear_overview_asset()
                 self._rebuild_floor_panel()
         else:
             if snapshot.map_image_path:
@@ -2181,6 +2403,7 @@ class EditorPage(QWidget):
             self.current_map_asset_path = ""
             self.current_map_floor_key = ""
             self._current_map_asset = None
+            self._clear_overview_asset()
             self._rebuild_floor_panel()
 
         self.operator_order = list(snapshot.operator_order)
@@ -2196,6 +2419,9 @@ class EditorPage(QWidget):
         scene.sync_operator_states(deepcopy(snapshot.scene_states), snapshot.selected_operator_id or None)
         for operator in scene.operator_items():
             self._update_operator_icon(operator)
+        self._sync_overview_scene_states(
+            self._resolved_states(self.current_keyframe_index, include_all_floors=True)
+        )
 
         self._refresh_property_panel()
         self._history_lock = False
@@ -2218,6 +2444,186 @@ class EditorPage(QWidget):
         if isinstance(scene, MapScene):
             return scene
         return None
+
+    def _overview_scene(self) -> OverviewScene | None:
+        return self.overview_view.overview_scene()
+
+    def _sync_overview_asset(self, asset: MapAsset, *, reset_camera: bool) -> bool:
+        return self.overview_view.set_map_asset(asset, reset_camera=reset_camera)
+
+    def _clear_overview_asset(self) -> None:
+        self._overview_visible_floor_keys = set()
+        self.overview_view.clear_map()
+
+    def _sync_overview_scene_states(self, states: list[OperatorState]) -> None:
+        scene = self._overview_scene()
+        if scene is None:
+            return
+        selected_operator_id = self._target_operator_id() or ""
+        scene.sync_operator_states(states, selected_operator_id=selected_operator_id)
+        scene.set_render_position_overrides(self._current_overview_position_overrides())
+        self._apply_overview_floor_visibility()
+
+    def _apply_overview_floor_visibility(self) -> None:
+        scene = self._overview_scene()
+        if scene is None:
+            return
+        scene.set_visible_floors(self._overview_visible_floor_keys)
+
+    def _toggle_overview_floor_visibility(self, floor_key: str) -> None:
+        if not self._current_map_asset:
+            return
+        if floor_key in self._overview_visible_floor_keys:
+            if len(self._overview_visible_floor_keys) <= 1:
+                return
+            self._overview_visible_floor_keys.remove(floor_key)
+        else:
+            self._overview_visible_floor_keys.add(floor_key)
+        self._rebuild_floor_panel()
+        self._apply_overview_floor_visibility()
+        self._sync_scene_preview_paths()
+
+    def _current_overview_position_overrides(self) -> dict[str, tuple[float, float, float]]:
+        if not self._is_overview_mode() or not self._is_playing:
+            return {}
+        scene = self._overview_scene()
+        if scene is None:
+            return {}
+
+        overrides: dict[str, tuple[float, float, float]] = {}
+        for operator_id in self.operator_order:
+            start_state = self._playback_start_states.get(operator_id)
+            end_state = self._playback_end_states.get(operator_id, start_state)
+            if start_state is None or end_state is None:
+                continue
+            route = self._playback_routes.get(operator_id, [])
+            world_position = self._overview_world_position_on_route(
+                scene,
+                start_state,
+                end_state,
+                route,
+                self._playback_elapsed_ms,
+            )
+            if world_position is not None:
+                overrides[operator_id] = world_position
+        return overrides
+
+    def _overview_world_position_on_route(
+        self,
+        scene: OverviewScene,
+        start_state: OperatorState,
+        end_state: OperatorState,
+        route: list[PlaybackRouteSegment],
+        elapsed_ms: float,
+    ) -> tuple[float, float, float] | None:
+        if not route:
+            return scene.world_point(
+                end_state.floor_key or start_state.floor_key or self._current_floor_key(),
+                end_state.position.x,
+                end_state.position.y,
+                z_offset=8.0,
+            )
+
+        phase, segment, local_progress = self._route_phase_at_elapsed(route, elapsed_ms)
+        if segment is None or phase == "final":
+            return scene.world_point(
+                end_state.floor_key or self._current_floor_key(),
+                end_state.position.x,
+                end_state.position.y,
+                z_offset=8.0,
+            )
+
+        if phase == "horizontal":
+            x = segment.start.x + (segment.end.x - segment.start.x) * local_progress
+            y = segment.start.y + (segment.end.y - segment.start.y) * local_progress
+            return scene.world_point(segment.floor_key, x, y, z_offset=8.0)
+
+        start_world = scene.world_point(
+            segment.floor_key,
+            segment.end.x,
+            segment.end.y,
+            z_offset=8.0,
+        )
+        end_world = scene.world_point(
+            segment.result_floor_key,
+            segment.end.x,
+            segment.end.y,
+            z_offset=8.0,
+        )
+        if start_world is None or end_world is None:
+            return None
+        return (
+            start_world[0] + (end_world[0] - start_world[0]) * local_progress,
+            start_world[1] + (end_world[1] - start_world[1]) * local_progress,
+            start_world[2] + (end_world[2] - start_world[2]) * local_progress,
+        )
+
+    def _default_operator_position(self) -> QPointF:
+        if self._is_overview_mode():
+            scene = self._map_scene()
+            return scene.sceneRect().center() if scene is not None else QPointF()
+        return self.map_view.scene_center()
+
+    def _active_canvas_widget(self) -> QWidget:
+        return self.overview_view if self._is_overview_mode() else self.map_view
+
+    def _active_canvas_rect(self) -> QRect:
+        widget = self._active_canvas_widget()
+        top_left = widget.mapTo(self, QPoint(0, 0))
+        return QRect(top_left, widget.size())
+
+    def _is_overview_mode(self) -> bool:
+        return self._view_mode == "overview_2p5d"
+
+    def _reset_active_view(self) -> None:
+        if self._is_overview_mode():
+            self.overview_view.reset_view()
+        else:
+            self.map_view.reset_view()
+
+    def _on_view_mode_changed(self, index: int) -> None:
+        mode = self.view_mode_combo.itemData(index) or "single_floor"
+        self._set_view_mode(str(mode))
+
+    def _set_view_mode(self, mode: str) -> None:
+        if mode == self._view_mode:
+            self._position_overlay_panels()
+            return
+        if mode == "overview_2p5d" and not self._supports_overview_view():
+            self.view_mode_combo.blockSignals(True)
+            self.view_mode_combo.setCurrentIndex(0)
+            self.view_mode_combo.blockSignals(False)
+            mode = "single_floor"
+
+        self._view_mode = mode
+        self.canvas_stack.setCurrentWidget(self.overview_view if self._is_overview_mode() else self.map_view)
+        self._rebuild_floor_panel()
+        self._position_overlay_panels()
+        if self._is_overview_mode():
+            if not self._overview_visible_floor_keys and self._current_map_asset is not None:
+                self._overview_visible_floor_keys = {floor.key for floor in self._current_map_asset.floors}
+            self._sync_overview_scene_states(
+                self._resolved_states(self.current_keyframe_index, include_all_floors=True)
+            )
+            self.overview_view.reset_view()
+        else:
+            self._apply_column_with_focus_floor(self.current_keyframe_index)
+
+    def _supports_overview_view(self) -> bool:
+        asset = self._current_map_asset
+        if asset is None or len(asset.floors) <= 1:
+            return False
+        overview = asset.overview_2p5d
+        return overview is None or overview.enabled
+
+    def _update_view_mode_availability(self) -> None:
+        supported = self._supports_overview_view()
+        self.view_mode_combo.setEnabled(supported)
+        if not supported and self._is_overview_mode():
+            self.view_mode_combo.blockSignals(True)
+            self.view_mode_combo.setCurrentIndex(0)
+            self.view_mode_combo.blockSignals(False)
+            self._set_view_mode("single_floor")
 
     def _route_planner(self) -> InteractionRoutePlanner:
         interactions = self._current_map_asset.interactions if self._current_map_asset is not None else []

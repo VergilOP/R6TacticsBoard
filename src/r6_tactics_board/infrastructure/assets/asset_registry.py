@@ -40,6 +40,18 @@ class MapFloorAsset:
     key: str
     name: str
     image_path: str
+    overview_height: float | None = None
+
+
+@dataclass(slots=True)
+class MapOverview2p5dAsset:
+    enabled: bool = True
+    default_yaw: float = 215.0
+    default_zoom: float = 1.0
+    pitch_factor: float = 0.65
+    floor_height: float = 180.0
+    draw_order: list[str] = field(default_factory=list)
+    floor_overrides: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -49,6 +61,7 @@ class MapAsset:
     path: str
     floors: list[MapFloorAsset] = field(default_factory=list)
     interactions: list[MapInteractionPoint] = field(default_factory=list)
+    overview_2p5d: MapOverview2p5dAsset | None = None
 
 
 class AssetRegistry:
@@ -90,11 +103,18 @@ class AssetRegistry:
         for item in data.get("floors", []):
             image_path = self._resolve_asset_path(path.parent, item.get("image", ""))
             if image_path.is_file():
+                overview_data = item.get("overview", {})
+                overview_height = overview_data.get("height")
                 floors.append(
                     MapFloorAsset(
                         key=item.get("key", image_path.stem),
                         name=item.get("name", image_path.stem),
                         image_path=str(image_path),
+                        overview_height=(
+                            float(overview_height)
+                            if overview_height is not None
+                            else None
+                        ),
                     )
                 )
 
@@ -113,6 +133,7 @@ class AssetRegistry:
             return None
 
         interactions = self._load_interactions(data)
+        overview_2p5d = self._load_overview_2p5d(data)
 
         return MapAsset(
             key=data.get("key", path.parent.name),
@@ -120,6 +141,7 @@ class AssetRegistry:
             path=str(path),
             floors=floors,
             interactions=interactions,
+            overview_2p5d=overview_2p5d,
         )
 
     def find_map_asset(self, key: str) -> MapAsset | None:
@@ -280,6 +302,39 @@ class AssetRegistry:
             )
 
         return interactions
+
+    @staticmethod
+    def _load_overview_2p5d(data: dict) -> MapOverview2p5dAsset | None:
+        raw = data.get("overview_2_5d")
+        if not isinstance(raw, dict):
+            return None
+
+        floor_overrides: dict[str, float] = {}
+        for floor_key, override in raw.get("floor_overrides", {}).items():
+            if not isinstance(override, dict):
+                continue
+            height = override.get("height")
+            if height is None:
+                continue
+            try:
+                floor_overrides[str(floor_key)] = float(height)
+            except (TypeError, ValueError):
+                continue
+
+        draw_order = [
+            str(item)
+            for item in raw.get("draw_order", [])
+            if str(item)
+        ]
+        return MapOverview2p5dAsset(
+            enabled=bool(raw.get("enabled", True)),
+            default_yaw=float(raw.get("default_yaw", 215.0)),
+            default_zoom=float(raw.get("default_zoom", 1.0)),
+            pitch_factor=float(raw.get("pitch_factor", 0.65)),
+            floor_height=float(raw.get("floor_height", 180.0)),
+            draw_order=draw_order,
+            floor_overrides=floor_overrides,
+        )
 
     @staticmethod
     def _list_image_files(directory: Path) -> list[Path]:

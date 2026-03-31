@@ -197,6 +197,9 @@ class FloorOverlayPanel(QWidget):
         floors: list[MapFloorAsset],
         current_floor_key: str,
         on_select: Callable[[str], None],
+        *,
+        multi_select: bool = False,
+        selected_floor_keys: set[str] | None = None,
     ) -> None:
         while self._layout.count():
             item = self._layout.takeAt(0)
@@ -210,7 +213,12 @@ class FloorOverlayPanel(QWidget):
 
         self._layout.addWidget(BodyLabel("楼层"))
         for floor in floors:
-            button = PrimaryPushButton(floor.name) if floor.key == current_floor_key else PushButton(floor.name)
+            is_selected = (
+                floor.key in (selected_floor_keys or set())
+                if multi_select
+                else floor.key == current_floor_key
+            )
+            button = PrimaryPushButton(floor.name) if is_selected else PushButton(floor.name)
             button.clicked.connect(lambda checked=False, key=floor.key: on_select(key))
             self._layout.addWidget(button)
 
