@@ -2676,6 +2676,9 @@ class EditorPage(QWidget):
         self.floor_panel.refresh_theme()
         self.playback_panel.refresh_theme()
         self.timeline.refresh_theme()
+        self.map_view.refresh_theme()
+        self.overview_view.refresh_theme()
+        self.canvas_stack.update()
 
     @staticmethod
     def _sort_operator_id(operator_id: str) -> int:

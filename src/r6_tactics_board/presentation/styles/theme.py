@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QPalette
 from qfluentwidgets import Theme, isDarkTheme, qconfig
 from qfluentwidgets.common.style_sheet import updateStyleSheet
 
@@ -18,20 +18,20 @@ _THEME_EVENTS = {
 }
 
 _DARK_TOKENS = {
-    "window_bg": "#11161D",
-    "page_bg": "#181D25",
-    "card_bg": "#202733",
-    "card_bg_alt": "#242D39",
-    "card_border": "#394556",
-    "overlay_bg": "rgba(24, 29, 37, 228)",
+    "window_bg": "#0E1520",
+    "page_bg": "#131C27",
+    "card_bg": "#192431",
+    "card_bg_alt": "#202C3A",
+    "card_border": "#324253",
+    "overlay_bg": "rgba(19, 28, 39, 232)",
     "overlay_border": "rgba(255, 255, 255, 0.10)",
-    "popup_bg": "rgba(24, 29, 37, 238)",
+    "popup_bg": "rgba(19, 28, 39, 242)",
     "popup_hover": "rgba(96, 165, 250, 0.95)",
     "popup_selection": "rgba(96, 165, 250, 0.24)",
-    "table_bg": "rgba(17, 22, 29, 0.96)",
-    "table_header_bg": "rgba(31, 39, 51, 0.98)",
+    "table_bg": "rgba(15, 22, 32, 0.98)",
+    "table_header_bg": "rgba(24, 35, 48, 0.98)",
     "table_grid": "rgba(255, 255, 255, 0.08)",
-    "table_selected_bg": "#315C84",
+    "table_selected_bg": "#2C4766",
     "table_selected_border": "#FACC15",
     "text_primary": "#F3F4F6",
     "text_secondary": "#CBD5E1",
@@ -39,9 +39,9 @@ _DARK_TOKENS = {
     "accent": "#60A5FA",
     "accent_strong": "#3B82F6",
     "accent_warn": "#FACC15",
-    "canvas_bg": "#202020",
-    "canvas_grid": "#2C2C2C",
-    "overview_bg": "#202020",
+    "canvas_bg": "#18222E",
+    "canvas_grid": "#2A394A",
+    "overview_bg": "#111A24",
 }
 
 _LIGHT_TOKENS = {
@@ -103,6 +103,18 @@ def apply_theme(theme: Theme, *, save: bool, lazy: bool = True) -> None:
 
 def theme_tokens() -> dict[str, str]:
     return _DARK_TOKENS if isDarkTheme() else _LIGHT_TOKENS
+
+
+def _theme_color(value: str) -> QColor:
+    normalized = value.strip()
+    if normalized.startswith("rgba(") and normalized.endswith(")"):
+        parts = [part.strip() for part in normalized[5:-1].split(",")]
+        if len(parts) == 4:
+            red, green, blue = (int(parts[index]) for index in range(3))
+            alpha_float = float(parts[3])
+            alpha = int(alpha_float * 255) if alpha_float <= 1.0 else int(alpha_float)
+            return QColor(red, green, blue, max(0, min(alpha, 255)))
+    return QColor(normalized)
 
 
 def hex_palette() -> dict[str, str]:
@@ -200,15 +212,75 @@ QComboBox QAbstractItemView {{
 """
 
 
+def scrollbar_stylesheet() -> str:
+    tokens = theme_tokens()
+    track = tokens["table_header_bg"]
+    handle = tokens["text_muted"]
+    handle_hover = tokens["text_secondary"]
+    return f"""
+QScrollBar:vertical {{
+    background: {track};
+    width: 12px;
+    margin: 2px;
+    border: none;
+    border-radius: 6px;
+}}
+QScrollBar::handle:vertical {{
+    background: {handle};
+    min-height: 28px;
+    border-radius: 6px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {handle_hover};
+}}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    height: 0px;
+    border: none;
+    background: transparent;
+}}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+    background: transparent;
+}}
+QScrollBar:horizontal {{
+    background: {track};
+    height: 12px;
+    margin: 2px;
+    border: none;
+    border-radius: 6px;
+}}
+QScrollBar::handle:horizontal {{
+    background: {handle};
+    min-width: 28px;
+    border-radius: 6px;
+}}
+QScrollBar::handle:horizontal:hover {{
+    background: {handle_hover};
+}}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+    width: 0px;
+    border: none;
+    background: transparent;
+}}
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
+    background: transparent;
+}}
+"""
+
+
 def timeline_table_stylesheet() -> str:
     tokens = theme_tokens()
     selection_fg = "#FFFFFF" if isDarkTheme() else tokens["text_primary"]
     return f"""
 QTableWidget {{
     background-color: {tokens['table_bg']};
+    color: {tokens['text_primary']};
     border: 1px solid {tokens['card_border']};
     border-radius: 10px;
     gridline-color: {tokens['table_grid']};
+}}
+QTableWidget::item {{
+    color: {tokens['text_primary']};
+    background-color: transparent;
 }}
 QHeaderView::section {{
     background-color: {tokens['table_header_bg']};
@@ -229,7 +301,127 @@ QTableWidget::item:selected {{
     color: {selection_fg};
     border: 2px solid {tokens['table_selected_border']};
 }}
+    {scrollbar_stylesheet()}
 """
+
+
+def list_widget_stylesheet() -> str:
+    tokens = theme_tokens()
+    selection_fg = "#FFFFFF" if isDarkTheme() else tokens["text_primary"]
+    return f"""
+QListWidget {{
+    background-color: {tokens['table_bg']};
+    color: {tokens['text_primary']};
+    border: 1px solid {tokens['card_border']};
+    border-radius: 10px;
+    outline: none;
+}}
+QListWidget::item {{
+    padding: 8px 10px;
+    border-bottom: 1px solid {tokens['table_grid']};
+}}
+QListWidget::item:selected {{
+    background-color: {tokens['table_selected_bg']};
+    color: {selection_fg};
+}}
+QListWidget::item:hover {{
+    background-color: {tokens['popup_selection']};
+}}
+    {scrollbar_stylesheet()}
+"""
+
+
+def plain_text_stylesheet() -> str:
+    tokens = theme_tokens()
+    return f"""
+QPlainTextEdit {{
+    background-color: {tokens['table_bg']};
+    color: {tokens['text_primary']};
+    border: 1px solid {tokens['card_border']};
+    border-radius: 10px;
+    selection-background-color: {tokens['table_selected_bg']};
+}}
+    {scrollbar_stylesheet()}
+"""
+
+
+def tab_widget_stylesheet() -> str:
+    tokens = theme_tokens()
+    return f"""
+QTabWidget::pane {{
+    border: 1px solid {tokens['card_border']};
+    border-radius: 12px;
+    background: {tokens['card_bg']};
+    top: -1px;
+}}
+QTabBar::tab {{
+    background: {tokens['table_header_bg']};
+    color: {tokens['text_secondary']};
+    border: 1px solid {tokens['card_border']};
+    padding: 8px 14px;
+    min-width: 84px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    margin-right: 4px;
+}}
+QTabBar::tab:selected {{
+    background: {tokens['card_bg']};
+    color: {tokens['text_primary']};
+    border-bottom-color: {tokens['card_bg']};
+}}
+QTabBar::tab:hover {{
+    color: {tokens['text_primary']};
+}}
+"""
+
+
+def splitter_stylesheet() -> str:
+    tokens = theme_tokens()
+    return f"""
+QSplitter::handle {{
+    background: {tokens['card_border']};
+}}
+QSplitter::handle:horizontal {{
+    width: 2px;
+}}
+QSplitter::handle:vertical {{
+    height: 2px;
+}}
+"""
+
+
+def graphics_view_stylesheet() -> str:
+    tokens = theme_tokens()
+    return f"""
+QGraphicsView {{
+    background: {tokens['canvas_bg']};
+    border: 1px solid {tokens['card_border']};
+    border-radius: 10px;
+}}
+QGraphicsView::corner {{
+    background: {tokens['table_header_bg']};
+    border: none;
+}}
+{scrollbar_stylesheet()}
+"""
+
+
+def item_view_palette() -> QPalette:
+    tokens = theme_tokens()
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, _theme_color(tokens["table_bg"]))
+    palette.setColor(QPalette.ColorRole.Base, _theme_color(tokens["table_bg"]))
+    palette.setColor(QPalette.ColorRole.AlternateBase, _theme_color(tokens["table_header_bg"]))
+    palette.setColor(QPalette.ColorRole.Button, _theme_color(tokens["card_bg"]))
+    palette.setColor(QPalette.ColorRole.Text, _theme_color(tokens["text_primary"]))
+    palette.setColor(QPalette.ColorRole.WindowText, _theme_color(tokens["text_primary"]))
+    palette.setColor(QPalette.ColorRole.ButtonText, _theme_color(tokens["text_primary"]))
+    palette.setColor(QPalette.ColorRole.Highlight, _theme_color(tokens["table_selected_bg"]))
+    palette.setColor(
+        QPalette.ColorRole.HighlightedText,
+        QColor("#FFFFFF") if isDarkTheme() else _theme_color(tokens["text_primary"]),
+    )
+    return palette
 
 
 def canvas_background_color() -> QColor:

@@ -5,6 +5,7 @@ from qfluentwidgets import FluentIcon, FluentWindow, NavigationItemPosition, qco
 from r6_tactics_board.infrastructure.diagnostics.debug_logging import debug_log
 from r6_tactics_board.presentation.pages.assets.assets_page import AssetsPage
 from r6_tactics_board.presentation.pages.debug.debug_page import DebugPage
+from r6_tactics_board.presentation.pages.debug.theme_audit_page import ThemeAuditPage
 from r6_tactics_board.presentation.pages.editor.editor_page import EditorPage
 from r6_tactics_board.presentation.pages.esports.esports_page import EsportsPage
 from r6_tactics_board.presentation.pages.settings.settings_page import SettingsPage
@@ -21,12 +22,14 @@ class MainWindow(FluentWindow):
         self.assets_page = AssetsPage()
         self.esports_page = EsportsPage()
         self.debug_page = DebugPage()
+        self.theme_audit_page = ThemeAuditPage()
         self.settings_page = SettingsPage()
 
         self.editor_page.setObjectName("editor-page")
         self.assets_page.setObjectName("assets-page")
         self.esports_page.setObjectName("esports-page")
         self.debug_page.setObjectName("debug-page")
+        self.theme_audit_page.setObjectName("theme-audit-page")
         self.settings_page.setObjectName("settings-page")
 
         self.assets_page.map_requested.connect(self._open_map_in_editor)
@@ -36,6 +39,7 @@ class MainWindow(FluentWindow):
         self.addSubInterface(self.assets_page, FluentIcon.FOLDER, "资源管理")
         self.addSubInterface(self.esports_page, FluentIcon.HISTORY, "电竞历史")
         self.addSubInterface(self.debug_page, FluentIcon.DEVELOPER_TOOLS, "测试调试")
+        self.addSubInterface(self.theme_audit_page, FluentIcon.PALETTE, "主题排查")
         self.addSubInterface(
             self.settings_page,
             FluentIcon.SETTING,
@@ -43,6 +47,7 @@ class MainWindow(FluentWindow):
             position=NavigationItemPosition.BOTTOM,
         )
         self.navigationInterface.setReturnButtonVisible(False)
+        self._bind_theme_audit_targets()
 
         self.setWindowTitle("R6 Tactics Board")
         self.setMinimumSize(1280, 720)
@@ -74,8 +79,41 @@ class MainWindow(FluentWindow):
         self.assets_page.refresh_theme()
         self.esports_page.refresh_theme()
         self.debug_page.refresh_theme()
+        self.theme_audit_page.refresh_theme()
+        self.theme_audit_page.refresh_report()
         self.settings_page.refresh_theme()
         debug_log("theme: main window refresh done")
+
+    def _bind_theme_audit_targets(self) -> None:
+        self.theme_audit_page.set_widget_targets(
+            {
+                "editor.timeline.table": lambda: self.editor_page.timeline.table,
+                "editor.map_view": lambda: self.editor_page.map_view,
+                "editor.map_view.vscroll": lambda: self.editor_page.map_view.verticalScrollBar(),
+                "editor.map_view.hscroll": lambda: self.editor_page.map_view.horizontalScrollBar(),
+                "editor.timeline.vscroll": lambda: self.editor_page.timeline.table.verticalScrollBar(),
+                "editor.timeline.hscroll": lambda: self.editor_page.timeline.table.horizontalScrollBar(),
+                "assets.maps_list": lambda: self.assets_page.maps_list,
+                "assets.attack_list": lambda: self.assets_page.attack_list,
+                "assets.defense_list": lambda: self.assets_page.defense_list,
+                "esports.matches_list": lambda: self.esports_page.matches_list,
+                "esports.match_json_view": lambda: self.esports_page.match_json_view,
+                "esports.summary_json_view": lambda: self.esports_page.summary_json_view,
+                "esports.raw_map_block_view": lambda: self.esports_page.raw_map_block_view,
+                "esports.content_tabs": lambda: self.esports_page.content_tabs,
+                "esports.raw_tabs": lambda: self.esports_page.raw_tabs,
+            }
+        )
+        self.theme_audit_page.set_probe_targets(
+            {
+                "editor.map_scene.background": lambda: self.editor_page._map_scene().backgroundBrush().color().name()
+                if self.editor_page._map_scene() is not None
+                else "MISSING",
+                "debug.map_scene.background": lambda: self.debug_page._scene().backgroundBrush().color().name()
+                if self.debug_page._scene() is not None
+                else "MISSING",
+            }
+        )
 
     def _schedule_theme_refresh(self) -> None:
         debug_log("theme: schedule main window refresh")

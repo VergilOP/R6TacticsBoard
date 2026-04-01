@@ -452,6 +452,7 @@ class DebugPage(QWidget):
 
     def refresh_theme(self) -> None:
         self.setStyleSheet(page_stylesheet(self.objectName()))
+        self.map_view.refresh_theme()
 
     def _scene(self) -> MapDebugScene | None:
         scene = self.map_view.scene()

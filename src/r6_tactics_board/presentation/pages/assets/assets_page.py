@@ -9,7 +9,7 @@ from r6_tactics_board.infrastructure.assets.asset_paths import (
     ensure_asset_directories,
 )
 from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry
-from r6_tactics_board.presentation.styles.theme import page_stylesheet
+from r6_tactics_board.presentation.styles.theme import item_view_palette, list_widget_stylesheet, page_stylesheet
 
 
 class AssetsPage(QWidget):
@@ -147,3 +147,11 @@ class AssetsPage(QWidget):
 
     def refresh_theme(self) -> None:
         self.setStyleSheet(page_stylesheet(self.objectName()))
+        list_style = list_widget_stylesheet()
+        palette = item_view_palette()
+        self.maps_list.setStyleSheet(list_style)
+        self.attack_list.setStyleSheet(list_style)
+        self.defense_list.setStyleSheet(list_style)
+        for widget in (self.maps_list, self.attack_list, self.defense_list):
+            widget.setPalette(palette)
+            widget.viewport().setPalette(palette)

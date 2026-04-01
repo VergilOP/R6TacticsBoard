@@ -281,7 +281,7 @@ class PlaybackOverlayPanel(QWidget):
     def reposition(self, map_rect: QRect) -> None:
         self.layout().activate()
         self.setFixedSize(self.layout().sizeHint())
-        x = map_rect.left() + max((map_rect.width() - self.width()) // 2, 12)
+        x = map_rect.left() + (map_rect.width() - self.width()) // 2
         y = map_rect.bottom() - self.height() - 12
         self.move(x, y)
         self.raise_()

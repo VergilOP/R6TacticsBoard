@@ -2,6 +2,7 @@ from PyQt6.QtCore import QPoint, QPointF, Qt, pyqtSignal
 from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QGraphicsView
 
+from r6_tactics_board.presentation.styles.theme import graphics_view_stylesheet, scrollbar_stylesheet
 from r6_tactics_board.presentation.widgets.canvas.map_scene import MapScene
 
 
@@ -20,10 +21,24 @@ class MapView(QGraphicsView):
             QPainter.RenderHint.Antialiasing
             | QPainter.RenderHint.SmoothPixmapTransform
         )
+        self.setFrameShape(QGraphicsView.Shape.NoFrame)
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+        self.setStyleSheet(graphics_view_stylesheet())
+        style = scrollbar_stylesheet()
+        self.verticalScrollBar().setStyleSheet(style)
+        self.horizontalScrollBar().setStyleSheet(style)
+
+    def refresh_theme(self) -> None:
+        self.setStyleSheet(graphics_view_stylesheet())
+        style = scrollbar_stylesheet()
+        self.verticalScrollBar().setStyleSheet(style)
+        self.horizontalScrollBar().setStyleSheet(style)
+        scene = self.scene()
+        if scene is not None and hasattr(scene, "refresh_theme"):
+            scene.refresh_theme()
 
     def scene_center(self) -> QPointF:
         return self.mapToScene(self.viewport().rect().center())

@@ -23,7 +23,15 @@ from qfluentwidgets import BodyLabel, ComboBox, PushButton, StrongBodyLabel, Sub
 from r6_tactics_board.domain.esports_models import EsportsMapDataset, EsportsMatchRecord
 from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry, OperatorCatalogEntry
 from r6_tactics_board.infrastructure.esports.esports_store import EsportsStore
-from r6_tactics_board.presentation.styles.theme import card_stylesheet, page_stylesheet
+from r6_tactics_board.presentation.styles.theme import (
+    card_stylesheet,
+    item_view_palette,
+    list_widget_stylesheet,
+    page_stylesheet,
+    plain_text_stylesheet,
+    splitter_stylesheet,
+    tab_widget_stylesheet,
+)
 
 
 class SummaryStatCard(QFrame):
@@ -105,6 +113,7 @@ class OperatorIconStrip(QWidget):
     @staticmethod
     def _build_item(name: str, entry: OperatorCatalogEntry | None) -> QWidget:
         frame = QFrame()
+        frame.setObjectName("esports-operator-card")
         frame.setFrameShape(QFrame.Shape.StyledPanel)
 
         icon_label = QLabel()
@@ -165,6 +174,8 @@ class EsportsPage(QWidget):
         self.matches_list = QListWidget()
 
         self.content_tabs = QTabWidget()
+        self.raw_tabs = QTabWidget()
+        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
         self.winner_label = SubtitleLabel("请选择比赛")
         self.score_label = StrongBodyLabel("-")
         self.event_label = BodyLabel("-")
@@ -202,8 +213,7 @@ class EsportsPage(QWidget):
         layout.addWidget(BodyLabel("优先展示观赛关键信息，包括胜负、比分、赛事信息和 ban 人记录。"))
         layout.addLayout(toolbar_layout)
 
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setChildrenCollapsible(False)
+        self.main_splitter.setChildrenCollapsible(False)
 
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
@@ -235,12 +245,12 @@ class EsportsPage(QWidget):
         self._init_match_tab()
         self._init_data_tab()
 
-        splitter.addWidget(left_panel)
-        splitter.addWidget(right_panel)
-        splitter.setStretchFactor(0, 0)
-        splitter.setStretchFactor(1, 1)
+        self.main_splitter.addWidget(left_panel)
+        self.main_splitter.addWidget(right_panel)
+        self.main_splitter.setStretchFactor(0, 0)
+        self.main_splitter.setStretchFactor(1, 1)
 
-        layout.addWidget(splitter, 1)
+        layout.addWidget(self.main_splitter, 1)
 
     def _init_match_tab(self) -> None:
         tab = QWidget()
@@ -248,9 +258,10 @@ class EsportsPage(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
-        hero_frame = QFrame()
-        hero_frame.setFrameShape(QFrame.Shape.StyledPanel)
-        hero_layout = QVBoxLayout(hero_frame)
+        self.hero_frame = QFrame()
+        self.hero_frame.setObjectName("esports-hero-card")
+        self.hero_frame.setFrameShape(QFrame.Shape.StyledPanel)
+        hero_layout = QVBoxLayout(self.hero_frame)
         hero_layout.setContentsMargins(16, 16, 16, 16)
         hero_layout.setSpacing(8)
 
@@ -269,7 +280,7 @@ class EsportsPage(QWidget):
         hero_layout.addWidget(self.side_summary_label)
         hero_layout.addWidget(self.meta_label)
 
-        layout.addWidget(hero_frame)
+        layout.addWidget(self.hero_frame)
         layout.addWidget(self.attack_bans_strip)
         layout.addWidget(self.defense_bans_strip)
         layout.addWidget(self.attack_ops_strip)
@@ -301,13 +312,12 @@ class EsportsPage(QWidget):
             editor.setReadOnly(True)
             editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
-        raw_tabs = QTabWidget()
-        raw_tabs.addTab(self.match_json_view, "比赛 JSON")
-        raw_tabs.addTab(self.summary_json_view, "汇总 JSON")
-        raw_tabs.addTab(self.raw_map_block_view, "原始地图块")
+        self.raw_tabs.addTab(self.match_json_view, "比赛 JSON")
+        self.raw_tabs.addTab(self.summary_json_view, "汇总 JSON")
+        self.raw_tabs.addTab(self.raw_map_block_view, "原始地图块")
 
         layout.addLayout(grid)
-        layout.addWidget(raw_tabs, 1)
+        layout.addWidget(self.raw_tabs, 1)
 
         self.content_tabs.addTab(tab, "数据视图")
 
@@ -517,6 +527,26 @@ class EsportsPage(QWidget):
         )
 
     def refresh_theme(self) -> None:
-        self.setStyleSheet(page_stylesheet(self.objectName()) + card_stylesheet("esports-summary-card"))
+        self.setStyleSheet(
+            page_stylesheet(self.objectName())
+            + card_stylesheet("esports-summary-card")
+            + card_stylesheet("esports-hero-card")
+            + card_stylesheet("esports-operator-card")
+        )
+        list_style = list_widget_stylesheet()
+        plain_text_style = plain_text_stylesheet()
+        tabs_style = tab_widget_stylesheet()
+        splitter_style = splitter_stylesheet()
+        palette = item_view_palette()
+        self.matches_list.setStyleSheet(list_style)
+        self.matches_list.setPalette(palette)
+        self.matches_list.viewport().setPalette(palette)
+        self.content_tabs.setStyleSheet(tabs_style)
+        self.raw_tabs.setStyleSheet(tabs_style)
+        self.main_splitter.setStyleSheet(splitter_style)
+        for editor in (self.raw_map_block_view, self.match_json_view, self.summary_json_view):
+            editor.setStyleSheet(plain_text_style)
+            editor.setPalette(palette)
+            editor.viewport().setPalette(palette)
         for card in (self.matches_stat_card, self.flawless_stat_card, self.updated_stat_card):
             card.refresh_theme()

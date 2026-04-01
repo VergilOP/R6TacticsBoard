@@ -1,9 +1,14 @@
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QBrush, QFont
 from PyQt6.QtWidgets import QHeaderView, QHBoxLayout, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, PushButton
 
-from r6_tactics_board.presentation.styles.theme import card_stylesheet, timeline_table_stylesheet
+from r6_tactics_board.presentation.styles.theme import (
+    card_stylesheet,
+    item_view_palette,
+    scrollbar_stylesheet,
+    timeline_table_stylesheet,
+)
 
 
 class TimelineWidget(QWidget):
@@ -63,6 +68,7 @@ class TimelineWidget(QWidget):
         toolbar.addWidget(self.clear_button)
 
         self.table.setMinimumHeight(180)
+        self.table.setFrameShape(QTableWidget.Shape.NoFrame)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectItems)
         self.table.verticalHeader().setDefaultSectionSize(34)
@@ -178,6 +184,30 @@ class TimelineWidget(QWidget):
     def _apply_theme(self) -> None:
         self.setStyleSheet(card_stylesheet(self.objectName()))
         self.table.setStyleSheet(timeline_table_stylesheet())
+        palette = item_view_palette()
+        self.table.setPalette(palette)
+        self.table.viewport().setPalette(palette)
+        self.table.horizontalHeader().setPalette(palette)
+        self.table.verticalHeader().setPalette(palette)
+        self.table.horizontalHeader().viewport().setPalette(palette)
+        self.table.verticalHeader().viewport().setPalette(palette)
+        self.table.setAutoFillBackground(True)
+        self.table.viewport().setAutoFillBackground(True)
+        self.table.horizontalHeader().setAutoFillBackground(True)
+        self.table.verticalHeader().setAutoFillBackground(True)
+        self.table.horizontalHeader().viewport().setAutoFillBackground(True)
+        self.table.verticalHeader().viewport().setAutoFillBackground(True)
+        self.table.verticalScrollBar().setStyleSheet(scrollbar_stylesheet())
+        self.table.horizontalScrollBar().setStyleSheet(scrollbar_stylesheet())
+        text_brush = QBrush(palette.text().color())
+        base_brush = QBrush(palette.base().color())
+        for row in range(self.table.rowCount()):
+            for column in range(self.table.columnCount()):
+                item = self.table.item(row, column)
+                if item is None:
+                    continue
+                item.setForeground(text_brush)
+                item.setBackground(base_brush)
 
     def refresh_theme(self) -> None:
         self._apply_theme()
