@@ -104,7 +104,7 @@ class InteractionRoutePlanner:
         current_point = Point2D(start_state.position.x, start_state.position.y)
 
         for interaction, target_floor in interaction_steps:
-            interaction_point = Point2D(interaction.position.x, interaction.position.y)
+            interaction_point = self.interaction_position_for_floor(interaction, current_floor)
             segments.append(
                 PlaybackRouteSegment(
                     floor_key=current_floor,
@@ -114,7 +114,8 @@ class InteractionRoutePlanner:
                 )
             )
             current_floor = target_floor
-            current_point = Point2D(interaction_point.x, interaction_point.y)
+            exit_point = self.interaction_position_for_floor(interaction, current_floor)
+            current_point = Point2D(exit_point.x, exit_point.y)
 
         segments.append(
             PlaybackRouteSegment(
@@ -153,7 +154,7 @@ class InteractionRoutePlanner:
                 prefix_point = Point2D(start_state.position.x, start_state.position.y)
                 if route_prefix:
                     last_interaction, _ = route_prefix[-1]
-                    prefix_point = Point2D(last_interaction.position.x, last_interaction.position.y)
+                    prefix_point = self.interaction_position_for_floor(last_interaction, current_floor)
 
                 continuation_start = self.copy_state_with_position(
                     start_state,
@@ -214,14 +215,15 @@ class InteractionRoutePlanner:
 
             for interaction, target_floor in self.iter_interaction_transitions(current_floor):
                 next_key = (interaction.id, target_floor)
-                interaction_point = Point2D(interaction.position.x, interaction.position.y)
+                interaction_point = self.interaction_position_for_floor(interaction, current_floor)
                 travel_cost = self.distance_points(current_point, interaction_point)
                 next_cost = current_cost + travel_cost
                 if next_cost >= best_costs.get(next_key, float("inf")):
                     continue
                 best_costs[next_key] = next_cost
                 parents[next_key] = (current_key, interaction, target_floor)
-                node_positions[next_key] = Point2D(interaction.position.x, interaction.position.y)
+                exit_point = self.interaction_position_for_floor(interaction, target_floor)
+                node_positions[next_key] = Point2D(exit_point.x, exit_point.y)
                 heappush(heap, (next_cost, next_key[0], next_key[1]))
 
         if goal_key not in parents:
@@ -385,6 +387,19 @@ class InteractionRoutePlanner:
             display_mode=template.display_mode,
             floor_key=floor_key,
         )
+
+    @staticmethod
+    def interaction_position_for_floor(
+        interaction: MapInteractionPoint,
+        floor_key: str,
+    ) -> Point2D:
+        if interaction.floor_key == floor_key:
+            return Point2D(interaction.position.x, interaction.position.y)
+        if floor_key in interaction.linked_floor_keys and interaction.target_position is not None:
+            return Point2D(interaction.target_position.x, interaction.target_position.y)
+        if interaction.target_position is not None:
+            return Point2D(interaction.target_position.x, interaction.target_position.y)
+        return Point2D(interaction.position.x, interaction.position.y)
 
     @staticmethod
     def route_segment_length(segment: PlaybackRouteSegment) -> float:

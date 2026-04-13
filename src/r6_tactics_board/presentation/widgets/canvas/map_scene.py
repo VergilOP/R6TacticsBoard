@@ -5,7 +5,15 @@ from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QBrush, QColor, QPen, QPixmap, QTransform
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPixmapItem, QGraphicsScene
 
-from r6_tactics_board.domain.models import MapInteractionPoint, OperatorDisplayMode, OperatorState, Point2D, TeamSide
+from r6_tactics_board.domain.models import (
+    MapInteractionPoint,
+    MapSurface,
+    OperatorDisplayMode,
+    OperatorState,
+    Point2D,
+    TacticalSurfaceState,
+    TeamSide,
+)
 from r6_tactics_board.presentation.styles.theme import (
     canvas_background_color,
     canvas_grid_color,
@@ -14,11 +22,13 @@ from r6_tactics_board.presentation.styles.theme import (
 )
 from r6_tactics_board.presentation.widgets.canvas.map_interaction_item import MapInteractionItem
 from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
+from r6_tactics_board.presentation.widgets.canvas.map_surface_item import MapSurfaceItem
 
 
 class MapScene(QGraphicsScene):
     operator_transform_started = pyqtSignal()
     operator_move_finished = pyqtSignal(str)
+    surface_selected = pyqtSignal(str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -39,6 +49,10 @@ class MapScene(QGraphicsScene):
         self._highlighted_interaction_ids: set[str] = set()
         self._highlighted_interaction_order: list[str] = []
         self._hovered_interaction_id = ""
+        self._surfaces: list[MapSurface] = []
+        self._surface_states: dict[str, TacticalSurfaceState] = {}
+        self._surface_items: dict[str, MapSurfaceItem] = {}
+        self._surface_floor_key = ""
 
         self.setSceneRect(QRectF(0, 0, 4000, 4000))
         self.setBackgroundBrush(QBrush(canvas_background_color()))
@@ -62,6 +76,7 @@ class MapScene(QGraphicsScene):
         self._map_item.setZValue(-100)
         self._map_item.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
         self.addItem(self._map_item)
+        self._rebuild_surface_items()
         self._rebuild_interaction_items()
         return True
 
@@ -114,6 +129,17 @@ class MapScene(QGraphicsScene):
             line_item.setZValue(4)
             self._path_items[operator_id] = line_item
 
+    def set_surface_overlays(
+        self,
+        surfaces: list[MapSurface],
+        surface_states: dict[str, TacticalSurfaceState],
+        floor_key: str,
+    ) -> None:
+        self._surfaces = deepcopy(surfaces)
+        self._surface_states = deepcopy(surface_states)
+        self._surface_floor_key = floor_key
+        self._rebuild_surface_items()
+
     def selected_operator(self) -> OperatorItem | None:
         for item in self.selectedItems():
             if isinstance(item, OperatorItem):
@@ -131,6 +157,16 @@ class MapScene(QGraphicsScene):
 
         self.removeItem(operator)
         return True
+
+    def selected_surface(self) -> MapSurfaceItem | None:
+        for item in self.selectedItems():
+            if isinstance(item, MapSurfaceItem):
+                return item
+        return None
+
+    def select_surface(self, surface_id: str | None) -> None:
+        for item in self._surface_items.values():
+            item.setSelected(bool(surface_id) and item.surface.id == surface_id)
 
     def snapshot_operator_states(self) -> list[OperatorState]:
         states: list[OperatorState] = []
@@ -278,6 +314,7 @@ class MapScene(QGraphicsScene):
         self.current_map_path = ""
         self._path_items = {}
         self._grid_items = []
+        self._surface_items = {}
         self._interaction_items = {}
         self._interaction_link_items = []
         self.setSceneRect(QRectF(0, 0, width, height))
@@ -370,7 +407,7 @@ class MapScene(QGraphicsScene):
             if not self._interaction_visible(interaction):
                 continue
 
-            item = MapInteractionItem(interaction)
+            item = MapInteractionItem(interaction, display_floor_key=self._interaction_floor_key)
             item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
             item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
             item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
@@ -404,7 +441,28 @@ class MapScene(QGraphicsScene):
                     route_pen,
                 )
                 line_item.setZValue(18)
-                self._interaction_link_items.append(line_item)
+            self._interaction_link_items.append(line_item)
+
+    def _rebuild_surface_items(self) -> None:
+        selected_ids = [item_id for item_id, item in self._surface_items.items() if item.isSelected()]
+        selected_id = selected_ids[0] if selected_ids else None
+        for item in self._surface_items.values():
+            self.removeItem(item)
+        self._surface_items.clear()
+
+        for surface in self._surfaces:
+            if self._surface_floor_key and surface.floor_key != self._surface_floor_key:
+                continue
+            item = MapSurfaceItem(
+                surface,
+                editable=False,
+                state=self._surface_states.get(surface.id),
+            )
+            item.selected_id.connect(self.surface_selected.emit)
+            self.addItem(item)
+            self._surface_items[surface.id] = item
+            if surface.id == selected_id:
+                item.setSelected(True)
 
     def _interaction_visible(self, interaction: MapInteractionPoint) -> bool:
         if not self._interaction_floor_key:
@@ -437,4 +495,6 @@ class MapScene(QGraphicsScene):
             operator.update()
         for interaction in self._interaction_items.values():
             interaction.update()
+        for surface in self._surface_items.values():
+            surface.update()
         self.update()

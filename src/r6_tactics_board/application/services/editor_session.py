@@ -2,7 +2,16 @@ from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
-from r6_tactics_board.domain.models import Keyframe, MapInfo, OperatorDefinition, OperatorFrameState, TacticProject, Timeline
+from r6_tactics_board.domain.models import (
+    Keyframe,
+    MapInfo,
+    OperatorDefinition,
+    OperatorFrameState,
+    SurfaceOpeningType,
+    TacticalSurfaceState,
+    TacticProject,
+    Timeline,
+)
 from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry, MapAsset, MapFloorAsset, OperatorAsset
 from r6_tactics_board.infrastructure.persistence.project_store import ProjectStore
 
@@ -71,6 +80,7 @@ class EditorSessionService:
         keyframe_columns: list[dict[str, OperatorFrameState]],
         keyframe_names: list[str],
         keyframe_notes: list[str],
+        surface_states: dict[str, TacticalSurfaceState],
         current_keyframe_index: int,
         transition_duration_ms: int,
     ) -> TacticProject:
@@ -119,6 +129,10 @@ class EditorSessionService:
             map_info=map_info,
             operators=operators,
             timeline=Timeline(keyframes=keyframes),
+            surface_states=[
+                deepcopy(surface_states[surface_id])
+                for surface_id in sorted(surface_states)
+            ],
             operator_order=list(operator_order),
             current_keyframe_index=current_keyframe_index,
             transition_duration_ms=transition_duration_ms,

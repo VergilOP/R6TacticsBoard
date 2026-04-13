@@ -38,124 +38,60 @@
     "walls": [],
     "doors": [],
     "windows": [],
-    "hatches": [
-      {
-        "id": "interaction-3",
-        "kind": "hatch",
-        "position": {
-          "x": 919.7733670856811,
-          "y": 531.3498793401741
-        },
-        "floor_key": "2f",
-        "linked_floor_keys": [
-          "roof"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-4",
-        "kind": "hatch",
-        "position": {
-          "x": 659.1428882954058,
-          "y": 640.646531736096
-        },
-        "floor_key": "2f",
-        "linked_floor_keys": [
-          "1f"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-5",
-        "kind": "hatch",
-        "position": {
-          "x": 855.0361191280965,
-          "y": 695.294857934057
-        },
-        "floor_key": "2f",
-        "linked_floor_keys": [
-          "1f"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-7",
-        "kind": "hatch",
-        "position": {
-          "x": 710.4282405734922,
-          "y": 344.70482678713824
-        },
-        "floor_key": "1f",
-        "linked_floor_keys": [
-          "2f"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-8",
-        "kind": "hatch",
-        "position": {
-          "x": 708.7467536135549,
-          "y": 633.9205838963469
-        },
-        "floor_key": "1f",
-        "linked_floor_keys": [
-          "b1"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-9",
-        "kind": "hatch",
-        "position": {
-          "x": 942.4734410448341,
-          "y": 519.5794706206133
-        },
-        "floor_key": "1f",
-        "linked_floor_keys": [
-          "b1"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-10",
-        "kind": "hatch",
-        "position": {
-          "x": 1064.3812456402854,
-          "y": 397.6716660251619
-        },
-        "floor_key": "1f",
-        "linked_floor_keys": [
-          "b1"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      }
-    ],
+    "hatches": [],
     "stairs": [
       {
-        "id": "interaction-1",
+        "id": "interaction-12",
         "kind": "stairs",
         "position": {
-          "x": 773.7144804977282,
-          "y": 666.2889691590377
+          "x": 760.9341825902336,
+          "y": 619.3913658881812
         },
+        "target_position": {
+          "x": 791.5277987964653,
+          "y": 622.7189867954404
+        },
+        "path_points": [
+          {
+            "x": 760.9341825902336,
+            "y": 659.0395275867213
+          },
+          {
+            "x": 791.5277987964653,
+            "y": 659.0395275867213
+          }
+        ],
         "floor_key": "b1",
         "linked_floor_keys": [
-          "1f",
+          "1f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-13",
+        "kind": "stairs",
+        "position": {
+          "x": 768.9771010490111,
+          "y": 628.6363659894179
+        },
+        "target_position": {
+          "x": 800.5232070862937,
+          "y": 630.5180909129533
+        },
+        "path_points": [
+          {
+            "x": 768.9771010490111,
+            "y": 668.229212075877
+          },
+          {
+            "x": 800.5232070862937,
+            "y": 668.229212075877
+          }
+        ],
+        "floor_key": "1f",
+        "linked_floor_keys": [
           "2f"
         ],
         "is_bidirectional": true,
@@ -163,42 +99,66 @@
         "note": ""
       },
       {
-        "id": "interaction-2",
+        "id": "interaction-14",
         "kind": "stairs",
         "position": {
-          "x": 1074.470167399909,
-          "y": 349.74928766695
+          "x": 568.3593362811799,
+          "y": 428.35005964343884
         },
-        "floor_key": "2f",
+        "target_position": {
+          "x": 630.4572581713593,
+          "y": 484.61768909653347
+        },
+        "path_points": [
+          {
+            "x": 568.3593362811799,
+            "y": 446.4035106979154
+          },
+          {
+            "x": 606.573514679798,
+            "y": 484.61768909653347
+          }
+        ],
+        "floor_key": "1f",
         "linked_floor_keys": [
-          "1f"
+          "2f"
         ],
         "is_bidirectional": true,
         "label": "",
         "note": ""
       },
       {
-        "id": "interaction-6",
+        "id": "interaction-15",
         "kind": "stairs",
         "position": {
-          "x": 599.4501012176331,
-          "y": 479.22378358211904
+          "x": 1030.9089202112687,
+          "y": 346.1040719560273
         },
-        "floor_key": "2f",
+        "target_position": {
+          "x": 1118.280356019362,
+          "y": 346.1040719560273
+        },
+        "path_points": [],
+        "floor_key": "1f",
         "linked_floor_keys": [
-          "1f"
+          "2f"
         ],
         "is_bidirectional": true,
         "label": "",
         "note": ""
       },
       {
-        "id": "interaction-11",
+        "id": "interaction-16",
         "kind": "stairs",
         "position": {
-          "x": 1044.2034021210382,
-          "y": 342.26667069522915
+          "x": 1007.968883206675,
+          "y": 343.65913356536464
         },
+        "target_position": {
+          "x": 1088.7493995179948,
+          "y": 343.65913356536464
+        },
+        "path_points": [],
         "floor_key": "b1",
         "linked_floor_keys": [
           "1f"
@@ -214,15 +174,57 @@
     "gadgets": [],
     "interactions": [
       {
-        "id": "interaction-1",
+        "id": "interaction-12",
         "kind": "stairs",
         "position": {
-          "x": 773.7144804977282,
-          "y": 666.2889691590377
+          "x": 760.9341825902336,
+          "y": 619.3913658881812
         },
+        "target_position": {
+          "x": 791.5277987964653,
+          "y": 622.7189867954404
+        },
+        "path_points": [
+          {
+            "x": 760.9341825902336,
+            "y": 659.0395275867213
+          },
+          {
+            "x": 791.5277987964653,
+            "y": 659.0395275867213
+          }
+        ],
         "floor_key": "b1",
         "linked_floor_keys": [
-          "1f",
+          "1f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-13",
+        "kind": "stairs",
+        "position": {
+          "x": 768.9771010490111,
+          "y": 628.6363659894179
+        },
+        "target_position": {
+          "x": 800.5232070862937,
+          "y": 630.5180909129533
+        },
+        "path_points": [
+          {
+            "x": 768.9771010490111,
+            "y": 668.229212075877
+          },
+          {
+            "x": 800.5232070862937,
+            "y": 668.229212075877
+          }
+        ],
+        "floor_key": "1f",
+        "linked_floor_keys": [
           "2f"
         ],
         "is_bidirectional": true,
@@ -230,152 +232,2829 @@
         "note": ""
       },
       {
-        "id": "interaction-2",
+        "id": "interaction-14",
         "kind": "stairs",
         "position": {
-          "x": 1074.470167399909,
-          "y": 349.74928766695
+          "x": 568.3593362811799,
+          "y": 428.35005964343884
         },
-        "floor_key": "2f",
-        "linked_floor_keys": [
-          "1f"
+        "target_position": {
+          "x": 630.4572581713593,
+          "y": 484.61768909653347
+        },
+        "path_points": [
+          {
+            "x": 568.3593362811799,
+            "y": 446.4035106979154
+          },
+          {
+            "x": 606.573514679798,
+            "y": 484.61768909653347
+          }
         ],
-        "is_bidirectional": true,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-3",
-        "kind": "hatch",
-        "position": {
-          "x": 919.7733670856811,
-          "y": 531.3498793401741
-        },
-        "floor_key": "2f",
-        "linked_floor_keys": [
-          "roof"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-4",
-        "kind": "hatch",
-        "position": {
-          "x": 659.1428882954058,
-          "y": 640.646531736096
-        },
-        "floor_key": "2f",
-        "linked_floor_keys": [
-          "1f"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-5",
-        "kind": "hatch",
-        "position": {
-          "x": 855.0361191280965,
-          "y": 695.294857934057
-        },
-        "floor_key": "2f",
-        "linked_floor_keys": [
-          "1f"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-6",
-        "kind": "stairs",
-        "position": {
-          "x": 599.4501012176331,
-          "y": 479.22378358211904
-        },
-        "floor_key": "2f",
-        "linked_floor_keys": [
-          "1f"
-        ],
-        "is_bidirectional": true,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-7",
-        "kind": "hatch",
-        "position": {
-          "x": 710.4282405734922,
-          "y": 344.70482678713824
-        },
         "floor_key": "1f",
         "linked_floor_keys": [
           "2f"
         ],
-        "is_bidirectional": false,
+        "is_bidirectional": true,
         "label": "",
         "note": ""
       },
       {
-        "id": "interaction-8",
-        "kind": "hatch",
-        "position": {
-          "x": 708.7467536135549,
-          "y": 633.9205838963469
-        },
-        "floor_key": "1f",
-        "linked_floor_keys": [
-          "b1"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-9",
-        "kind": "hatch",
-        "position": {
-          "x": 942.4734410448341,
-          "y": 519.5794706206133
-        },
-        "floor_key": "1f",
-        "linked_floor_keys": [
-          "b1"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-10",
-        "kind": "hatch",
-        "position": {
-          "x": 1064.3812456402854,
-          "y": 397.6716660251619
-        },
-        "floor_key": "1f",
-        "linked_floor_keys": [
-          "b1"
-        ],
-        "is_bidirectional": false,
-        "label": "",
-        "note": ""
-      },
-      {
-        "id": "interaction-11",
+        "id": "interaction-15",
         "kind": "stairs",
         "position": {
-          "x": 1044.2034021210382,
-          "y": 342.26667069522915
+          "x": 1030.9089202112687,
+          "y": 346.1040719560273
         },
+        "target_position": {
+          "x": 1118.280356019362,
+          "y": 346.1040719560273
+        },
+        "path_points": [],
+        "floor_key": "1f",
+        "linked_floor_keys": [
+          "2f"
+        ],
+        "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "interaction-16",
+        "kind": "stairs",
+        "position": {
+          "x": 1007.968883206675,
+          "y": 343.65913356536464
+        },
+        "target_position": {
+          "x": 1088.7493995179948,
+          "y": 343.65913356536464
+        },
+        "path_points": [],
         "floor_key": "b1",
         "linked_floor_keys": [
           "1f"
         ],
         "is_bidirectional": true,
+        "label": "",
+        "note": ""
+      }
+    ],
+    "soft_walls": [
+      {
+        "id": "surface-18",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 734.0316413482961,
+          "y": 453.6572079483617
+        },
+        "end": {
+          "x": 734.0316413482961,
+          "y": 482.45699869034894
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-19",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 734.0316413482961,
+          "y": 512.591759738873
+        },
+        "end": {
+          "x": 734.0316413482961,
+          "y": 482.45699869034894
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-20",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 744.2534602955444,
+          "y": 549.3604346710657
+        },
+        "end": {
+          "x": 770.8039624993253,
+          "y": 549.3604346710657
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-21",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 796.6830761832684,
+          "y": 549.3604346710657
+        },
+        "end": {
+          "x": 770.8039624993253,
+          "y": 549.3604346710657
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-22",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 857.7013310050647,
+          "y": 545.0178886634892
+        },
+        "end": {
+          "x": 857.7013310050647,
+          "y": 522.9941868368137
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-23",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 857.7013310050647,
+          "y": 501.0908203265565
+        },
+        "end": {
+          "x": 857.7013310050647,
+          "y": 522.9941868368137
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-24",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 857.9433460533168,
+          "y": 450.75302736933776
+        },
+        "end": {
+          "x": 857.9433460533168,
+          "y": 471.3417384045715
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-25",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 857.9433460533168,
+          "y": 491.64822682894635
+        },
+        "end": {
+          "x": 857.9433460533168,
+          "y": 471.3417384045715
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-26",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 910.9847253628698,
+          "y": 450.33931777029136
+        },
+        "end": {
+          "x": 910.9847253628698,
+          "y": 472.97590791567177
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-27",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 910.9847253628698,
+          "y": 491.56367705943944
+        },
+        "end": {
+          "x": 910.9847253628698,
+          "y": 472.97590791567177
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-28",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 910.9847253628698,
+          "y": 501.13361760870595
+        },
+        "end": {
+          "x": 910.9847253628698,
+          "y": 524.9000974160364
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-29",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 910.9847253628698,
+          "y": 544.7504620351706
+        },
+        "end": {
+          "x": 910.9847253628698,
+          "y": 524.9000974160364
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-30",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 1029.0900747410853,
+          "y": 465.82178096442294
+        },
+        "end": {
+          "x": 1029.0900747410853,
+          "y": 442.11716288506705
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-31",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 969.4326791039209,
+          "y": 438.28055997241916
+        },
+        "end": {
+          "x": 1004.843884306081,
+          "y": 438.28055997241916
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-32",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 854.4183442635596,
+          "y": 592.4564980838026
+        },
+        "end": {
+          "x": 878.7214695383635,
+          "y": 592.4564980838026
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-41",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 469.9848414007303,
+          "y": 541.5413112980968
+        },
+        "end": {
+          "x": 499.9701726701852,
+          "y": 541.5413112980968
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-42",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 529.8586223352614,
+          "y": 541.5413112980968
+        },
+        "end": {
+          "x": 499.9701726701852,
+          "y": 541.5413112980968
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-43",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 570.017865645008,
+          "y": 540.8111432379196
+        },
+        "end": {
+          "x": 599.7751381098972,
+          "y": 540.8111432379196
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-44",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 628.4478433842446,
+          "y": 540.8111432379196
+        },
+        "end": {
+          "x": 599.7751381098972,
+          "y": 540.8111432379196
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-45",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 633.0557081736404,
+          "y": 595.5737477512102
+        },
+        "end": {
+          "x": 633.0557081736404,
+          "y": 570.9902181903159
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-46",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 633.0557081736404,
+          "y": 540.4613960233913
+        },
+        "end": {
+          "x": 633.0557081736404,
+          "y": 570.9902181903159
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-47",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 742.9207191612264,
+          "y": 546.7333842556709
+        },
+        "end": {
+          "x": 773.088581220002,
+          "y": 546.7333842556709
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-48",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 803.2575787642559,
+          "y": 546.7333842556709
+        },
+        "end": {
+          "x": 773.088581220002,
+          "y": 546.7333842556709
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-49",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 887.2849844690882,
+          "y": 486.3965246526416
+        },
+        "end": {
+          "x": 917.0458646840318,
+          "y": 486.3965246526416
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-50",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 950.5852051021968,
+          "y": 486.3965246526416
+        },
+        "end": {
+          "x": 917.0458646840318,
+          "y": 486.3965246526416
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-51",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 983.906218163507,
+          "y": 486.3965246526416
+        },
+        "end": {
+          "x": 950.5852051021968,
+          "y": 486.3965246526416
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-52",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 987.7591823400587,
+          "y": 546.9202160080688
+        },
+        "end": {
+          "x": 987.7591823400587,
+          "y": 520.8837060519552
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-53",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 987.7591823400587,
+          "y": 486.1819623808519
+        },
+        "end": {
+          "x": 987.7591823400587,
+          "y": 520.8837060519552
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-54",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 987.7591823400587,
+          "y": 573.7918583838615
+        },
+        "end": {
+          "x": 987.7591823400587,
+          "y": 546.9202160080688
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-55",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 987.7591823400587,
+          "y": 599.8269109156994
+        },
+        "end": {
+          "x": 987.7591823400587,
+          "y": 573.7918583838615
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-56",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1009.5912073393573,
+          "y": 487.3019938945997
+        },
+        "end": {
+          "x": 1033.9358768647576,
+          "y": 487.3019938945997
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-57",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1058.2998488351718,
+          "y": 487.3019938945997
+        },
+        "end": {
+          "x": 1033.9358768647576,
+          "y": 487.3019938945997
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-58",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1081.5266172712609,
+          "y": 487.3019938945997
+        },
+        "end": {
+          "x": 1058.2998488351718,
+          "y": 487.3019938945997
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-59",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1108.1166907913182,
+          "y": 487.3019938945997
+        },
+        "end": {
+          "x": 1081.5266172712609,
+          "y": 487.3019938945997
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-60",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1152.618960860403,
+          "y": 478.065367933358
+        },
+        "end": {
+          "x": 1152.618960860403,
+          "y": 503.8174826608046
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-61",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1152.618960860403,
+          "y": 529.2881952999662
+        },
+        "end": {
+          "x": 1152.618960860403,
+          "y": 503.8174826608046
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-63",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1049.3366887483367,
+          "y": 658.2495486166713
+        },
+        "end": {
+          "x": 1022.6484244602816,
+          "y": 658.2495486166713
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-64",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1074.4517695367829,
+          "y": 658.2495486166713
+        },
+        "end": {
+          "x": 1049.3366887483367,
+          "y": 658.2495486166713
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-66",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 988.1790289746605,
+          "y": 632.4799036187164
+        },
+        "end": {
+          "x": 988.1790289746605,
+          "y": 656.9620189372255
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-67",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 988.1790289746605,
+          "y": 678.8523901423553
+        },
+        "end": {
+          "x": 988.1790289746605,
+          "y": 656.9620189372255
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-68",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 988.154990913886,
+          "y": 658.2495486166713
+        },
+        "end": {
+          "x": 1022.6484244602816,
+          "y": 658.2495486166713
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-69",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 787.9681638208368,
+          "y": 377.5680784974843
+        },
+        "end": {
+          "x": 787.9681638208368,
+          "y": 400.099847887786
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-70",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 787.9681638208368,
+          "y": 430.06258895148824
+        },
+        "end": {
+          "x": 787.9681638208368,
+          "y": 400.099847887786
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-71",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 878.0952413820436,
+          "y": 327.6763034189591
+        },
+        "end": {
+          "x": 878.0952413820436,
+          "y": 356.67431886181237
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-72",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 878.0952413820436,
+          "y": 382.71819721526754
+        },
+        "end": {
+          "x": 878.0952413820436,
+          "y": 356.67431886181237
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-73",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 878.0952413820436,
+          "y": 412.33137984252124
+        },
+        "end": {
+          "x": 878.0952413820436,
+          "y": 382.71819721526754
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-74",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 878.0952413820436,
+          "y": 435.18503165268436
+        },
+        "end": {
+          "x": 878.0952413820436,
+          "y": 412.33137984252124
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-75",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 774.384725702683,
+          "y": 426.79999461529326
+        },
+        "end": {
+          "x": 774.384725702683,
+          "y": 454.93251811118427
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-76",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 774.384725702683,
+          "y": 478.9960762487678
+        },
+        "end": {
+          "x": 774.384725702683,
+          "y": 454.93251811118427
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-77",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 732.926270024528,
+          "y": 492.68932596093265
+        },
+        "end": {
+          "x": 732.926270024528,
+          "y": 523.4330655612141
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-78",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 732.926270024528,
+          "y": 553.4054949423655
+        },
+        "end": {
+          "x": 732.926270024528,
+          "y": 523.4330655612141
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-79",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 700.7219339173896,
+          "y": 566.3521177462261
+        },
+        "end": {
+          "x": 730.3928984193478,
+          "y": 566.3521177462261
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-80",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 634.0922730060688,
+          "y": 554.8770094781653
+        },
+        "end": {
+          "x": 634.0922730060688,
+          "y": 581.9091782240703
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-81",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 634.0922730060688,
+          "y": 604.4821256753748
+        },
+        "end": {
+          "x": 634.0922730060688,
+          "y": 581.9091782240703
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-82",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 784.0090100565404,
+          "y": 567.0924473119074
+        },
+        "end": {
+          "x": 812.8913529632538,
+          "y": 567.0924473119074
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-83",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 840.646690330431,
+          "y": 567.0924473119074
+        },
+        "end": {
+          "x": 812.8913529632538,
+          "y": 567.0924473119074
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-84",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 868.0389169859775,
+          "y": 567.0924473119074
+        },
+        "end": {
+          "x": 840.646690330431,
+          "y": 567.0924473119074
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-85",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 977.9753562650519,
+          "y": 646.307710839811
+        },
+        "end": {
+          "x": 955.0221547231902,
+          "y": 646.307710839811
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-86",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 932.4420536408353,
+          "y": 646.307710839811
+        },
+        "end": {
+          "x": 955.0221547231902,
+          "y": 646.307710839811
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-87",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 908.3132876106878,
+          "y": 646.307710839811
+        },
+        "end": {
+          "x": 932.4420536408353,
+          "y": 646.307710839811
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-88",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 884.3236662063622,
+          "y": 495.65064422365805
+        },
+        "end": {
+          "x": 884.3236662063622,
+          "y": 524.9147398076113
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-89",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 884.3236662063622,
+          "y": 555.6262635035581
+        },
+        "end": {
+          "x": 884.3236662063622,
+          "y": 524.9147398076113
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-90",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 890.246302731813,
+          "y": 483.0650416070752
+        },
+        "end": {
+          "x": 924.176504059818,
+          "y": 483.0650416070752
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-91",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 950.9558855881256,
+          "y": 483.0650416070752
+        },
+        "end": {
+          "x": 924.176504059818,
+          "y": 483.0650416070752
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-92",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 971.6825549567606,
+          "y": 483.0650416070752
+        },
+        "end": {
+          "x": 950.9558855881256,
+          "y": 483.0650416070752
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-93",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1000.206868038983,
+          "y": 483.0650416070752
+        },
+        "end": {
+          "x": 971.6825549567606,
+          "y": 483.0650416070752
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-94",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1006.8482093266242,
+          "y": 438.27510288335407
+        },
+        "end": {
+          "x": 1006.8482093266242,
+          "y": 459.00433072243163
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-95",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1006.8482093266242,
+          "y": 478.30976386336135
+        },
+        "end": {
+          "x": 1006.8482093266242,
+          "y": 459.00433072243163
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-96",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1006.8482093266242,
+          "y": 375.71725458328075
+        },
+        "end": {
+          "x": 1006.8482093266242,
+          "y": 354.958302670853
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-97",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1006.8482093266242,
+          "y": 332.76578785149843
+        },
+        "end": {
+          "x": 1006.8482093266242,
+          "y": 354.958302670853
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-98",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 884.3236662063622,
+          "y": 370.1647828406707
+        },
+        "end": {
+          "x": 884.3236662063622,
+          "y": 397.5794775500471
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-99",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 884.3236662063622,
+          "y": 417.9160398271172
+        },
+        "end": {
+          "x": 884.3236662063622,
+          "y": 397.5794775500471
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      }
+    ],
+    "hatch_surfaces": [
+      {
+        "id": "surface-33",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 697.8410862596295,
+          "y": 330.2513627778505
+        },
+        "end": {
+          "x": 723.2697974286842,
+          "y": 356.9676036263511
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-34",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 697.5750511142256,
+          "y": 620.7486726086238
+        },
+        "end": {
+          "x": 723.1838439494263,
+          "y": 646.7807512758112
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-35",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 928.4288000818275,
+          "y": 506.5705053174575
+        },
+        "end": {
+          "x": 956.5243070994344,
+          "y": 533.3889438342641
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-36",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 1051.4530656589243,
+          "y": 386.10037674196127
+        },
+        "end": {
+          "x": 1079.974262176798,
+          "y": 410.3646782571672
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-37",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 867.4031470875154,
+          "y": 558.1161262641193
+        },
+        "end": {
+          "x": 889.5150698432153,
+          "y": 581.3476400454242
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-38",
+        "kind": "hatch",
+        "floor_key": "2f",
+        "start": {
+          "x": 905.1648688922496,
+          "y": 519.4050437505012
+        },
+        "end": {
+          "x": 933.5583585600432,
+          "y": 545.8403617170677
+        },
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-39",
+        "kind": "hatch",
+        "floor_key": "2f",
+        "start": {
+          "x": 842.5033744529808,
+          "y": 682.9123808029682
+        },
+        "end": {
+          "x": 871.3864070460812,
+          "y": 709.3476987695346
+        },
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-40",
+        "kind": "hatch",
+        "floor_key": "2f",
+        "start": {
+          "x": 645.2175755543456,
+          "y": 629.0626590192215
+        },
+        "end": {
+          "x": 671.652893520912,
+          "y": 655.4979769857881
+        },
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "surface-18",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 734.0316413482961,
+          "y": 453.6572079483617
+        },
+        "end": {
+          "x": 734.0316413482961,
+          "y": 482.45699869034894
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-19",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 734.0316413482961,
+          "y": 512.591759738873
+        },
+        "end": {
+          "x": 734.0316413482961,
+          "y": 482.45699869034894
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-20",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 744.2534602955444,
+          "y": 549.3604346710657
+        },
+        "end": {
+          "x": 770.8039624993253,
+          "y": 549.3604346710657
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-21",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 796.6830761832684,
+          "y": 549.3604346710657
+        },
+        "end": {
+          "x": 770.8039624993253,
+          "y": 549.3604346710657
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-22",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 857.7013310050647,
+          "y": 545.0178886634892
+        },
+        "end": {
+          "x": 857.7013310050647,
+          "y": 522.9941868368137
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-23",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 857.7013310050647,
+          "y": 501.0908203265565
+        },
+        "end": {
+          "x": 857.7013310050647,
+          "y": 522.9941868368137
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-24",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 857.9433460533168,
+          "y": 450.75302736933776
+        },
+        "end": {
+          "x": 857.9433460533168,
+          "y": 471.3417384045715
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-25",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 857.9433460533168,
+          "y": 491.64822682894635
+        },
+        "end": {
+          "x": 857.9433460533168,
+          "y": 471.3417384045715
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-26",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 910.9847253628698,
+          "y": 450.33931777029136
+        },
+        "end": {
+          "x": 910.9847253628698,
+          "y": 472.97590791567177
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-27",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 910.9847253628698,
+          "y": 491.56367705943944
+        },
+        "end": {
+          "x": 910.9847253628698,
+          "y": 472.97590791567177
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-28",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 910.9847253628698,
+          "y": 501.13361760870595
+        },
+        "end": {
+          "x": 910.9847253628698,
+          "y": 524.9000974160364
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-29",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 910.9847253628698,
+          "y": 544.7504620351706
+        },
+        "end": {
+          "x": 910.9847253628698,
+          "y": 524.9000974160364
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-30",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 1029.0900747410853,
+          "y": 465.82178096442294
+        },
+        "end": {
+          "x": 1029.0900747410853,
+          "y": 442.11716288506705
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-31",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 969.4326791039209,
+          "y": 438.28055997241916
+        },
+        "end": {
+          "x": 1004.843884306081,
+          "y": 438.28055997241916
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-32",
+        "kind": "soft_wall",
+        "floor_key": "b1",
+        "start": {
+          "x": 854.4183442635596,
+          "y": 592.4564980838026
+        },
+        "end": {
+          "x": 878.7214695383635,
+          "y": 592.4564980838026
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-33",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 697.8410862596295,
+          "y": 330.2513627778505
+        },
+        "end": {
+          "x": 723.2697974286842,
+          "y": 356.9676036263511
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-34",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 697.5750511142256,
+          "y": 620.7486726086238
+        },
+        "end": {
+          "x": 723.1838439494263,
+          "y": 646.7807512758112
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-35",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 928.4288000818275,
+          "y": 506.5705053174575
+        },
+        "end": {
+          "x": 956.5243070994344,
+          "y": 533.3889438342641
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-36",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 1051.4530656589243,
+          "y": 386.10037674196127
+        },
+        "end": {
+          "x": 1079.974262176798,
+          "y": 410.3646782571672
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-37",
+        "kind": "hatch",
+        "floor_key": "1f",
+        "start": {
+          "x": 867.4031470875154,
+          "y": 558.1161262641193
+        },
+        "end": {
+          "x": 889.5150698432153,
+          "y": 581.3476400454242
+        },
+        "linked_floor_keys": [
+          "b1"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-38",
+        "kind": "hatch",
+        "floor_key": "2f",
+        "start": {
+          "x": 905.1648688922496,
+          "y": 519.4050437505012
+        },
+        "end": {
+          "x": 933.5583585600432,
+          "y": 545.8403617170677
+        },
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-39",
+        "kind": "hatch",
+        "floor_key": "2f",
+        "start": {
+          "x": 842.5033744529808,
+          "y": 682.9123808029682
+        },
+        "end": {
+          "x": 871.3864070460812,
+          "y": 709.3476987695346
+        },
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-40",
+        "kind": "hatch",
+        "floor_key": "2f",
+        "start": {
+          "x": 645.2175755543456,
+          "y": 629.0626590192215
+        },
+        "end": {
+          "x": 671.652893520912,
+          "y": 655.4979769857881
+        },
+        "linked_floor_keys": [
+          "1f"
+        ],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-41",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 469.9848414007303,
+          "y": 541.5413112980968
+        },
+        "end": {
+          "x": 499.9701726701852,
+          "y": 541.5413112980968
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-42",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 529.8586223352614,
+          "y": 541.5413112980968
+        },
+        "end": {
+          "x": 499.9701726701852,
+          "y": 541.5413112980968
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-43",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 570.017865645008,
+          "y": 540.8111432379196
+        },
+        "end": {
+          "x": 599.7751381098972,
+          "y": 540.8111432379196
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-44",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 628.4478433842446,
+          "y": 540.8111432379196
+        },
+        "end": {
+          "x": 599.7751381098972,
+          "y": 540.8111432379196
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-45",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 633.0557081736404,
+          "y": 595.5737477512102
+        },
+        "end": {
+          "x": 633.0557081736404,
+          "y": 570.9902181903159
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-46",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 633.0557081736404,
+          "y": 540.4613960233913
+        },
+        "end": {
+          "x": 633.0557081736404,
+          "y": 570.9902181903159
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-47",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 742.9207191612264,
+          "y": 546.7333842556709
+        },
+        "end": {
+          "x": 773.088581220002,
+          "y": 546.7333842556709
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-48",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 803.2575787642559,
+          "y": 546.7333842556709
+        },
+        "end": {
+          "x": 773.088581220002,
+          "y": 546.7333842556709
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-49",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 887.2849844690882,
+          "y": 486.3965246526416
+        },
+        "end": {
+          "x": 917.0458646840318,
+          "y": 486.3965246526416
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-50",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 950.5852051021968,
+          "y": 486.3965246526416
+        },
+        "end": {
+          "x": 917.0458646840318,
+          "y": 486.3965246526416
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-51",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 983.906218163507,
+          "y": 486.3965246526416
+        },
+        "end": {
+          "x": 950.5852051021968,
+          "y": 486.3965246526416
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-52",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 987.7591823400587,
+          "y": 546.9202160080688
+        },
+        "end": {
+          "x": 987.7591823400587,
+          "y": 520.8837060519552
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-53",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 987.7591823400587,
+          "y": 486.1819623808519
+        },
+        "end": {
+          "x": 987.7591823400587,
+          "y": 520.8837060519552
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-54",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 987.7591823400587,
+          "y": 573.7918583838615
+        },
+        "end": {
+          "x": 987.7591823400587,
+          "y": 546.9202160080688
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-55",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 987.7591823400587,
+          "y": 599.8269109156994
+        },
+        "end": {
+          "x": 987.7591823400587,
+          "y": 573.7918583838615
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-56",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1009.5912073393573,
+          "y": 487.3019938945997
+        },
+        "end": {
+          "x": 1033.9358768647576,
+          "y": 487.3019938945997
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-57",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1058.2998488351718,
+          "y": 487.3019938945997
+        },
+        "end": {
+          "x": 1033.9358768647576,
+          "y": 487.3019938945997
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-58",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1081.5266172712609,
+          "y": 487.3019938945997
+        },
+        "end": {
+          "x": 1058.2998488351718,
+          "y": 487.3019938945997
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-59",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1108.1166907913182,
+          "y": 487.3019938945997
+        },
+        "end": {
+          "x": 1081.5266172712609,
+          "y": 487.3019938945997
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-60",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1152.618960860403,
+          "y": 478.065367933358
+        },
+        "end": {
+          "x": 1152.618960860403,
+          "y": 503.8174826608046
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-61",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1152.618960860403,
+          "y": 529.2881952999662
+        },
+        "end": {
+          "x": 1152.618960860403,
+          "y": 503.8174826608046
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-63",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1049.3366887483367,
+          "y": 658.2495486166713
+        },
+        "end": {
+          "x": 1022.6484244602816,
+          "y": 658.2495486166713
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-64",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 1074.4517695367829,
+          "y": 658.2495486166713
+        },
+        "end": {
+          "x": 1049.3366887483367,
+          "y": 658.2495486166713
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-66",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 988.1790289746605,
+          "y": 632.4799036187164
+        },
+        "end": {
+          "x": 988.1790289746605,
+          "y": 656.9620189372255
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-67",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 988.1790289746605,
+          "y": 678.8523901423553
+        },
+        "end": {
+          "x": 988.1790289746605,
+          "y": 656.9620189372255
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-68",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 988.154990913886,
+          "y": 658.2495486166713
+        },
+        "end": {
+          "x": 1022.6484244602816,
+          "y": 658.2495486166713
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-69",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 787.9681638208368,
+          "y": 377.5680784974843
+        },
+        "end": {
+          "x": 787.9681638208368,
+          "y": 400.099847887786
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-70",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 787.9681638208368,
+          "y": 430.06258895148824
+        },
+        "end": {
+          "x": 787.9681638208368,
+          "y": 400.099847887786
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-71",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 878.0952413820436,
+          "y": 327.6763034189591
+        },
+        "end": {
+          "x": 878.0952413820436,
+          "y": 356.67431886181237
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-72",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 878.0952413820436,
+          "y": 382.71819721526754
+        },
+        "end": {
+          "x": 878.0952413820436,
+          "y": 356.67431886181237
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-73",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 878.0952413820436,
+          "y": 412.33137984252124
+        },
+        "end": {
+          "x": 878.0952413820436,
+          "y": 382.71819721526754
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-74",
+        "kind": "soft_wall",
+        "floor_key": "1f",
+        "start": {
+          "x": 878.0952413820436,
+          "y": 435.18503165268436
+        },
+        "end": {
+          "x": 878.0952413820436,
+          "y": 412.33137984252124
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-75",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 774.384725702683,
+          "y": 426.79999461529326
+        },
+        "end": {
+          "x": 774.384725702683,
+          "y": 454.93251811118427
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-76",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 774.384725702683,
+          "y": 478.9960762487678
+        },
+        "end": {
+          "x": 774.384725702683,
+          "y": 454.93251811118427
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-77",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 732.926270024528,
+          "y": 492.68932596093265
+        },
+        "end": {
+          "x": 732.926270024528,
+          "y": 523.4330655612141
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-78",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 732.926270024528,
+          "y": 553.4054949423655
+        },
+        "end": {
+          "x": 732.926270024528,
+          "y": 523.4330655612141
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-79",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 700.7219339173896,
+          "y": 566.3521177462261
+        },
+        "end": {
+          "x": 730.3928984193478,
+          "y": 566.3521177462261
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-80",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 634.0922730060688,
+          "y": 554.8770094781653
+        },
+        "end": {
+          "x": 634.0922730060688,
+          "y": 581.9091782240703
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-81",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 634.0922730060688,
+          "y": 604.4821256753748
+        },
+        "end": {
+          "x": 634.0922730060688,
+          "y": 581.9091782240703
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-82",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 784.0090100565404,
+          "y": 567.0924473119074
+        },
+        "end": {
+          "x": 812.8913529632538,
+          "y": 567.0924473119074
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-83",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 840.646690330431,
+          "y": 567.0924473119074
+        },
+        "end": {
+          "x": 812.8913529632538,
+          "y": 567.0924473119074
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-84",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 868.0389169859775,
+          "y": 567.0924473119074
+        },
+        "end": {
+          "x": 840.646690330431,
+          "y": 567.0924473119074
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-85",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 977.9753562650519,
+          "y": 646.307710839811
+        },
+        "end": {
+          "x": 955.0221547231902,
+          "y": 646.307710839811
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-86",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 932.4420536408353,
+          "y": 646.307710839811
+        },
+        "end": {
+          "x": 955.0221547231902,
+          "y": 646.307710839811
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-87",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 908.3132876106878,
+          "y": 646.307710839811
+        },
+        "end": {
+          "x": 932.4420536408353,
+          "y": 646.307710839811
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-88",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 884.3236662063622,
+          "y": 495.65064422365805
+        },
+        "end": {
+          "x": 884.3236662063622,
+          "y": 524.9147398076113
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-89",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 884.3236662063622,
+          "y": 555.6262635035581
+        },
+        "end": {
+          "x": 884.3236662063622,
+          "y": 524.9147398076113
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-90",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 890.246302731813,
+          "y": 483.0650416070752
+        },
+        "end": {
+          "x": 924.176504059818,
+          "y": 483.0650416070752
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-91",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 950.9558855881256,
+          "y": 483.0650416070752
+        },
+        "end": {
+          "x": 924.176504059818,
+          "y": 483.0650416070752
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-92",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 971.6825549567606,
+          "y": 483.0650416070752
+        },
+        "end": {
+          "x": 950.9558855881256,
+          "y": 483.0650416070752
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-93",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1000.206868038983,
+          "y": 483.0650416070752
+        },
+        "end": {
+          "x": 971.6825549567606,
+          "y": 483.0650416070752
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-94",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1006.8482093266242,
+          "y": 438.27510288335407
+        },
+        "end": {
+          "x": 1006.8482093266242,
+          "y": 459.00433072243163
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-95",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1006.8482093266242,
+          "y": 478.30976386336135
+        },
+        "end": {
+          "x": 1006.8482093266242,
+          "y": 459.00433072243163
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-96",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1006.8482093266242,
+          "y": 375.71725458328075
+        },
+        "end": {
+          "x": 1006.8482093266242,
+          "y": 354.958302670853
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-97",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 1006.8482093266242,
+          "y": 332.76578785149843
+        },
+        "end": {
+          "x": 1006.8482093266242,
+          "y": 354.958302670853
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-98",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 884.3236662063622,
+          "y": 370.1647828406707
+        },
+        "end": {
+          "x": 884.3236662063622,
+          "y": 397.5794775500471
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
+        "label": "",
+        "note": ""
+      },
+      {
+        "id": "surface-99",
+        "kind": "soft_wall",
+        "floor_key": "2f",
+        "start": {
+          "x": 884.3236662063622,
+          "y": 417.9160398271172
+        },
+        "end": {
+          "x": 884.3236662063622,
+          "y": 397.5794775500471
+        },
+        "linked_floor_keys": [],
+        "is_bidirectional": false,
         "label": "",
         "note": ""
       }

@@ -8,8 +8,9 @@ from r6_tactics_board.domain.models import (
     OperatorDisplayMode,
     OperatorFrameState,
     OperatorTransitionMode,
-    OperatorState,
     Point2D,
+    SurfaceOpeningType,
+    TacticalSurfaceState,
     TacticProject,
     TeamSide,
     Timeline,
@@ -73,6 +74,21 @@ class ProjectStore:
             map_info=map_info,
             operators=operators,
             timeline=Timeline(keyframes=keyframes),
+            surface_states=[
+                TacticalSurfaceState(
+                    surface_id=item.get("surface_id", ""),
+                    reinforced=bool(item.get("reinforced", False)),
+                    opening_type=(
+                        SurfaceOpeningType(item["opening_type"])
+                        if item.get("opening_type")
+                        else None
+                    ),
+                    foot_hole=bool(item.get("foot_hole", False)),
+                    gun_hole=bool(item.get("gun_hole", False)),
+                )
+                for item in data.get("surface_states", [])
+                if item.get("surface_id")
+            ],
             operator_order=data.get("operator_order", []),
             current_keyframe_index=data.get("current_keyframe_index", 0),
             transition_duration_ms=data.get("transition_duration_ms", 700),
@@ -125,6 +141,16 @@ class ProjectStore:
                     for keyframe in project.timeline.keyframes
                 ]
             },
+            "surface_states": [
+                {
+                    "surface_id": state.surface_id,
+                    "reinforced": state.reinforced,
+                    "opening_type": state.opening_type.value if state.opening_type is not None else "",
+                    "foot_hole": state.foot_hole,
+                    "gun_hole": state.gun_hole,
+                }
+                for state in project.surface_states
+            ],
             "operator_order": project.operator_order,
             "current_keyframe_index": project.current_keyframe_index,
             "transition_duration_ms": project.transition_duration_ms,

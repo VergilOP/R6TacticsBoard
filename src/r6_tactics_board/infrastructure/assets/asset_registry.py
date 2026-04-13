@@ -4,7 +4,13 @@ import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from r6_tactics_board.domain.models import MapInteractionPoint, MapInteractionType, Point2D
+from r6_tactics_board.domain.models import (
+    MapInteractionPoint,
+    MapInteractionType,
+    MapSurface,
+    MapSurfaceType,
+    Point2D,
+)
 from r6_tactics_board.infrastructure.assets.asset_paths import (
     ATTACK_OPERATORS_DIR,
     DEFENSE_OPERATORS_DIR,
@@ -61,6 +67,7 @@ class MapAsset:
     path: str
     floors: list[MapFloorAsset] = field(default_factory=list)
     interactions: list[MapInteractionPoint] = field(default_factory=list)
+    surfaces: list[MapSurface] = field(default_factory=list)
     overview_2p5d: MapOverview2p5dAsset | None = None
 
 
@@ -133,6 +140,8 @@ class AssetRegistry:
             return None
 
         interactions = self._load_interactions(data)
+        surfaces = self._load_surfaces(data)
+        interactions, surfaces = self._migrate_hatch_interactions_to_surfaces(interactions, surfaces)
         overview_2p5d = self._load_overview_2p5d(data)
 
         return MapAsset(
@@ -141,6 +150,7 @@ class AssetRegistry:
             path=str(path),
             floors=floors,
             interactions=interactions,
+            surfaces=surfaces,
             overview_2p5d=overview_2p5d,
         )
 
@@ -161,10 +171,36 @@ class AssetRegistry:
 
         data = json.loads(path.read_text(encoding="utf-8"))
         layers = data.setdefault("layers", {})
-        serialized = [self._serialize_interaction(item) for item in interactions]
+        serialized = [
+            self._serialize_interaction(item)
+            for item in interactions
+            if item.kind == MapInteractionType.STAIRS
+        ]
         layers["interactions"] = serialized
         layers["stairs"] = [item for item in serialized if item.get("kind") == MapInteractionType.STAIRS.value]
-        layers["hatches"] = [item for item in serialized if item.get("kind") == MapInteractionType.HATCH.value]
+        layers["hatches"] = []
+
+        path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+
+    def save_map_surfaces(
+        self,
+        map_json_path: str,
+        surfaces: list[MapSurface],
+    ) -> None:
+        path = Path(map_json_path)
+        if not path.is_absolute():
+            path = (PROJECT_ROOT / path).resolve()
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        layers = data.setdefault("layers", {})
+        serialized = [self._serialize_surface(item) for item in surfaces]
+        layers["soft_walls"] = [item for item in serialized if item.get("kind") == MapSurfaceType.SOFT_WALL.value]
+        layers["hatch_surfaces"] = [item for item in serialized if item.get("kind") == MapSurfaceType.HATCH.value]
+        layers["surfaces"] = serialized
 
         path.write_text(
             json.dumps(data, ensure_ascii=False, indent=2),
@@ -290,6 +326,22 @@ class AssetRegistry:
                         y=float(position.get("y", 0)),
                     ),
                     floor_key=item.get("floor_key", "default"),
+                    target_position=(
+                        Point2D(
+                            x=float(item.get("target_position", {}).get("x", position.get("x", 0))),
+                            y=float(item.get("target_position", {}).get("y", position.get("y", 0))),
+                        )
+                        if kind == MapInteractionType.STAIRS
+                        else None
+                    ),
+                    path_points=[
+                        Point2D(
+                            x=float(point.get("x", 0)),
+                            y=float(point.get("y", 0)),
+                        )
+                        for point in item.get("path_points", [])
+                        if isinstance(point, dict)
+                    ],
                     linked_floor_keys=[
                         str(value)
                         for value in item.get("linked_floor_keys", [])
@@ -302,6 +354,47 @@ class AssetRegistry:
             )
 
         return interactions
+
+    @staticmethod
+    def _load_surfaces(data: dict) -> list[MapSurface]:
+        layers = data.get("layers", {})
+        raw_items = layers.get("surfaces")
+        if raw_items is None:
+            raw_items = list(layers.get("soft_walls", [])) + list(layers.get("hatch_surfaces", []))
+
+        surfaces: list[MapSurface] = []
+        for index, item in enumerate(raw_items):
+            kind_value = item.get("kind", MapSurfaceType.SOFT_WALL.value)
+            try:
+                kind = MapSurfaceType(kind_value)
+            except ValueError:
+                continue
+            start = item.get("start", {})
+            end = item.get("end", {})
+            surfaces.append(
+                MapSurface(
+                    id=item.get("id", f"surface-{index + 1}"),
+                    kind=kind,
+                    floor_key=item.get("floor_key", "default"),
+                    start=Point2D(
+                        x=float(start.get("x", 0)),
+                        y=float(start.get("y", 0)),
+                    ),
+                    end=Point2D(
+                        x=float(end.get("x", 0)),
+                        y=float(end.get("y", 0)),
+                    ),
+                    linked_floor_keys=[
+                        str(value)
+                        for value in item.get("linked_floor_keys", [])
+                        if str(value)
+                    ],
+                    is_bidirectional=bool(item.get("is_bidirectional", False)),
+                    label=item.get("label", ""),
+                    note=item.get("note", ""),
+                )
+            )
+        return surfaces
 
     @staticmethod
     def _load_overview_2p5d(data: dict) -> MapOverview2p5dAsset | None:
@@ -368,12 +461,112 @@ class AssetRegistry:
                 "x": item.position.x,
                 "y": item.position.y,
             },
+            "target_position": (
+                {
+                    "x": item.target_position.x,
+                    "y": item.target_position.y,
+                }
+                if item.target_position is not None
+                else None
+            ),
+            "path_points": [
+                {
+                    "x": point.x,
+                    "y": point.y,
+                }
+                for point in item.path_points
+            ],
             "floor_key": item.floor_key,
             "linked_floor_keys": list(item.linked_floor_keys),
             "is_bidirectional": item.is_bidirectional,
             "label": item.label,
             "note": item.note,
         }
+
+    @staticmethod
+    def _serialize_surface(item: MapSurface) -> dict:
+        return {
+            "id": item.id,
+            "kind": item.kind.value,
+            "floor_key": item.floor_key,
+            "start": {
+                "x": item.start.x,
+                "y": item.start.y,
+            },
+            "end": {
+                "x": item.end.x,
+                "y": item.end.y,
+            },
+            "linked_floor_keys": list(item.linked_floor_keys),
+            "is_bidirectional": item.is_bidirectional,
+            "label": item.label,
+            "note": item.note,
+        }
+
+    @staticmethod
+    def _migrate_hatch_interactions_to_surfaces(
+        interactions: list[MapInteractionPoint],
+        surfaces: list[MapSurface],
+    ) -> tuple[list[MapInteractionPoint], list[MapSurface]]:
+        remaining_interactions: list[MapInteractionPoint] = []
+        migrated_surfaces = list(surfaces)
+        surface_ids = {surface.id for surface in migrated_surfaces}
+
+        for interaction in interactions:
+            if interaction.kind != MapInteractionType.HATCH:
+                remaining_interactions.append(interaction)
+                continue
+
+            existing = next(
+                (
+                    surface
+                    for surface in migrated_surfaces
+                    if surface.kind == MapSurfaceType.HATCH
+                    and (
+                        surface.id == interaction.id
+                        or (
+                            surface.floor_key == interaction.floor_key
+                            and abs(((surface.start.x + surface.end.x) / 2) - interaction.position.x) <= 2.0
+                            and abs(((surface.start.y + surface.end.y) / 2) - interaction.position.y) <= 2.0
+                        )
+                    )
+                ),
+                None,
+            )
+            if existing is not None:
+                if not existing.linked_floor_keys:
+                    existing.linked_floor_keys = list(interaction.linked_floor_keys)
+                existing.is_bidirectional = existing.is_bidirectional or interaction.is_bidirectional
+                if not existing.label:
+                    existing.label = interaction.label
+                if not existing.note:
+                    existing.note = interaction.note
+                continue
+
+            surface_id = interaction.id if interaction.id not in surface_ids else f"{interaction.id}-surface"
+            surface_ids.add(surface_id)
+            half_size = 32.0
+            migrated_surfaces.append(
+                MapSurface(
+                    id=surface_id,
+                    kind=MapSurfaceType.HATCH,
+                    floor_key=interaction.floor_key,
+                    start=Point2D(
+                        x=interaction.position.x - half_size,
+                        y=interaction.position.y - half_size,
+                    ),
+                    end=Point2D(
+                        x=interaction.position.x + half_size,
+                        y=interaction.position.y + half_size,
+                    ),
+                    linked_floor_keys=list(interaction.linked_floor_keys),
+                    is_bidirectional=interaction.is_bidirectional,
+                    label=interaction.label,
+                    note=interaction.note,
+                )
+            )
+
+        return remaining_interactions, migrated_surfaces
 
     @staticmethod
     def _normalize_operator_lookup(value: str) -> str:

@@ -22,6 +22,17 @@ class MapInteractionType(str, Enum):
     HATCH = "hatch"
 
 
+class MapSurfaceType(str, Enum):
+    SOFT_WALL = "soft_wall"
+    HATCH = "hatch"
+
+
+class SurfaceOpeningType(str, Enum):
+    PASSAGE = "passage"
+    CROUCH_PASSAGE = "crouch_passage"
+    VAULT = "vault"
+
+
 @dataclass(slots=True)
 class Point2D:
     x: float
@@ -43,10 +54,34 @@ class MapInteractionPoint:
     kind: MapInteractionType
     position: Point2D
     floor_key: str
+    target_position: Point2D | None = None
+    path_points: list[Point2D] = field(default_factory=list)
     linked_floor_keys: list[str] = field(default_factory=list)
     is_bidirectional: bool = False
     label: str = ""
     note: str = ""
+
+
+@dataclass(slots=True)
+class MapSurface:
+    id: str
+    kind: MapSurfaceType
+    floor_key: str
+    start: Point2D
+    end: Point2D
+    linked_floor_keys: list[str] = field(default_factory=list)
+    is_bidirectional: bool = False
+    label: str = ""
+    note: str = ""
+
+
+@dataclass(slots=True)
+class TacticalSurfaceState:
+    surface_id: str
+    reinforced: bool = False
+    opening_type: SurfaceOpeningType | None = None
+    foot_hole: bool = False
+    gun_hole: bool = False
 
 
 @dataclass(slots=True)
@@ -101,6 +136,7 @@ class TacticProject:
     map_info: MapInfo | None = None
     operators: list[OperatorDefinition] = field(default_factory=list)
     timeline: Timeline = field(default_factory=Timeline)
+    surface_states: list[TacticalSurfaceState] = field(default_factory=list)
     operator_order: list[str] = field(default_factory=list)
     current_keyframe_index: int = 0
     transition_duration_ms: int = 700

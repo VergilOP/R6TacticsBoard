@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 
-from r6_tactics_board.domain.models import OperatorDefinition, OperatorFrameState, OperatorState
+from r6_tactics_board.domain.models import (
+    OperatorDefinition,
+    OperatorFrameState,
+    OperatorState,
+    TacticalSurfaceState,
+)
 
 
 @dataclass(slots=True)
@@ -17,6 +22,8 @@ class EditorHistoryState:
     keyframe_notes: list[str]
     current_keyframe_index: int
     current_timeline_row: int
+    selected_surface_id: str
+    surface_states: dict[str, TacticalSurfaceState]
     transition_duration_ms: int
 
 
@@ -28,4 +35,5 @@ class EditorProjectState:
     keyframe_columns: list[dict[str, OperatorFrameState]]
     keyframe_names: list[str]
     keyframe_notes: list[str]
+    surface_states: dict[str, TacticalSurfaceState]
     transition_duration_ms: int

@@ -8,7 +8,7 @@ from PyQt6.QtGui import QColor, QPalette
 from qfluentwidgets import Theme, isDarkTheme, qconfig
 from qfluentwidgets.common.style_sheet import updateStyleSheet
 
-from r6_tactics_board.domain.models import MapInteractionType
+from r6_tactics_board.domain.models import MapInteractionType, MapSurfaceType
 from r6_tactics_board.infrastructure.diagnostics.debug_logging import debug_log
 
 _THEME_EVENTS = {
@@ -508,6 +508,32 @@ def interaction_badge_background_color() -> QColor:
 
 def interaction_badge_text_color() -> QColor:
     return QColor("#FACC15") if isDarkTheme() else QColor("#C2410C")
+
+
+def surface_fill_brush_color(kind: MapSurfaceType, reinforced: bool) -> QColor:
+    if kind == MapSurfaceType.SOFT_WALL:
+        return QColor("#2563EB" if reinforced else "#F97316") if isDarkTheme() else QColor("#1D4ED8" if reinforced else "#EA580C")
+    return QColor(37, 99, 235, 90) if reinforced else QColor(249, 115, 22, 85)
+
+
+def surface_outline_color(kind: MapSurfaceType, reinforced: bool, selected: bool) -> QColor:
+    if selected:
+        return QColor("#FACC15") if isDarkTheme() else QColor("#D97706")
+    if reinforced:
+        return QColor("#93C5FD") if isDarkTheme() else QColor("#2563EB")
+    return QColor("#FDBA74") if isDarkTheme() else QColor("#EA580C")
+
+
+def surface_selection_color() -> QColor:
+    return QColor("#FACC15") if isDarkTheme() else QColor("#D97706")
+
+
+def surface_hole_color() -> QColor:
+    return QColor("#0F172A") if isDarkTheme() else QColor("#FFFFFF")
+
+
+def surface_label_color() -> QColor:
+    return QColor("#F8FAFC") if isDarkTheme() else QColor("#0F172A")
 
 
 def overview_background_color() -> str:

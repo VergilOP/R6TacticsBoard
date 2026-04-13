@@ -21,12 +21,17 @@ from r6_tactics_board.application.state.history import UndoRedoHistory
 from r6_tactics_board.application.timeline.timeline_editor import TimelineEditorController
 from r6_tactics_board.domain.models import (
     MapInteractionPoint,
+    MapInteractionType,
+    MapSurface,
+    MapSurfaceType,
     OperatorDefinition,
     OperatorDisplayMode,
     OperatorFrameState,
     OperatorState,
     OperatorTransitionMode,
     Point2D,
+    SurfaceOpeningType,
+    TacticalSurfaceState,
     TacticProject,
     TeamSide,
     resolve_operator_state,
@@ -84,12 +89,14 @@ class EditorPage(QWidget):
         self.keyframe_notes: list[str] = [""]
         self.current_keyframe_index = 0
         self.current_timeline_row = -1
+        self.current_surface_id = ""
         self.current_project_path = ""
         self.current_map_asset_path = ""
         self.current_map_floor_key = ""
         self._current_map_asset: MapAsset | None = None
         self._overview_visible_floor_keys: set[str] = set()
         self._clean_project_state: EditorProjectState | None = None
+        self.surface_states: dict[str, TacticalSurfaceState] = {}
 
         self.session_service = EditorSessionService()
         self.playback_timer = QTimer(self)
@@ -131,14 +138,17 @@ class EditorPage(QWidget):
         self.floor_value_label = self.property_panel.floor_value_label
         self.display_mode_combo = self.property_panel.display_mode_combo
         self.transition_mode_combo = self.property_panel.transition_mode_combo
-        self.manual_interactions_edit = self.property_panel.manual_interactions_edit
         self.manual_interactions_hint = self.property_panel.manual_interactions_hint
         self.manual_interaction_combo = self.property_panel.manual_interaction_combo
-        self.manual_interaction_add_button = self.property_panel.manual_interaction_add_button
-        self.manual_interaction_remove_button = self.property_panel.manual_interaction_remove_button
-        self.manual_interaction_clear_button = self.property_panel.manual_interaction_clear_button
-        self.manual_interactions_value_label = self.property_panel.manual_interactions_value_label
         self.delete_operator_button = self.property_panel.delete_operator_button
+        self.surface_title = self.property_panel.surface_title
+        self.surface_hint = self.property_panel.surface_hint
+        self.surface_selection_label = self.property_panel.surface_selection_label
+        self.surface_count_label = self.property_panel.surface_count_label
+        self.reinforce_button = self.property_panel.reinforce_button
+        self.opening_combo = self.property_panel.opening_combo
+        self.foot_hole_box = self.property_panel.foot_hole_box
+        self.gun_hole_box = self.property_panel.gun_hole_box
         self.playback_previous_button = self.playback_panel.previous_button
         self.playback_play_button = self.playback_panel.play_button
         self.playback_pause_button = self.playback_panel.pause_button
@@ -211,6 +221,10 @@ class EditorPage(QWidget):
         self.rotation_slider.valueChanged.connect(self._update_selected_rotation)
         self.display_mode_combo.currentIndexChanged.connect(self._update_display_mode)
         self.transition_mode_combo.currentIndexChanged.connect(self._update_transition_mode)
+        self.reinforce_button.clicked.connect(self._toggle_selected_surface_reinforcement)
+        self.opening_combo.currentIndexChanged.connect(self._update_selected_surface_opening)
+        self.foot_hole_box.toggled.connect(self._update_selected_surface_foot_hole)
+        self.gun_hole_box.toggled.connect(self._update_selected_surface_gun_hole)
         self.keyframe_name_edit.editingFinished.connect(
             lambda: self._update_current_keyframe_name(self.keyframe_name_edit.text())
         )
@@ -249,6 +263,7 @@ class EditorPage(QWidget):
             scene.selectionChanged.connect(self._on_scene_selection_changed)
             scene.operator_transform_started.connect(self._on_operator_transform_started)
             scene.operator_move_finished.connect(self._on_operator_move_finished)
+            scene.surface_selected.connect(self._on_surface_selected)
 
     def _load_map(self) -> None:
         if not self.confirm_discard_changes("加载地图"):
@@ -338,6 +353,7 @@ class EditorPage(QWidget):
         self._update_view_mode_availability()
         self._rebuild_floor_panel()
         self._apply_overview_floor_visibility()
+        self._sync_scene_surface_overlays()
         if fit_view:
             self._reset_active_view()
         self._refresh_property_panel()
@@ -575,10 +591,11 @@ class EditorPage(QWidget):
         self.delete_operator_button.setEnabled(enabled)
 
     def _manual_interactions_hint_text(self) -> str:
-        if self._current_map_asset is None or not self._current_map_asset.interactions:
+        interactions = self._transition_interactions()
+        if not interactions:
             return "当前地图没有可用互动点，手动路径将回退为自动。"
-        interaction_ids = ", ".join(item.id for item in self._current_map_asset.interactions[:6])
-        if len(self._current_map_asset.interactions) > 6:
+        interaction_ids = ", ".join(item.id for item in interactions[:6])
+        if len(interactions) > 6:
             interaction_ids += " ..."
         return f"可用互动点 ID：{interaction_ids}"
 
@@ -674,15 +691,16 @@ class EditorPage(QWidget):
 
     @staticmethod
     def _interaction_choice_label(interaction: MapInteractionPoint) -> str:
+        kind_label = "楼梯" if interaction.kind == MapInteractionType.STAIRS else "Hatch"
         suffix = f" | {interaction.label}" if interaction.label else ""
-        return f"{interaction.floor_key} | {interaction.id}{suffix}"
+        return f"{interaction.floor_key} | {kind_label} | {interaction.id}{suffix}"
 
     def _manual_interaction_summary(self, selected_ids: list[str]) -> str:
         if not selected_ids:
             return "自动路径"
         lookup = {
             item.id: self._interaction_choice_label(item)
-            for item in (self._current_map_asset.interactions if self._current_map_asset is not None else [])
+            for item in self._transition_interactions()
         }
         parts = [
             f"{index + 1}. {lookup.get(interaction_id, interaction_id)}"
@@ -708,7 +726,7 @@ class EditorPage(QWidget):
         highlighted_lookup = set(highlighted_ids or [])
         overlay_interactions = [
             interaction
-            for interaction in (self._current_map_asset.interactions if self._current_map_asset is not None else [])
+            for interaction in self._transition_interactions()
             if interaction.id in highlighted_lookup
             or interaction in candidate_interactions
         ]
@@ -955,7 +973,7 @@ class EditorPage(QWidget):
 
         available_ids = {
             item.id
-            for item in (self._current_map_asset.interactions if self._current_map_asset is not None else [])
+            for item in self._transition_interactions()
         }
         normalized_ids = [item for item in manual_ids if item in available_ids]
         frame = self._current_transition_frame(operator_id)
@@ -1034,7 +1052,7 @@ class EditorPage(QWidget):
         ]
         available_ids = {
             interaction.id
-            for interaction in (self._current_map_asset.interactions if self._current_map_asset is not None else [])
+            for interaction in self._transition_interactions()
         }
         manual_ids = [item for item in raw_ids if item in available_ids]
 
@@ -1264,6 +1282,7 @@ class EditorPage(QWidget):
         scene.sync_operator_states(self._resolved_states(column))
         for operator in scene.operator_items():
             self._update_operator_icon(operator)
+        self._sync_scene_surface_overlays()
         self._sync_overview_scene_states(self._resolved_states(column, include_all_floors=True))
 
         self._sync_operator_registry()
@@ -1401,15 +1420,22 @@ class EditorPage(QWidget):
     def _on_scene_selection_changed(self) -> None:
         scene = self._map_scene()
         operator = self._current_operator()
-        if operator is None and scene is not None and scene.selectedItems():
+        surface = self._current_surface()
+        if operator is None and surface is None and scene is not None and scene.selectedItems():
             return
         # Keep the timeline cell as the source of truth for placement mode.
         # Scene selection can temporarily disappear when switching floors because
         # the operator may not exist on the currently visible floor.
         if operator is not None:
             self.current_timeline_row = self._operator_row(operator.operator_id)
+            self.current_surface_id = ""
+        elif surface is not None:
+            self.current_surface_id = surface.surface.id
         self._refresh_property_panel()
         self._refresh_timeline()
+
+    def _on_surface_selected(self, surface_id: str) -> None:
+        self.current_surface_id = surface_id
 
     def _on_operator_transform_started(self) -> None:
         if self._applying_timeline:
@@ -1907,6 +1933,15 @@ class EditorPage(QWidget):
         if overview_scene is not None:
             overview_scene.set_preview_routes(self._current_preview_routes())
 
+    def _sync_scene_surface_overlays(self) -> None:
+        scene = self._map_scene()
+        if scene is None:
+            return
+        surfaces = self._current_map_asset.surfaces if self._current_map_asset is not None else []
+        scene.set_surface_overlays(surfaces, self.surface_states, self._current_floor_key())
+        if self.current_surface_id:
+            scene.select_surface(self.current_surface_id)
+
     def _current_preview_routes(self) -> dict[str, list[PlaybackRouteSegment]]:
         routes: dict[str, list[PlaybackRouteSegment]] = {}
         if self._is_playing and self._playback_from_column >= 0 and self._playback_to_column >= 0:
@@ -2064,6 +2099,14 @@ class EditorPage(QWidget):
     def _target_operator_id(self) -> str | None:
         if 0 <= self.current_timeline_row < len(self.operator_order):
             return self.operator_order[self.current_timeline_row]
+        return None
+
+    def _selected_surface_asset(self) -> MapSurface | None:
+        if self._current_map_asset is None or not self.current_surface_id:
+            return None
+        for surface in self._current_map_asset.surfaces:
+            if surface.id == self.current_surface_id:
+                return surface
         return None
 
     def _keyframe_label(self, index: int) -> str:
@@ -2443,6 +2486,12 @@ class EditorPage(QWidget):
             return None
         return scene.selected_operator()
 
+    def _current_surface(self):
+        scene = self._map_scene()
+        if scene is None:
+            return None
+        return scene.selected_surface()
+
     def _map_scene(self) -> MapScene | None:
         scene = self.map_view.scene()
         if isinstance(scene, MapScene):
@@ -2630,8 +2679,45 @@ class EditorPage(QWidget):
             self._set_view_mode("single_floor")
 
     def _route_planner(self) -> InteractionRoutePlanner:
-        interactions = self._current_map_asset.interactions if self._current_map_asset is not None else []
-        return InteractionRoutePlanner(interactions)
+        return InteractionRoutePlanner(self._transition_interactions())
+
+    def _transition_interactions(self) -> list[MapInteractionPoint]:
+        if self._current_map_asset is None:
+            return []
+
+        interactions = [
+            deepcopy(item)
+            for item in self._current_map_asset.interactions
+            if item.kind == MapInteractionType.STAIRS
+        ]
+        interactions.extend(self._hatch_surface_interactions())
+        return interactions
+
+    def _hatch_surface_interactions(self) -> list[MapInteractionPoint]:
+        if self._current_map_asset is None:
+            return []
+
+        hatch_interactions: list[MapInteractionPoint] = []
+        for surface in self._current_map_asset.surfaces:
+            if surface.kind != MapSurfaceType.HATCH:
+                continue
+            center = Point2D(
+                x=(surface.start.x + surface.end.x) / 2,
+                y=(surface.start.y + surface.end.y) / 2,
+            )
+            hatch_interactions.append(
+                MapInteractionPoint(
+                    id=surface.id,
+                    kind=MapInteractionType.HATCH,
+                    position=center,
+                    floor_key=surface.floor_key,
+                    linked_floor_keys=list(surface.linked_floor_keys),
+                    is_bidirectional=surface.is_bidirectional,
+                    label=surface.label,
+                    note=surface.note,
+                )
+            )
+        return hatch_interactions
 
     def _update_dirty_state(self) -> None:
         is_dirty = self.is_dirty()
@@ -2669,6 +2755,456 @@ class EditorPage(QWidget):
         if clicked is discard_button:
             return True
         return clicked is not cancel_button
+
+    def _reset_template_state(self) -> None:
+        self.operator_order = []
+        self.operator_definitions = {}
+        self.keyframe_columns = [{}]
+        self.keyframe_names = [""]
+        self.keyframe_notes = [""]
+        self.surface_states = {}
+        self.current_keyframe_index = 0
+        self.current_timeline_row = -1
+        self.current_surface_id = ""
+        self._transition_duration_ms = 700
+        self.playback_duration_slider.setValue(self._transition_duration_ms)
+
+    def _refresh_property_panel(self) -> None:
+        if self.manual_interaction_combo.view().isVisible():
+            self._schedule_property_panel_refresh()
+            return
+
+        operator = self._current_operator()
+        target_operator_id = self._target_operator_id()
+        target_definition = self.operator_definitions.get(target_operator_id) if target_operator_id is not None else None
+        target_frame = (
+            self._resolved_frame_state(target_operator_id, self.current_keyframe_index)
+            if target_operator_id is not None and 0 <= self.current_keyframe_index < len(self.keyframe_columns)
+            else None
+        )
+        selected_surface = self._selected_surface_asset()
+
+        self._syncing_panel = True
+        if operator is None and target_operator_id is None:
+            self.selection_label.setText("当前选中：无")
+            self.name_edit.setText("")
+            self.side_combo.setCurrentIndex(0)
+            self._refresh_operator_combo("attack")
+            self.rotation_slider.setValue(0)
+            self.rotation_value_label.setText("0°")
+            self.floor_value_label.setText(self._current_floor_key())
+            self.display_mode_combo.setCurrentIndex(0)
+            self._set_combo_value(self.transition_mode_combo, OperatorTransitionMode.AUTO.value)
+            self._refresh_manual_interaction_controls([])
+            self._set_property_enabled(False)
+        else:
+            operator_id = operator.operator_id if operator is not None else target_operator_id
+            custom_name = operator.custom_name if operator is not None else (
+                target_definition.custom_name if target_definition is not None else f"干员 {operator_id}"
+            )
+            side = operator.side if operator is not None else (
+                target_definition.side.value if target_definition is not None else "attack"
+            )
+            operator_key = operator.operator_key if operator is not None else (
+                target_definition.operator_key if target_definition is not None else ""
+            )
+            rotation = int(operator.rotation()) % 360 if operator is not None else (
+                int(target_frame.rotation) % 360 if target_frame is not None else 0
+            )
+            floor_key = operator.floor_key if operator is not None else (
+                target_frame.floor_key if target_frame is not None and target_frame.floor_key else self._current_floor_key()
+            )
+            display_mode = operator.display_mode if operator is not None else (
+                OperatorItem.ICON
+                if target_frame is None or target_frame.display_mode == OperatorDisplayMode.ICON
+                else OperatorItem.CUSTOM_NAME
+            )
+            transition_mode = target_frame.transition_mode.value if target_frame is not None else OperatorTransitionMode.AUTO.value
+            manual_interaction_ids = list(target_frame.manual_interaction_ids) if target_frame is not None else []
+            if self._is_transition_mode_locked(target_operator_id):
+                transition_mode = OperatorTransitionMode.AUTO.value
+                manual_interaction_ids = []
+
+            self.selection_label.setText(
+                f"当前选中：干员 {operator_id}"
+                if operator is not None
+                else f"当前目标：干员 {operator_id}（时间轴）"
+            )
+            self.name_edit.setText(custom_name)
+            self.side_combo.setCurrentIndex(0 if side == "attack" else 1)
+            self._refresh_operator_combo(side, operator_key)
+            self.rotation_slider.setValue(rotation)
+            self.rotation_value_label.setText(f"{rotation}°")
+            self.floor_value_label.setText(floor_key or self._current_floor_key())
+            self.display_mode_combo.setCurrentIndex(0 if display_mode == OperatorItem.ICON else 1)
+            self._set_combo_value(self.transition_mode_combo, transition_mode)
+            self._refresh_manual_interaction_controls(manual_interaction_ids)
+            self._set_property_enabled(True)
+
+        self._refresh_surface_property_panel(selected_surface)
+        self._syncing_panel = False
+
+        self._syncing_keyframe_panel = True
+        self.keyframe_name_edit.setText(self._current_keyframe_name())
+        self.keyframe_note_edit.setText(self._current_keyframe_note())
+        has_keyframe = 0 <= self.current_keyframe_index < len(self.keyframe_columns)
+        self.keyframe_name_edit.setEnabled(has_keyframe)
+        self.keyframe_note_edit.setEnabled(has_keyframe)
+        self._syncing_keyframe_panel = False
+
+    def _set_property_enabled(self, enabled: bool) -> None:
+        self.name_edit.setEnabled(enabled)
+        self.side_combo.setEnabled(enabled)
+        self.operator_combo.setEnabled(enabled)
+        self.rotation_slider.setEnabled(enabled)
+        self.display_mode_combo.setEnabled(enabled)
+        transition_editable = enabled and not self._is_transition_mode_locked(self._target_operator_id())
+        self.transition_mode_combo.setEnabled(transition_editable)
+        manual_enabled = (
+            enabled
+            and transition_editable
+            and self.transition_mode_combo.currentData() == OperatorTransitionMode.MANUAL.value
+        )
+        self.manual_interaction_combo.setEnabled(manual_enabled)
+        self.delete_operator_button.setEnabled(enabled)
+
+    def _refresh_manual_interaction_controls(self, selected_ids: list[str]) -> None:
+        operator_id = self._target_operator_id()
+        interactions = self._available_manual_interactions(operator_id, selected_ids)
+        transition_locked = self._is_transition_mode_locked(operator_id)
+        self.manual_interaction_combo.blockSignals(True)
+        self.manual_interaction_combo.clear()
+        if interactions and not transition_locked:
+            for index, interaction in enumerate(interactions):
+                self.manual_interaction_combo.addItem(self._interaction_choice_label(interaction))
+                self.manual_interaction_combo.setItemData(index, interaction.id)
+            if selected_ids:
+                last_id = selected_ids[-1]
+                for index in range(self.manual_interaction_combo.count()):
+                    if self.manual_interaction_combo.itemData(index) == last_id:
+                        self.manual_interaction_combo.setCurrentIndex(index)
+                        break
+        else:
+            self.manual_interaction_combo.addItem("当前步骤无可选互动点")
+            self.manual_interaction_combo.setItemData(0, "")
+        self.manual_interaction_combo.blockSignals(False)
+        if not interactions:
+            self._hovered_manual_interaction_id = ""
+        if transition_locked:
+            self.manual_interactions_hint.setText("当前关键帧与下一关键帧在同一楼层，路径模式固定为自动。")
+        elif not self._has_next_transition_target(operator_id):
+            self.manual_interactions_hint.setText("当前关键帧没有下一步目标。")
+        elif not interactions:
+            self.manual_interactions_hint.setText("当前楼层没有可通往下一关键帧楼层的互动点。")
+        else:
+            self.manual_interactions_hint.setText("手动模式下可从下拉中切换当前使用的互动点。")
+        self._sync_scene_interaction_overlays(selected_ids)
+
+    def _surface_state(self, surface_id: str) -> TacticalSurfaceState | None:
+        return self.surface_states.get(surface_id)
+
+    def _default_surface_state(self, surface_id: str) -> TacticalSurfaceState:
+        return TacticalSurfaceState(surface_id=surface_id)
+
+    def _surface_supports_openings(self, surface_id: str) -> bool:
+        surface = next(
+            (item for item in self._current_map_asset.surfaces if item.id == surface_id),
+            None,
+        ) if self._current_map_asset is not None else None
+        return surface is not None and surface.kind == MapSurfaceType.SOFT_WALL
+
+    def _normalized_surface_state(self, surface_id: str, state: TacticalSurfaceState) -> TacticalSurfaceState:
+        normalized = deepcopy(state)
+        if not self._surface_supports_openings(surface_id):
+            normalized.opening_type = None
+            normalized.foot_hole = False
+            normalized.gun_hole = False
+        if normalized.reinforced:
+            normalized.opening_type = None
+            normalized.foot_hole = False
+            normalized.gun_hole = False
+        elif normalized.opening_type is not None:
+            normalized.foot_hole = False
+            normalized.gun_hole = False
+        return normalized
+
+    def _set_surface_state(self, surface_id: str, state: TacticalSurfaceState | None) -> None:
+        if state is None:
+            self.surface_states.pop(surface_id, None)
+        else:
+            normalized = self._normalized_surface_state(surface_id, state)
+            default_state = self._default_surface_state(surface_id)
+            if normalized == default_state:
+                self.surface_states.pop(surface_id, None)
+            else:
+                self.surface_states[surface_id] = normalized
+        self._sync_scene_surface_overlays()
+        self._refresh_property_panel()
+        self._refresh_timeline()
+
+    def _reinforced_surface_count(self) -> int:
+        return sum(1 for state in self.surface_states.values() if state.reinforced)
+
+    def _refresh_surface_property_panel(self, surface: MapSurface | None) -> None:
+        state = self._surface_state(surface.id) if surface is not None else None
+        self.surface_count_label.setText(f"加固数量：{self._reinforced_surface_count()} / 10")
+        if surface is None:
+            current_floor = self._current_floor_key()
+            floor_surface_count = 0
+            if self._current_map_asset is not None:
+                floor_surface_count = sum(
+                    1 for item in self._current_map_asset.surfaces if item.floor_key == current_floor
+                )
+            if floor_surface_count > 0:
+                self.surface_selection_label.setText(f"当前战术面：未选中（本层 {floor_surface_count} 个）")
+            else:
+                self.surface_selection_label.setText("当前战术面：无")
+            self.reinforce_button.setText("加固")
+            self.reinforce_button.setEnabled(False)
+            self._set_combo_value(self.opening_combo, "")
+            self.opening_combo.setEnabled(False)
+            self.foot_hole_box.blockSignals(True)
+            self.gun_hole_box.blockSignals(True)
+            self.foot_hole_box.setChecked(False)
+            self.gun_hole_box.setChecked(False)
+            self.foot_hole_box.blockSignals(False)
+            self.gun_hole_box.blockSignals(False)
+            self.foot_hole_box.setEnabled(False)
+            self.gun_hole_box.setEnabled(False)
+            return
+
+        self.surface_selection_label.setText(f"当前战术面：{surface.id} ({surface.kind.value})")
+        reinforced = bool(state and state.reinforced)
+        supports_openings = self._surface_supports_openings(surface.id)
+        self.reinforce_button.setText("取消加固" if reinforced else "加固")
+        self.reinforce_button.setEnabled(True)
+        opening_value = state.opening_type.value if state and state.opening_type is not None else ""
+        self._set_combo_value(self.opening_combo, opening_value)
+        self.opening_combo.setEnabled(supports_openings and not reinforced)
+        self.foot_hole_box.blockSignals(True)
+        self.gun_hole_box.blockSignals(True)
+        self.foot_hole_box.setChecked(bool(state and state.foot_hole))
+        self.gun_hole_box.setChecked(bool(state and state.gun_hole))
+        self.foot_hole_box.blockSignals(False)
+        self.gun_hole_box.blockSignals(False)
+        holes_enabled = supports_openings and not reinforced and not opening_value
+        self.foot_hole_box.setEnabled(holes_enabled)
+        self.gun_hole_box.setEnabled(holes_enabled)
+
+    def _toggle_selected_surface_reinforcement(self) -> None:
+        if self._syncing_panel:
+            return
+        surface = self._selected_surface_asset()
+        if surface is None:
+            return
+        before = self._capture_history_state()
+        state = deepcopy(self._surface_state(surface.id) or self._default_surface_state(surface.id))
+        if state.reinforced:
+            state.reinforced = False
+        else:
+            if self._reinforced_surface_count() >= 10:
+                MessageBox("加固数量已满", "当前战术最多允许 10 面加固墙体。", self).exec()
+                return
+            state.reinforced = True
+        self._set_surface_state(surface.id, state)
+        self._commit_history(before)
+
+    def _update_selected_surface_opening(self, index: int) -> None:
+        if self._syncing_panel:
+            return
+        surface = self._selected_surface_asset()
+        if surface is None or not self._surface_supports_openings(surface.id):
+            return
+        before = self._capture_history_state()
+        state = deepcopy(self._surface_state(surface.id) or self._default_surface_state(surface.id))
+        opening_value = self.opening_combo.itemData(index) or ""
+        state.opening_type = SurfaceOpeningType(opening_value) if opening_value else None
+        self._set_surface_state(surface.id, state)
+        self._commit_history(before)
+
+    def _update_selected_surface_foot_hole(self, checked: bool) -> None:
+        if self._syncing_panel:
+            return
+        surface = self._selected_surface_asset()
+        if surface is None or not self._surface_supports_openings(surface.id):
+            return
+        before = self._capture_history_state()
+        state = deepcopy(self._surface_state(surface.id) or self._default_surface_state(surface.id))
+        state.foot_hole = checked
+        self._set_surface_state(surface.id, state)
+        self._commit_history(before)
+
+    def _update_selected_surface_gun_hole(self, checked: bool) -> None:
+        if self._syncing_panel:
+            return
+        surface = self._selected_surface_asset()
+        if surface is None:
+            return
+        before = self._capture_history_state()
+        state = deepcopy(self._surface_state(surface.id) or self._default_surface_state(surface.id))
+        state.gun_hole = checked
+        self._set_surface_state(surface.id, state)
+        self._commit_history(before)
+
+    def _build_project(self, project_path: str = "") -> TacticProject:
+        scene = self._map_scene()
+        return self.session_service.build_project(
+            project_path=project_path or self.current_project_path,
+            current_map_asset=self._current_map_asset,
+            current_map_asset_path=self.current_map_asset_path,
+            current_map_floor_key=self.current_map_floor_key,
+            map_image_path=scene.current_map_path if scene is not None else "",
+            operator_order=self.operator_order,
+            operator_definitions=self.operator_definitions,
+            keyframe_columns=self.keyframe_columns,
+            keyframe_names=self.keyframe_names,
+            keyframe_notes=self.keyframe_notes,
+            surface_states=self.surface_states,
+            current_keyframe_index=self.current_keyframe_index,
+            transition_duration_ms=self._transition_duration_ms,
+        )
+
+    def _apply_project(self, project: TacticProject) -> None:
+        self._pause_column_playback()
+        scene = self._map_scene()
+        if scene is None:
+            return
+        if project.map_info and project.map_info.metadata_path:
+            if not self._load_map_asset(project.map_info.metadata_path, floor_key=project.map_info.current_floor_key):
+                scene.clear_map()
+                self.current_map_asset_path = ""
+                self.current_map_floor_key = ""
+                self._current_map_asset = None
+                self._clear_overview_asset()
+                self._rebuild_floor_panel()
+        elif project.map_info and project.map_info.image_path:
+            if scene.load_map_image(project.map_info.image_path):
+                self.current_map_asset_path = ""
+                self.current_map_floor_key = ""
+                self._current_map_asset = None
+                self._clear_overview_asset()
+                self._rebuild_floor_panel()
+        else:
+            scene.clear_map()
+            self.current_map_asset_path = ""
+            self.current_map_floor_key = ""
+            self._current_map_asset = None
+            self._clear_overview_asset()
+            self._rebuild_floor_panel()
+
+        self.operator_order = list(project.operator_order)
+        self.operator_definitions = {operator.id: deepcopy(operator) for operator in project.operators}
+        self.keyframe_columns = [
+            {state.id: deepcopy(state) for state in keyframe.operator_frames}
+            for keyframe in project.timeline.keyframes
+        ] or [{}]
+        self.keyframe_names = [keyframe.name for keyframe in project.timeline.keyframes] or [""]
+        self.keyframe_notes = [keyframe.note for keyframe in project.timeline.keyframes] or [""]
+        self.surface_states = {
+            state.surface_id: self._normalized_surface_state(state.surface_id, deepcopy(state))
+            for state in project.surface_states
+            if self._normalized_surface_state(state.surface_id, deepcopy(state)) != self._default_surface_state(state.surface_id)
+        }
+        self.current_keyframe_index = min(project.current_keyframe_index, len(self.keyframe_columns) - 1)
+        self.current_timeline_row = -1
+        self.current_surface_id = ""
+        self._transition_duration_ms = project.transition_duration_ms
+        self.playback_duration_slider.setValue(self._transition_duration_ms)
+        self._update_view_mode_availability()
+
+        for operator_id in self.operator_definitions:
+            if operator_id not in self.operator_order:
+                self.operator_order.append(operator_id)
+        for frame in self.keyframe_columns:
+            for state in frame.values():
+                if state.id not in self.operator_order:
+                    self.operator_order.append(state.id)
+
+        self._apply_timeline_column(self.current_keyframe_index)
+        self._refresh_timeline()
+
+    def _capture_project_state(self) -> EditorProjectState:
+        scene = self._map_scene()
+        map_reference_path = self.current_map_asset_path
+        if not map_reference_path and scene is not None:
+            map_reference_path = scene.current_map_path
+        return EditorProjectState(
+            map_reference_path=map_reference_path,
+            operator_order=list(self.operator_order),
+            operator_definitions=deepcopy(self.operator_definitions),
+            keyframe_columns=deepcopy(self.keyframe_columns),
+            keyframe_names=list(self.keyframe_names),
+            keyframe_notes=list(self.keyframe_notes),
+            surface_states=deepcopy(self.surface_states),
+            transition_duration_ms=self._transition_duration_ms,
+        )
+
+    def _capture_history_state(self) -> EditorHistoryState:
+        scene = self._map_scene()
+        selected = self._current_operator()
+        return EditorHistoryState(
+            map_asset_path=self.current_map_asset_path,
+            map_floor_key=self.current_map_floor_key,
+            map_image_path=scene.current_map_path if scene is not None else "",
+            scene_states=deepcopy(scene.snapshot_operator_states() if scene is not None else []),
+            selected_operator_id=selected.operator_id if selected is not None else "",
+            operator_order=list(self.operator_order),
+            operator_definitions=deepcopy(self.operator_definitions),
+            keyframe_columns=deepcopy(self.keyframe_columns),
+            keyframe_names=list(self.keyframe_names),
+            keyframe_notes=list(self.keyframe_notes),
+            current_keyframe_index=self.current_keyframe_index,
+            current_timeline_row=self.current_timeline_row,
+            selected_surface_id=self.current_surface_id,
+            surface_states=deepcopy(self.surface_states),
+            transition_duration_ms=self._transition_duration_ms,
+        )
+
+    def _restore_history_state(self, snapshot: EditorHistoryState) -> None:
+        scene = self._map_scene()
+        if scene is None:
+            return
+        self._history_lock = True
+        self._pause_column_playback()
+        if snapshot.map_asset_path:
+            if not self._load_map_asset(snapshot.map_asset_path, floor_key=snapshot.map_floor_key, fit_view=False):
+                scene.clear_map()
+                self.current_map_asset_path = ""
+                self.current_map_floor_key = ""
+                self._current_map_asset = None
+                self._clear_overview_asset()
+                self._rebuild_floor_panel()
+        else:
+            if snapshot.map_image_path:
+                scene.load_map_image(snapshot.map_image_path)
+            else:
+                scene.clear_map()
+            self.current_map_asset_path = ""
+            self.current_map_floor_key = ""
+            self._current_map_asset = None
+            self._clear_overview_asset()
+            self._rebuild_floor_panel()
+
+        self.operator_order = list(snapshot.operator_order)
+        self.operator_definitions = deepcopy(snapshot.operator_definitions)
+        self.keyframe_columns = deepcopy(snapshot.keyframe_columns)
+        self.keyframe_names = list(snapshot.keyframe_names)
+        self.keyframe_notes = list(snapshot.keyframe_notes)
+        self.current_keyframe_index = snapshot.current_keyframe_index
+        self.current_timeline_row = snapshot.current_timeline_row
+        self.current_surface_id = snapshot.selected_surface_id
+        self.surface_states = deepcopy(snapshot.surface_states)
+        self._transition_duration_ms = snapshot.transition_duration_ms
+        self.playback_duration_slider.setValue(self._transition_duration_ms)
+
+        scene.sync_operator_states(deepcopy(snapshot.scene_states), snapshot.selected_operator_id or None)
+        self._sync_scene_surface_overlays()
+        for operator in scene.operator_items():
+            self._update_operator_icon(operator)
+        self._sync_overview_scene_states(self._resolved_states(self.current_keyframe_index, include_all_floors=True))
+        self._refresh_property_panel()
+        self._history_lock = False
+        self._refresh_timeline()
 
     def refresh_theme(self) -> None:
         self.setStyleSheet(page_stylesheet(self.objectName()))

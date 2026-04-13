@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "r6-tactics-board"
-version = "0.6.1"
+version = "0.6.2"
 description = "A Rainbow Six Siege tactics board built with PyQt6 and PyQt6-Fluent-Widgets."
 readme = "README.md"
 requires-python = ">=3.11"
