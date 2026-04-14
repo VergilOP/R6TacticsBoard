@@ -25,6 +25,7 @@ class EditorHistoryState:
     selected_surface_id: str
     surface_states: dict[str, TacticalSurfaceState]
     transition_duration_ms: int
+    operator_scale: float
 
 
 @dataclass(slots=True)
@@ -37,3 +38,4 @@ class EditorProjectState:
     keyframe_notes: list[str]
     surface_states: dict[str, TacticalSurfaceState]
     transition_duration_ms: int
+    operator_scale: float

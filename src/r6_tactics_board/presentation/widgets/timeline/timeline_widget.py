@@ -4,10 +4,11 @@ from PyQt6.QtWidgets import QHeaderView, QHBoxLayout, QTableWidget, QTableWidget
 from qfluentwidgets import BodyLabel, PushButton
 
 from r6_tactics_board.presentation.styles.theme import (
-    card_stylesheet,
     item_view_palette,
     scrollbar_stylesheet,
+    subtle_danger_button_stylesheet,
     timeline_table_stylesheet,
+    theme_tokens,
 )
 
 
@@ -20,6 +21,7 @@ class TimelineWidget(QWidget):
     capture_column_requested = pyqtSignal()
     clear_cell_requested = pyqtSignal()
     cell_selected = pyqtSignal(int, int)
+    keyframe_selected = pyqtSignal(int)
     keyframe_column_moved = pyqtSignal(int, int)
     operator_row_moved = pyqtSignal(int, int)
 
@@ -62,10 +64,10 @@ class TimelineWidget(QWidget):
         toolbar.addWidget(self.add_button)
         toolbar.addWidget(self.insert_button)
         toolbar.addWidget(self.duplicate_button)
-        toolbar.addWidget(self.delete_button)
         toolbar.addWidget(self.capture_button)
         toolbar.addWidget(self.capture_column_button)
         toolbar.addWidget(self.clear_button)
+        toolbar.addWidget(self.delete_button)
 
         self.table.setMinimumHeight(180)
         self.table.setFrameShape(QTableWidget.Shape.NoFrame)
@@ -92,6 +94,7 @@ class TimelineWidget(QWidget):
         self.capture_column_button.clicked.connect(self.capture_column_requested.emit)
         self.clear_button.clicked.connect(self.clear_cell_requested.emit)
         self.table.cellClicked.connect(self._on_cell_clicked)
+        self.table.horizontalHeader().sectionClicked.connect(self._on_column_header_clicked)
         self.table.horizontalHeader().sectionMoved.connect(self._on_column_section_moved)
         self.table.verticalHeader().sectionMoved.connect(self._on_row_section_moved)
 
@@ -135,6 +138,7 @@ class TimelineWidget(QWidget):
             header_item = self.table.horizontalHeaderItem(column)
             if header_item is not None:
                 header_item.setToolTip(note or keyframe_labels[column])
+                self._apply_header_state(header_item, selected=(current_column == column and current_row < 0))
 
         if self._selected_cell is not None:
             self.table.setCurrentCell(*self._selected_cell)
@@ -166,6 +170,11 @@ class TimelineWidget(QWidget):
         self._selected_cell = (row, column)
         self.cell_selected.emit(row, column)
 
+    def _on_column_header_clicked(self, column: int) -> None:
+        self._selected_cell = None
+        self.table.clearSelection()
+        self.keyframe_selected.emit(column)
+
     def _on_column_section_moved(self, logical_index: int, old_visual_index: int, new_visual_index: int) -> None:
         if old_visual_index != new_visual_index:
             self.keyframe_column_moved.emit(old_visual_index, new_visual_index)
@@ -182,7 +191,14 @@ class TimelineWidget(QWidget):
                 header.moveSection(current_visual_index, logical_index)
 
     def _apply_theme(self) -> None:
-        self.setStyleSheet(card_stylesheet(self.objectName()))
+        tokens = theme_tokens()
+        self.setStyleSheet(
+            f"#{self.objectName()} {{"
+            "background: transparent;"
+            "border: none;"
+            "}"
+        )
+        self.title_label.setStyleSheet(f"color: {tokens['text_secondary']};")
         self.table.setStyleSheet(timeline_table_stylesheet())
         palette = item_view_palette()
         self.table.setPalette(palette)
@@ -199,6 +215,7 @@ class TimelineWidget(QWidget):
         self.table.verticalHeader().viewport().setAutoFillBackground(True)
         self.table.verticalScrollBar().setStyleSheet(scrollbar_stylesheet())
         self.table.horizontalScrollBar().setStyleSheet(scrollbar_stylesheet())
+        self.delete_button.setStyleSheet(subtle_danger_button_stylesheet())
         text_brush = QBrush(palette.text().color())
         base_brush = QBrush(palette.base().color())
         for row in range(self.table.rowCount()):
@@ -208,6 +225,26 @@ class TimelineWidget(QWidget):
                     continue
                 item.setForeground(text_brush)
                 item.setBackground(base_brush)
+        for column in range(self.table.columnCount()):
+            header_item = self.table.horizontalHeaderItem(column)
+            if header_item is not None:
+                self._apply_header_state(header_item, selected=False)
 
     def refresh_theme(self) -> None:
         self._apply_theme()
+
+    @staticmethod
+    def _apply_header_state(header_item: QTableWidgetItem, *, selected: bool) -> None:
+        font = QFont(header_item.font())
+        font.setBold(selected)
+        header_item.setFont(font)
+        palette = item_view_palette()
+        header_item.setForeground(
+            QBrush(
+                palette.highlightedText().color() if selected else palette.text().color()
+            )
+        )
+        if selected:
+            header_item.setBackground(QBrush(palette.highlight().color()))
+        else:
+            header_item.setBackground(QBrush(palette.alternateBase().color()))

@@ -98,6 +98,8 @@ class OperatorFrameState:
     position: Point2D
     rotation: float = 0.0
     display_mode: OperatorDisplayMode = OperatorDisplayMode.ICON
+    show_icon: bool = True
+    show_name: bool = False
     floor_key: str = ""
     transition_mode: OperatorTransitionMode = OperatorTransitionMode.AUTO
     manual_interaction_ids: list[str] = field(default_factory=list)
@@ -112,6 +114,8 @@ class OperatorState:
     position: Point2D
     rotation: float = 0.0
     display_mode: OperatorDisplayMode = OperatorDisplayMode.ICON
+    show_icon: bool = True
+    show_name: bool = False
     floor_key: str = ""
     transition_mode: OperatorTransitionMode = OperatorTransitionMode.AUTO
     manual_interaction_ids: list[str] = field(default_factory=list)
@@ -140,12 +144,22 @@ class TacticProject:
     operator_order: list[str] = field(default_factory=list)
     current_keyframe_index: int = 0
     transition_duration_ms: int = 700
+    operator_scale: float = 1.0
 
 
 def resolve_operator_state(
     definition: OperatorDefinition,
     frame: OperatorFrameState,
 ) -> OperatorState:
+    show_icon = frame.show_icon
+    show_name = frame.show_name
+    if not show_icon and not show_name:
+        show_icon = True
+    display_mode = (
+        OperatorDisplayMode.CUSTOM_NAME
+        if show_name and not show_icon
+        else OperatorDisplayMode.ICON
+    )
     return OperatorState(
         id=definition.id,
         operator_key=definition.operator_key,
@@ -153,7 +167,9 @@ def resolve_operator_state(
         side=definition.side,
         position=Point2D(x=frame.position.x, y=frame.position.y),
         rotation=frame.rotation,
-        display_mode=frame.display_mode,
+        display_mode=display_mode,
+        show_icon=show_icon,
+        show_name=show_name,
         floor_key=frame.floor_key,
         transition_mode=frame.transition_mode,
         manual_interaction_ids=list(frame.manual_interaction_ids),

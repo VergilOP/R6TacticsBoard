@@ -83,6 +83,7 @@ class EditorSessionService:
         surface_states: dict[str, TacticalSurfaceState],
         current_keyframe_index: int,
         transition_duration_ms: int,
+        operator_scale: float,
     ) -> TacticProject:
         map_info = None
         if map_image_path:
@@ -136,4 +137,5 @@ class EditorSessionService:
             operator_order=list(operator_order),
             current_keyframe_index=current_keyframe_index,
             transition_duration_ms=transition_duration_ms,
+            operator_scale=operator_scale,
         )

@@ -20,6 +20,27 @@ from r6_tactics_board.domain.models import (
 class ProjectStore:
     """JSON persistence for tactic projects."""
 
+    @staticmethod
+    def _display_flags(raw_state: dict) -> tuple[bool, bool]:
+        if "show_icon" in raw_state or "show_name" in raw_state:
+            show_icon = bool(raw_state.get("show_icon", True))
+            show_name = bool(raw_state.get("show_name", False))
+        else:
+            legacy_mode = raw_state.get("display_mode", OperatorDisplayMode.ICON.value)
+            show_icon = legacy_mode != OperatorDisplayMode.CUSTOM_NAME.value
+            show_name = legacy_mode == OperatorDisplayMode.CUSTOM_NAME.value
+        if not show_icon and not show_name:
+            show_icon = True
+        return show_icon, show_name
+
+    @staticmethod
+    def _display_mode_from_flags(show_icon: bool, show_name: bool) -> OperatorDisplayMode:
+        return (
+            OperatorDisplayMode.CUSTOM_NAME
+            if show_name and not show_icon
+            else OperatorDisplayMode.ICON
+        )
+
     def load(self, path: str) -> TacticProject:
         project_path = Path(path).resolve()
         data = json.loads(project_path.read_text(encoding="utf-8"))
@@ -43,26 +64,7 @@ class ProjectStore:
                 name=item.get("name", ""),
                 note=item.get("note", ""),
                 operator_frames=[
-                    OperatorFrameState(
-                        id=state["id"],
-                        position=Point2D(
-                            x=state["position"]["x"],
-                            y=state["position"]["y"],
-                        ),
-                        rotation=state.get("rotation", 0.0),
-                        display_mode=OperatorDisplayMode(
-                            state.get("display_mode", OperatorDisplayMode.ICON.value)
-                        ),
-                        floor_key=state.get("floor_key", ""),
-                        transition_mode=OperatorTransitionMode(
-                            state.get("transition_mode", OperatorTransitionMode.AUTO.value)
-                        ),
-                        manual_interaction_ids=[
-                            str(item)
-                            for item in state.get("manual_interaction_ids", [])
-                            if str(item)
-                        ],
-                    )
+                    self._load_operator_frame_state(state)
                     for state in item.get("operator_frames", item.get("operator_states", []))
                 ],
             )
@@ -92,6 +94,7 @@ class ProjectStore:
             operator_order=data.get("operator_order", []),
             current_keyframe_index=data.get("current_keyframe_index", 0),
             transition_duration_ms=data.get("transition_duration_ms", 700),
+            operator_scale=float(data.get("operator_scale", 1.0)),
         )
 
     def save(self, path: str, project: TacticProject) -> None:
@@ -130,7 +133,9 @@ class ProjectStore:
                                     "y": state.position.y,
                                 },
                                 "rotation": state.rotation,
-                                "display_mode": state.display_mode.value,
+                                "display_mode": self._display_mode_from_flags(state.show_icon, state.show_name).value,
+                                "show_icon": state.show_icon,
+                                "show_name": state.show_name,
                                 "floor_key": state.floor_key,
                                 "transition_mode": state.transition_mode.value,
                                 "manual_interaction_ids": list(state.manual_interaction_ids),
@@ -154,6 +159,7 @@ class ProjectStore:
             "operator_order": project.operator_order,
             "current_keyframe_index": project.current_keyframe_index,
             "transition_duration_ms": project.transition_duration_ms,
+            "operator_scale": project.operator_scale,
         }
         project_path.write_text(
             json.dumps(data, ensure_ascii=False, indent=2),
@@ -210,3 +216,26 @@ class ProjectStore:
                 )
 
         return list(inferred.values())
+
+    def _load_operator_frame_state(self, state: dict) -> OperatorFrameState:
+        show_icon, show_name = self._display_flags(state)
+        return OperatorFrameState(
+            id=state["id"],
+            position=Point2D(
+                x=state["position"]["x"],
+                y=state["position"]["y"],
+            ),
+            rotation=state.get("rotation", 0.0),
+            display_mode=self._display_mode_from_flags(show_icon, show_name),
+            show_icon=show_icon,
+            show_name=show_name,
+            floor_key=state.get("floor_key", ""),
+            transition_mode=OperatorTransitionMode(
+                state.get("transition_mode", OperatorTransitionMode.AUTO.value)
+            ),
+            manual_interaction_ids=[
+                str(item)
+                for item in state.get("manual_interaction_ids", [])
+                if str(item)
+            ],
+        )

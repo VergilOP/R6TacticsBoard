@@ -24,6 +24,9 @@ class OverviewOperatorOverlay:
     operator_key: str
     custom_name: str
     display_mode: str
+    show_icon: bool
+    show_name: bool
+    operator_scale: float
     icon_pixmap: QPixmap
     selected: bool
 
@@ -44,6 +47,7 @@ class OverviewScene:
         self._route_items: dict[str, GLLinePlotItem] = {}
         self._routes: dict[str, list[PlaybackRouteSegment]] = {}
         self._icon_cache: dict[tuple[str, str], QPixmap] = {}
+        self._operator_scale = 1.0
 
     @property
     def asset(self) -> MapAsset | None:
@@ -216,14 +220,22 @@ class OverviewScene:
                     operator_key=state.operator_key,
                     custom_name=state.custom_name,
                     display_mode=state.display_mode.value,
+                    show_icon=state.show_icon,
+                    show_name=state.show_name,
+                    operator_scale=self._operator_scale,
                     icon_pixmap=self._operator_icon(state.side.value, state.operator_key),
                     selected=operator_id == self._selected_operator_id,
                 )
             )
         return overlays
 
+    def set_operator_scale(self, scale: float) -> None:
+        self._operator_scale = max(0.4, min(2.5, scale))
+        self._view.update()
+
     def _route_points(self, segments: list[PlaybackRouteSegment]) -> np.ndarray:
         points: list[list[float]] = []
+        planner = PlaybackRoutePlannerAdapter()
         for segment in segments:
             if self._visible_floor_keys and segment.floor_key not in self._visible_floor_keys:
                 continue
@@ -244,8 +256,22 @@ class OverviewScene:
                     or segment.result_floor_key in self._visible_floor_keys
                 )
             ):
-                end_next_floor = self._projection.point_to_world(end_layout, segment.end)
-                points.append([end_next_floor[0], end_next_floor[1], end_next_floor[2] + 6.0])
+                transition_points = segment.transition_points
+                if len(transition_points) >= 2:
+                    total_length = planner.transition_path_length(segment)
+                    traversed = 0.0
+                    for index, point in enumerate(transition_points):
+                        if index > 0:
+                            previous = transition_points[index - 1]
+                            traversed += planner.distance_points(previous, point)
+                        z_progress = traversed / total_length if total_length > 0.001 else 1.0
+                        world = self._projection.point_to_world(start_layout, point)
+                        z_value = start_layout.z + ((end_layout.z - start_layout.z) * z_progress)
+                        points.append([world[0], world[1], z_value + 6.0])
+                else:
+                    result_position = segment.result_position or segment.end
+                    end_next_floor = self._projection.point_to_world(end_layout, result_position)
+                    points.append([end_next_floor[0], end_next_floor[1], end_next_floor[2] + 6.0])
 
         if not points:
             return np.empty((0, 3), dtype=np.float32)
@@ -315,3 +341,22 @@ class OverviewScene:
         self.set_visible_floors(visible_floor_keys)
         self.set_render_position_overrides(render_position_overrides)
         self.set_preview_routes(routes)
+
+
+class PlaybackRoutePlannerAdapter:
+    @staticmethod
+    def transition_path_length(segment: PlaybackRouteSegment) -> float:
+        if len(segment.transition_points) < 2:
+            if segment.result_position is None:
+                return 0.0
+            return PlaybackRoutePlannerAdapter.distance_points(segment.end, segment.result_position)
+        return sum(
+            PlaybackRoutePlannerAdapter.distance_points(first, second)
+            for first, second in zip(segment.transition_points, segment.transition_points[1:])
+        )
+
+    @staticmethod
+    def distance_points(first: Point2D, second: Point2D) -> float:
+        dx = second.x - first.x
+        dy = second.y - first.y
+        return (dx * dx + dy * dy) ** 0.5

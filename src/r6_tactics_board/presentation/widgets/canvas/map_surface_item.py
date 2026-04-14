@@ -120,6 +120,13 @@ class MapSurfaceItem(QGraphicsObject):
         path.moveTo(self._start_anchor)
         path.lineTo(self._end_anchor)
 
+        if is_selected:
+            highlight_pen = QPen(surface_selection_color())
+            highlight_pen.setWidth(18 if reinforced else 14)
+            highlight_pen.setCapStyle(Qt.PenCapStyle.FlatCap)
+            painter.setPen(highlight_pen)
+            painter.drawPath(path)
+
         pen = QPen(surface_outline_color(self.surface.kind, reinforced, is_selected))
         pen.setWidth(12 if reinforced else 8)
         pen.setCapStyle(Qt.PenCapStyle.FlatCap)
@@ -131,6 +138,12 @@ class MapSurfaceItem(QGraphicsObject):
         inner_pen.setCapStyle(Qt.PenCapStyle.FlatCap)
         painter.setPen(inner_pen)
         painter.drawPath(path)
+
+        if is_selected:
+            painter.setPen(QPen(surface_selection_color(), 2))
+            painter.setBrush(QBrush(QColor(surface_selection_color())))
+            painter.drawEllipse(self._start_anchor, 4.0, 4.0)
+            painter.drawEllipse(self._end_anchor, 4.0, 4.0)
 
         self._paint_surface_markers(painter)
 

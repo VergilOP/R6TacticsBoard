@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 from PyQt6.QtCore import QRect, Qt, pyqtSignal
-from PyQt6.QtWidgets import QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QTabWidget, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
     ComboBox,
@@ -15,11 +15,11 @@ from qfluentwidgets import (
 from r6_tactics_board.domain.models import OperatorTransitionMode, SurfaceOpeningType
 from r6_tactics_board.infrastructure.assets.asset_registry import MapFloorAsset
 from r6_tactics_board.presentation.styles.theme import (
-    card_stylesheet,
     floating_panel_stylesheet,
     popup_combo_stylesheet,
+    subtle_danger_button_stylesheet,
+    tab_widget_stylesheet,
 )
-from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
 
 
 class PopupAwareComboBox(QComboBox):
@@ -45,15 +45,16 @@ class EditorPropertyPanel(QWidget):
         super().__init__(parent)
         self.setObjectName("editor-property-panel")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self._active_section = "operator"
 
-        self.property_title = SubtitleLabel("干员属性")
-        self.property_hint = BodyLabel("名称、阵营、图标是全局属性；位置、朝向、显示模式和楼层属于当前时间点。")
+        self.property_title = SubtitleLabel("属性面板")
+        self.property_hint = BodyLabel("名称、阵营、图标是全局属性；位置、朝向、显示与楼层属于当前时间点。")
         self.selection_label = BodyLabel("当前选中：无")
-        self.keyframe_title = SubtitleLabel("关键帧属性")
-        self.keyframe_hint = BodyLabel("关键帧名称和备注仅作用于当前关键帧列。")
-        self.surface_title = SubtitleLabel("战术面")
-        self.surface_hint = BodyLabel("加固总数上限为 10；过人洞、蹲姿过人洞、翻越洞三选一，且不能与脚洞、对枪洞并存。")
-        self.surface_selection_label = BodyLabel("当前战术面：无")
+        self.keyframe_title = SubtitleLabel("关键帧")
+        self.keyframe_hint = BodyLabel("当前关键帧：-")
+        self.surface_title = SubtitleLabel("装修")
+        self.surface_hint = BodyLabel("加固总数上限为 10；大洞三选一，且不能与脚洞、对枪洞并存。")
+        self.surface_selection_label = BodyLabel("当前装修：无")
         self.surface_count_label = BodyLabel("加固数量：0 / 10")
 
         self.keyframe_name_edit = LineEdit()
@@ -64,23 +65,34 @@ class EditorPropertyPanel(QWidget):
         self.rotation_slider = Slider(Qt.Orientation.Horizontal)
         self.rotation_value_label = BodyLabel("0°")
         self.floor_value_label = BodyLabel("-")
-        self.display_mode_combo = ComboBox()
+        self.transition_mode_label = BodyLabel("路径模式")
+        self.manual_interaction_label = BodyLabel("手动互动点")
+        self.show_icon_box = QCheckBox("显示图标")
+        self.show_name_box = QCheckBox("显示名字")
+        self.operator_size_slider = Slider(Qt.Orientation.Horizontal)
+        self.operator_size_value_label = BodyLabel("100%")
         self.transition_mode_combo = ComboBox()
         self.manual_interactions_hint = BodyLabel("")
         self.manual_interaction_combo = PopupAwareComboBox()
         self.delete_operator_button = PushButton("删除选中干员")
 
         self.reinforce_button = PushButton("加固")
+        self.surface_opening_label = BodyLabel("开洞")
         self.opening_combo = ComboBox()
         self.foot_hole_box = QCheckBox("脚洞")
         self.gun_hole_box = QCheckBox("对枪洞")
+
+        self.section_tabs = QTabWidget()
+        self.operator_page = QWidget()
+        self.surface_page = QWidget()
+        self.keyframe_page = QWidget()
 
         self._init_ui()
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(14)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         property_grid = QGridLayout()
         property_grid.setHorizontalSpacing(12)
@@ -94,18 +106,16 @@ class EditorPropertyPanel(QWidget):
 
         self.name_edit.setPlaceholderText("输入自定义名称")
         self.keyframe_name_edit.setPlaceholderText("例如：默认站位")
-        self.keyframe_note_edit.setPlaceholderText("例如：20 秒内优先控图")
+        self.keyframe_note_edit.setPlaceholderText("例如：10 秒内优先控图")
         self.rotation_slider.setRange(0, 359)
+        self.operator_size_slider.setRange(50, 160)
+        self.operator_size_slider.setValue(100)
 
         self.side_combo.addItem("进攻")
         self.side_combo.setItemData(0, "attack")
         self.side_combo.addItem("防守")
         self.side_combo.setItemData(1, "defense")
 
-        self.display_mode_combo.addItem("干员图标")
-        self.display_mode_combo.setItemData(0, OperatorItem.ICON)
-        self.display_mode_combo.addItem("自定义名")
-        self.display_mode_combo.setItemData(1, OperatorItem.CUSTOM_NAME)
         self.transition_mode_combo.addItem("自动路径")
         self.transition_mode_combo.setItemData(0, OperatorTransitionMode.AUTO.value)
         self.transition_mode_combo.addItem("手动互动点")
@@ -122,6 +132,19 @@ class EditorPropertyPanel(QWidget):
         self.opening_combo.addItem("翻越洞")
         self.opening_combo.setItemData(3, SurfaceOpeningType.VAULT.value)
 
+        display_layout = QHBoxLayout()
+        display_layout.setContentsMargins(0, 0, 0, 0)
+        display_layout.setSpacing(8)
+        display_layout.addWidget(self.show_icon_box)
+        display_layout.addWidget(self.show_name_box)
+        display_layout.addStretch(1)
+
+        size_layout = QHBoxLayout()
+        size_layout.setContentsMargins(0, 0, 0, 0)
+        size_layout.setSpacing(8)
+        size_layout.addWidget(self.operator_size_slider, 1)
+        size_layout.addWidget(self.operator_size_value_label)
+
         property_grid.addWidget(BodyLabel("名称"), 0, 0)
         property_grid.addWidget(self.name_edit, 0, 1)
         property_grid.addWidget(BodyLabel("阵营"), 1, 0)
@@ -132,14 +155,16 @@ class EditorPropertyPanel(QWidget):
         property_grid.addWidget(self.rotation_slider, 3, 1)
         property_grid.addWidget(BodyLabel("角度"), 4, 0)
         property_grid.addWidget(self.rotation_value_label, 4, 1)
-        property_grid.addWidget(BodyLabel("显示模式"), 5, 0)
-        property_grid.addWidget(self.display_mode_combo, 5, 1)
-        property_grid.addWidget(BodyLabel("楼层"), 6, 0)
-        property_grid.addWidget(self.floor_value_label, 6, 1)
-        property_grid.addWidget(BodyLabel("路径模式"), 7, 0)
-        property_grid.addWidget(self.transition_mode_combo, 7, 1)
-        property_grid.addWidget(BodyLabel("手动互动点"), 8, 0)
-        property_grid.addWidget(self.manual_interaction_combo, 8, 1)
+        property_grid.addWidget(BodyLabel("显示"), 5, 0)
+        property_grid.addLayout(display_layout, 5, 1)
+        property_grid.addWidget(BodyLabel("整体大小"), 6, 0)
+        property_grid.addLayout(size_layout, 6, 1)
+        property_grid.addWidget(BodyLabel("楼层"), 7, 0)
+        property_grid.addWidget(self.floor_value_label, 7, 1)
+        property_grid.addWidget(self.transition_mode_label, 8, 0)
+        property_grid.addWidget(self.transition_mode_combo, 8, 1)
+        property_grid.addWidget(self.manual_interaction_label, 9, 0)
+        property_grid.addWidget(self.manual_interaction_combo, 9, 1)
 
         keyframe_grid.addWidget(BodyLabel("名称"), 0, 0)
         keyframe_grid.addWidget(self.keyframe_name_edit, 0, 1)
@@ -148,36 +173,85 @@ class EditorPropertyPanel(QWidget):
 
         surface_grid.addWidget(BodyLabel("状态"), 0, 0)
         surface_grid.addWidget(self.reinforce_button, 0, 1)
-        surface_grid.addWidget(BodyLabel("开洞"), 1, 0)
+        surface_grid.addWidget(self.surface_opening_label, 1, 0)
         surface_grid.addWidget(self.opening_combo, 1, 1)
         surface_grid.addWidget(self.foot_hole_box, 2, 0)
         surface_grid.addWidget(self.gun_hole_box, 2, 1)
 
-        layout.addWidget(self.property_title)
-        layout.addWidget(self.property_hint)
-        layout.addWidget(self.selection_label)
-        layout.addLayout(property_grid)
-        layout.addWidget(self.manual_interactions_hint)
-        layout.addWidget(self.delete_operator_button)
-        layout.addSpacing(12)
-        layout.addWidget(self.surface_title)
-        layout.addWidget(self.surface_hint)
-        layout.addWidget(self.surface_selection_label)
-        layout.addWidget(self.surface_count_label)
-        layout.addLayout(surface_grid)
-        layout.addSpacing(12)
-        layout.addWidget(self.keyframe_title)
-        layout.addWidget(self.keyframe_hint)
-        layout.addLayout(keyframe_grid)
-        layout.addStretch(1)
+        operator_layout = QVBoxLayout(self.operator_page)
+        operator_layout.setContentsMargins(16, 12, 16, 16)
+        operator_layout.setSpacing(12)
+        operator_layout.addWidget(self.property_title)
+        operator_layout.addWidget(self.property_hint)
+        operator_layout.addWidget(self.selection_label)
+        operator_layout.addLayout(property_grid)
+        operator_layout.addWidget(self.manual_interactions_hint)
+        operator_layout.addWidget(self.delete_operator_button)
+        operator_layout.addStretch(1)
+
+        surface_layout = QVBoxLayout(self.surface_page)
+        surface_layout.setContentsMargins(16, 12, 16, 16)
+        surface_layout.setSpacing(12)
+        surface_layout.addWidget(self.surface_title)
+        surface_layout.addWidget(self.surface_hint)
+        surface_layout.addWidget(self.surface_selection_label)
+        surface_layout.addWidget(self.surface_count_label)
+        surface_layout.addLayout(surface_grid)
+        surface_layout.addStretch(1)
+
+        keyframe_layout = QVBoxLayout(self.keyframe_page)
+        keyframe_layout.setContentsMargins(16, 12, 16, 16)
+        keyframe_layout.setSpacing(12)
+        keyframe_layout.addWidget(self.keyframe_title)
+        keyframe_layout.addWidget(self.keyframe_hint)
+        keyframe_layout.addLayout(keyframe_grid)
+        keyframe_layout.addStretch(1)
+
+        self.section_tabs.addTab(self.operator_page, "干员")
+        self.section_tabs.addTab(self.surface_page, "装修")
+        self.section_tabs.addTab(self.keyframe_page, "关键帧")
+
+        layout.addWidget(self.section_tabs, 1)
+        self.setTabOrder(self.name_edit, self.side_combo)
+        self.setTabOrder(self.side_combo, self.operator_combo)
+        self.setTabOrder(self.operator_combo, self.rotation_slider)
+        self.setTabOrder(self.rotation_slider, self.show_icon_box)
+        self.setTabOrder(self.show_icon_box, self.show_name_box)
+        self.setTabOrder(self.show_name_box, self.operator_size_slider)
+        self.set_active_section("operator")
         self._apply_theme()
 
     def refresh_theme(self) -> None:
         self._apply_theme()
         self.manual_interaction_combo.refresh_theme()
+        self.delete_operator_button.setStyleSheet(subtle_danger_button_stylesheet())
+
+    def set_active_section(self, section: str) -> None:
+        mapping = {
+            "operator": 0,
+            "surface": 1,
+            "keyframe": 2,
+        }
+        index = mapping.get(section, mapping["operator"])
+        self._active_section = section if section in mapping else "operator"
+        self.section_tabs.setCurrentIndex(index)
+
+    def active_section(self) -> str:
+        return {
+            0: "operator",
+            1: "surface",
+            2: "keyframe",
+        }.get(self.section_tabs.currentIndex(), getattr(self, "_active_section", "operator"))
 
     def _apply_theme(self) -> None:
-        self.setStyleSheet(card_stylesheet(self.objectName()))
+        self.setStyleSheet(
+            f"#{self.objectName()} {{"
+            "background: transparent;"
+            "border: none;"
+            "}"
+            + tab_widget_stylesheet()
+        )
+        self.delete_operator_button.setStyleSheet(subtle_danger_button_stylesheet())
 
 
 class FloorOverlayPanel(QWidget):

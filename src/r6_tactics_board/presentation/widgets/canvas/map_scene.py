@@ -53,6 +53,7 @@ class MapScene(QGraphicsScene):
         self._surface_states: dict[str, TacticalSurfaceState] = {}
         self._surface_items: dict[str, MapSurfaceItem] = {}
         self._surface_floor_key = ""
+        self._operator_scale = 1.0
 
         self.setSceneRect(QRectF(0, 0, 4000, 4000))
         self.setBackgroundBrush(QBrush(canvas_background_color()))
@@ -87,6 +88,7 @@ class MapScene(QGraphicsScene):
         self._operator_count += 1
         operator = OperatorItem(str(self._operator_count))
         operator.setZValue(10)
+        operator.set_operator_scale(self._operator_scale)
 
         if position is None:
             position = self.sceneRect().center()
@@ -186,6 +188,8 @@ class MapScene(QGraphicsScene):
                     position=Point2D(x=item.pos().x(), y=item.pos().y()),
                     rotation=item.rotation(),
                     display_mode=display_mode,
+                    show_icon=item.show_icon,
+                    show_name=item.show_name,
                     floor_key=item.floor_key,
                 )
             )
@@ -227,7 +231,8 @@ class MapScene(QGraphicsScene):
             operator.set_side(state.side.value)
             operator.set_operator_key(state.operator_key)
             operator.set_floor_key(state.floor_key)
-            operator.set_display_mode(state.display_mode.value)
+            operator.set_display_options(state.show_icon, state.show_name)
+            operator.set_operator_scale(self._operator_scale)
             operator.setRotation(state.rotation)
             operator.setPos(state.position.x, state.position.y)
             operator.setSelected(state.id == selected_id)
@@ -241,6 +246,12 @@ class MapScene(QGraphicsScene):
     def operator_items(self) -> list[OperatorItem]:
         items = [item for item in self.items() if isinstance(item, OperatorItem)]
         return sorted(items, key=lambda item: self._operator_sort_key(item.operator_id))
+
+    def set_operator_scale(self, scale: float) -> None:
+        self._operator_scale = max(0.4, min(2.5, scale))
+        for item in self.operator_items():
+            item.set_operator_scale(self._operator_scale)
+        self.update()
 
     def find_operator(self, operator_id: str) -> OperatorItem | None:
         for item in self.operator_items():
@@ -303,6 +314,8 @@ class MapScene(QGraphicsScene):
                 "side": item.side,
                 "floor_key": item.floor_key,
                 "display_mode": item.display_mode,
+                "show_icon": item.show_icon,
+                "show_name": item.show_name,
                 "rotation": int(item.rotation()),
                 "position": item.pos(),
             }
@@ -326,7 +339,8 @@ class MapScene(QGraphicsScene):
             operator.set_side(state["side"])
             operator.set_operator_key(state["operator_key"])
             operator.set_floor_key(state["floor_key"])
-            operator.set_display_mode(state["display_mode"])
+            operator.set_display_options(state["show_icon"], state["show_name"])
+            operator.set_operator_scale(self._operator_scale)
             operator.setRotation(state["rotation"])
             operator.setZValue(10)
             operator.setPos(state["position"])
@@ -368,7 +382,8 @@ class MapScene(QGraphicsScene):
         operator.set_side(self._placement_state.side.value)
         operator.set_operator_key(self._placement_state.operator_key)
         operator.set_floor_key(self._placement_state.floor_key)
-        operator.set_display_mode(self._placement_state.display_mode.value)
+        operator.set_display_options(self._placement_state.show_icon, self._placement_state.show_name)
+        operator.set_operator_scale(self._operator_scale)
         operator.setPos(self._placement_anchor)
         operator.setRotation(self._placement_state.rotation)
         self._operator_count = max(self._operator_count, self._operator_sort_key(operator.operator_id))

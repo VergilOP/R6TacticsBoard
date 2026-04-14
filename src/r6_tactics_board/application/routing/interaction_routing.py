@@ -1,10 +1,11 @@
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from heapq import heappop, heappush
 from math import hypot
 
 from r6_tactics_board.domain.models import (
     MapInteractionPoint,
+    MapInteractionType,
     OperatorState,
     OperatorTransitionMode,
     Point2D,
@@ -17,6 +18,10 @@ class PlaybackRouteSegment:
     start: Point2D
     end: Point2D
     result_floor_key: str
+    result_position: Point2D | None = None
+    interaction_id: str = ""
+    interaction_kind: MapInteractionType | None = None
+    transition_points: list[Point2D] = field(default_factory=list)
 
 
 class InteractionRoutePlanner:
@@ -79,6 +84,7 @@ class InteractionRoutePlanner:
                     start=Point2D(start_state.position.x, start_state.position.y),
                     end=Point2D(end_state.position.x, end_state.position.y),
                     result_floor_key=end_floor,
+                    result_position=Point2D(end_state.position.x, end_state.position.y),
                 )
             ]
 
@@ -96,6 +102,7 @@ class InteractionRoutePlanner:
                     start=Point2D(start_state.position.x, start_state.position.y),
                     end=Point2D(end_state.position.x, end_state.position.y),
                     result_floor_key=end_floor,
+                    result_position=Point2D(end_state.position.x, end_state.position.y),
                 )
             ]
 
@@ -105,16 +112,24 @@ class InteractionRoutePlanner:
 
         for interaction, target_floor in interaction_steps:
             interaction_point = self.interaction_position_for_floor(interaction, current_floor)
+            exit_point = self.interaction_position_for_floor(interaction, target_floor)
             segments.append(
                 PlaybackRouteSegment(
                     floor_key=current_floor,
                     start=Point2D(current_point.x, current_point.y),
                     end=Point2D(interaction_point.x, interaction_point.y),
                     result_floor_key=target_floor,
+                    result_position=Point2D(exit_point.x, exit_point.y),
+                    interaction_id=interaction.id,
+                    interaction_kind=interaction.kind,
+                    transition_points=self.transition_points_for_travel(
+                        interaction,
+                        current_floor,
+                        target_floor,
+                    ),
                 )
             )
             current_floor = target_floor
-            exit_point = self.interaction_position_for_floor(interaction, current_floor)
             current_point = Point2D(exit_point.x, exit_point.y)
 
         segments.append(
@@ -123,6 +138,7 @@ class InteractionRoutePlanner:
                 start=Point2D(current_point.x, current_point.y),
                 end=Point2D(end_state.position.x, end_state.position.y),
                 result_floor_key=end_floor,
+                result_position=Point2D(end_state.position.x, end_state.position.y),
             )
         )
         return segments
@@ -385,6 +401,8 @@ class InteractionRoutePlanner:
             position=Point2D(position.x, position.y),
             rotation=template.rotation,
             display_mode=template.display_mode,
+            show_icon=template.show_icon,
+            show_name=template.show_name,
             floor_key=floor_key,
         )
 
@@ -402,8 +420,85 @@ class InteractionRoutePlanner:
         return Point2D(interaction.position.x, interaction.position.y)
 
     @staticmethod
+    def transition_points_for_travel(
+        interaction: MapInteractionPoint,
+        current_floor: str,
+        target_floor: str,
+    ) -> list[Point2D]:
+        if interaction.kind != MapInteractionType.STAIRS:
+            return []
+        if interaction.target_position is None:
+            return []
+
+        if interaction.floor_key == current_floor and target_floor in interaction.linked_floor_keys:
+            ordered = [interaction.position, *interaction.path_points, interaction.target_position]
+        elif (
+            interaction.is_bidirectional
+            and current_floor in interaction.linked_floor_keys
+            and target_floor == interaction.floor_key
+        ):
+            ordered = [
+                interaction.target_position,
+                *reversed(interaction.path_points),
+                interaction.position,
+            ]
+        else:
+            ordered = [interaction.position, *interaction.path_points, interaction.target_position]
+
+        return [Point2D(point.x, point.y) for point in ordered]
+
+    @staticmethod
     def route_segment_length(segment: PlaybackRouteSegment) -> float:
         return hypot(segment.end.x - segment.start.x, segment.end.y - segment.start.y)
+
+    @staticmethod
+    def transition_path_length(segment: PlaybackRouteSegment) -> float:
+        if segment.result_floor_key == segment.floor_key:
+            return 0.0
+        if len(segment.transition_points) >= 2:
+            return sum(
+                hypot(second.x - first.x, second.y - first.y)
+                for first, second in zip(segment.transition_points, segment.transition_points[1:])
+            )
+        if segment.result_position is not None:
+            return hypot(
+                segment.result_position.x - segment.end.x,
+                segment.result_position.y - segment.end.y,
+            )
+        return 0.0
+
+    @staticmethod
+    def transition_point_at_progress(
+        segment: PlaybackRouteSegment,
+        progress: float,
+    ) -> Point2D:
+        if len(segment.transition_points) < 2:
+            if segment.result_position is not None:
+                return Point2D(segment.result_position.x, segment.result_position.y)
+            return Point2D(segment.end.x, segment.end.y)
+
+        clamped = max(0.0, min(1.0, progress))
+        total_length = InteractionRoutePlanner.transition_path_length(segment)
+        if total_length <= 0.001:
+            last = segment.transition_points[-1]
+            return Point2D(last.x, last.y)
+
+        target_distance = total_length * clamped
+        traversed = 0.0
+        for first, second in zip(segment.transition_points, segment.transition_points[1:]):
+            section_length = hypot(second.x - first.x, second.y - first.y)
+            if section_length <= 0.001:
+                continue
+            if target_distance <= traversed + section_length:
+                local_progress = (target_distance - traversed) / section_length
+                return Point2D(
+                    x=first.x + (second.x - first.x) * local_progress,
+                    y=first.y + (second.y - first.y) * local_progress,
+                )
+            traversed += section_length
+
+        last = segment.transition_points[-1]
+        return Point2D(last.x, last.y)
 
     @staticmethod
     def distance_points(first: Point2D, second: Point2D) -> float:

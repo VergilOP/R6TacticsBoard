@@ -68,6 +68,7 @@ class EditorPage(QWidget):
         self._history_lock = False
         self._rotation_history_snapshot: EditorHistoryState | None = None
         self._operator_transform_history_snapshot: EditorHistoryState | None = None
+        self._operator_size_history_snapshot: EditorHistoryState | None = None
         self._playback_from_column = -1
         self._playback_to_column = -1
         self._playback_elapsed_ms = 0.0
@@ -76,6 +77,9 @@ class EditorPage(QWidget):
         self._scrubbing_playback_slider = False
         self._hovered_manual_interaction_id = ""
         self._property_panel_refresh_pending = False
+        self._syncing_property_section = False
+        self._preferred_property_section = "operator"
+        self._last_property_auto_context: tuple[str, str] | None = None
         self._transition_duration_ms = 700
         self._playback_start_states: dict[str, OperatorState] = {}
         self._playback_end_states: dict[str, OperatorState] = {}
@@ -97,6 +101,7 @@ class EditorPage(QWidget):
         self._overview_visible_floor_keys: set[str] = set()
         self._clean_project_state: EditorProjectState | None = None
         self.surface_states: dict[str, TacticalSurfaceState] = {}
+        self._operator_scale = 1.0
 
         self.session_service = EditorSessionService()
         self.playback_timer = QTimer(self)
@@ -136,7 +141,12 @@ class EditorPage(QWidget):
         self.rotation_slider = self.property_panel.rotation_slider
         self.rotation_value_label = self.property_panel.rotation_value_label
         self.floor_value_label = self.property_panel.floor_value_label
-        self.display_mode_combo = self.property_panel.display_mode_combo
+        self.transition_mode_label = self.property_panel.transition_mode_label
+        self.manual_interaction_label = self.property_panel.manual_interaction_label
+        self.show_icon_box = self.property_panel.show_icon_box
+        self.show_name_box = self.property_panel.show_name_box
+        self.operator_size_slider = self.property_panel.operator_size_slider
+        self.operator_size_value_label = self.property_panel.operator_size_value_label
         self.transition_mode_combo = self.property_panel.transition_mode_combo
         self.manual_interactions_hint = self.property_panel.manual_interactions_hint
         self.manual_interaction_combo = self.property_panel.manual_interaction_combo
@@ -146,6 +156,7 @@ class EditorPage(QWidget):
         self.surface_selection_label = self.property_panel.surface_selection_label
         self.surface_count_label = self.property_panel.surface_count_label
         self.reinforce_button = self.property_panel.reinforce_button
+        self.surface_opening_label = self.property_panel.surface_opening_label
         self.opening_combo = self.property_panel.opening_combo
         self.foot_hole_box = self.property_panel.foot_hole_box
         self.gun_hole_box = self.property_panel.gun_hole_box
@@ -219,7 +230,11 @@ class EditorPage(QWidget):
         self.rotation_slider.sliderPressed.connect(self._on_rotation_slider_pressed)
         self.rotation_slider.sliderReleased.connect(self._on_rotation_slider_released)
         self.rotation_slider.valueChanged.connect(self._update_selected_rotation)
-        self.display_mode_combo.currentIndexChanged.connect(self._update_display_mode)
+        self.show_icon_box.toggled.connect(self._update_show_icon)
+        self.show_name_box.toggled.connect(self._update_show_name)
+        self.operator_size_slider.sliderPressed.connect(self._on_operator_size_slider_pressed)
+        self.operator_size_slider.sliderReleased.connect(self._on_operator_size_slider_released)
+        self.operator_size_slider.valueChanged.connect(self._update_operator_scale)
         self.transition_mode_combo.currentIndexChanged.connect(self._update_transition_mode)
         self.reinforce_button.clicked.connect(self._toggle_selected_surface_reinforcement)
         self.opening_combo.currentIndexChanged.connect(self._update_selected_surface_opening)
@@ -240,6 +255,7 @@ class EditorPage(QWidget):
         self.timeline.capture_column_requested.connect(self._capture_all_operators_to_current_column)
         self.timeline.clear_cell_requested.connect(self._clear_current_cell)
         self.timeline.cell_selected.connect(self._select_timeline_cell)
+        self.timeline.keyframe_selected.connect(self._select_keyframe_column)
         self.timeline.keyframe_column_moved.connect(self._move_keyframe_column)
         self.timeline.operator_row_moved.connect(self._move_operator_row)
         self.playback_timer.timeout.connect(self._advance_playback)
@@ -254,6 +270,7 @@ class EditorPage(QWidget):
         self.manual_interaction_combo.activated.connect(self._select_manual_interaction_candidate)
         self.manual_interaction_combo.highlighted.connect(self._preview_manual_interaction_hover)
         self.manual_interaction_combo.popupHidden.connect(self._on_manual_interaction_popup_hidden)
+        self.property_panel.section_tabs.currentChanged.connect(self._on_property_section_changed)
         self.playback_progress_slider.sliderPressed.connect(self._on_playback_slider_pressed)
         self.playback_progress_slider.sliderMoved.connect(self._on_playback_slider_moved)
         self.playback_progress_slider.sliderReleased.connect(self._on_playback_slider_released)
@@ -337,6 +354,7 @@ class EditorPage(QWidget):
         selected_floor = selection.floor
         if not scene.load_map_image(selected_floor.image_path):
             return False
+        self._apply_operator_scale_to_views()
 
         previous_asset_path = self._current_map_asset.path if self._current_map_asset is not None else ""
         if not self._sync_overview_asset(asset, reset_camera=previous_asset_path != asset.path):
@@ -473,7 +491,10 @@ class EditorPage(QWidget):
             self.rotation_slider.setValue(0)
             self.rotation_value_label.setText("0°")
             self.floor_value_label.setText(self._current_floor_key())
-            self.display_mode_combo.setCurrentIndex(0)
+            self.show_icon_box.setChecked(True)
+            self.show_name_box.setChecked(False)
+            self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
+            self.operator_size_value_label.setText(f"{int(round(self._operator_scale * 100))}%")
             self._set_combo_value(self.transition_mode_combo, OperatorTransitionMode.AUTO.value)
             self._refresh_manual_interaction_controls([])
             self._set_property_enabled(False)
@@ -494,10 +515,11 @@ class EditorPage(QWidget):
             floor_key = operator.floor_key if operator is not None else (
                 target_frame.floor_key if target_frame is not None and target_frame.floor_key else self._current_floor_key()
             )
-            display_mode = operator.display_mode if operator is not None else (
-                OperatorItem.ICON
-                if target_frame is None or target_frame.display_mode == OperatorDisplayMode.ICON
-                else OperatorItem.CUSTOM_NAME
+            show_icon = operator.show_icon if operator is not None else (
+                target_frame.show_icon if target_frame is not None else True
+            )
+            show_name = operator.show_name if operator is not None else (
+                target_frame.show_name if target_frame is not None else False
             )
             transition_mode = (
                 target_frame.transition_mode.value
@@ -519,10 +541,11 @@ class EditorPage(QWidget):
             self._refresh_operator_combo(side, operator_key)
             self.rotation_slider.setValue(rotation)
             self.rotation_value_label.setText(f"{rotation}°")
+            self.show_icon_box.setChecked(show_icon)
+            self.show_name_box.setChecked(show_name)
+            self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
+            self.operator_size_value_label.setText(f"{int(round(self._operator_scale * 100))}%")
             self.floor_value_label.setText(floor_key or self._current_floor_key())
-            self.display_mode_combo.setCurrentIndex(
-                0 if display_mode == OperatorItem.ICON else 1
-            )
             self._set_combo_value(self.transition_mode_combo, transition_mode)
             self._refresh_manual_interaction_controls(manual_interaction_ids)
             self._set_property_enabled(True)
@@ -576,7 +599,9 @@ class EditorPage(QWidget):
         self.side_combo.setEnabled(enabled)
         self.operator_combo.setEnabled(enabled)
         self.rotation_slider.setEnabled(enabled)
-        self.display_mode_combo.setEnabled(enabled)
+        self.show_icon_box.setEnabled(enabled)
+        self.show_name_box.setEnabled(enabled)
+        self.operator_size_slider.setEnabled(True)
         transition_editable = enabled and not self._is_transition_mode_locked(self._target_operator_id())
         self.transition_mode_combo.setEnabled(transition_editable)
         manual_enabled = (
@@ -876,6 +901,8 @@ class EditorPage(QWidget):
                         position=Point2D(x=0, y=0),
                         rotation=value,
                         display_mode=OperatorDisplayMode.ICON,
+                        show_icon=True,
+                        show_name=False,
                         floor_key=self._current_floor_key(),
                     )
                 else:
@@ -895,13 +922,33 @@ class EditorPage(QWidget):
         self._commit_history(self._rotation_history_snapshot)
         self._rotation_history_snapshot = None
 
-    def _update_display_mode(self, index: int) -> None:
+    def _on_operator_size_slider_pressed(self) -> None:
+        self._operator_size_history_snapshot = self._capture_history_state()
+
+    def _on_operator_size_slider_released(self) -> None:
+        if self._operator_size_history_snapshot is None:
+            return
+        self._commit_history(self._operator_size_history_snapshot)
+        self._operator_size_history_snapshot = None
+
+    def _update_show_icon(self, checked: bool) -> None:
         if self._syncing_panel:
             return
-        operator = self._current_operator()
-        mode = self.display_mode_combo.itemData(index)
-        if mode is None:
+        self._update_display_options(show_icon=checked)
+
+    def _update_show_name(self, checked: bool) -> None:
+        if self._syncing_panel:
             return
+        self._update_display_options(show_name=checked)
+
+    def _update_display_options(
+        self,
+        *,
+        show_icon: bool | None = None,
+        show_name: bool | None = None,
+    ) -> None:
+        operator = self._current_operator()
+        before = self._capture_history_state()
         if operator is None:
             operator_id = self._target_operator_id()
             if operator_id is None or not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
@@ -914,15 +961,32 @@ class EditorPage(QWidget):
                         id=operator_id,
                         position=Point2D(x=0, y=0),
                         rotation=0,
-                        display_mode=OperatorDisplayMode(mode),
+                        display_mode=OperatorDisplayMode.ICON,
+                        show_icon=True,
+                        show_name=False,
                         floor_key=self._current_floor_key(),
                     )
                 else:
                     current_frame = deepcopy(current_frame)
-            if current_frame.display_mode.value == mode:
+            next_show_icon = current_frame.show_icon if show_icon is None else bool(show_icon)
+            next_show_name = current_frame.show_name if show_name is None else bool(show_name)
+            if not next_show_icon and not next_show_name:
+                if show_icon is False:
+                    next_show_name = True
+                else:
+                    next_show_icon = True
+            if (
+                current_frame.show_icon == next_show_icon
+                and current_frame.show_name == next_show_name
+            ):
                 return
-            before = self._capture_history_state()
-            current_frame.display_mode = OperatorDisplayMode(mode)
+            current_frame.show_icon = next_show_icon
+            current_frame.show_name = next_show_name
+            current_frame.display_mode = (
+                OperatorDisplayMode.CUSTOM_NAME
+                if next_show_name and not next_show_icon
+                else OperatorDisplayMode.ICON
+            )
             current_frame.floor_key = self._current_floor_key()
             self.keyframe_columns[self.current_keyframe_index][operator_id] = current_frame
             self._refresh_property_panel()
@@ -930,11 +994,29 @@ class EditorPage(QWidget):
             self._commit_history(before)
             return
 
-        if mode != operator.display_mode:
-            before = self._capture_history_state()
-            operator.set_display_mode(mode)
-            self._capture_selected_operator_to_current_cell(refresh_history=False)
-            self._commit_history(before)
+        next_show_icon = operator.show_icon if show_icon is None else bool(show_icon)
+        next_show_name = operator.show_name if show_name is None else bool(show_name)
+        if not next_show_icon and not next_show_name:
+            if show_icon is False:
+                next_show_name = True
+            else:
+                next_show_icon = True
+        if operator.show_icon == next_show_icon and operator.show_name == next_show_name:
+            return
+        operator.set_display_options(next_show_icon, next_show_name)
+        self._capture_selected_operator_to_current_cell(refresh_history=False)
+        self._refresh_property_panel()
+        self._commit_history(before)
+
+    def _update_operator_scale(self, value: int) -> None:
+        scale = max(0.5, min(1.6, value / 100.0))
+        self.operator_size_value_label.setText(f"{value}%")
+        if abs(self._operator_scale - scale) < 1e-6:
+            return
+        self._operator_scale = scale
+        self._apply_operator_scale_to_views()
+        self._refresh_property_panel()
+        self._refresh_timeline()
 
     def _update_transition_mode(self, index: int) -> None:
         if self._syncing_panel:
@@ -948,13 +1030,15 @@ class EditorPage(QWidget):
 
         frame = self._current_transition_frame(operator_id)
         if frame is None:
-            frame = OperatorFrameState(
-                id=operator_id,
-                position=Point2D(x=0, y=0),
-                rotation=0,
-                display_mode=OperatorDisplayMode.ICON,
-                floor_key=self._current_floor_key(),
-            )
+                frame = OperatorFrameState(
+                    id=operator_id,
+                    position=Point2D(x=0, y=0),
+                    rotation=0,
+                    display_mode=OperatorDisplayMode.ICON,
+                    show_icon=True,
+                    show_name=False,
+                    floor_key=self._current_floor_key(),
+                )
         if frame.transition_mode.value == mode:
             return
 
@@ -983,6 +1067,8 @@ class EditorPage(QWidget):
                 position=Point2D(x=0, y=0),
                 rotation=0,
                 display_mode=OperatorDisplayMode.ICON,
+                show_icon=True,
+                show_name=False,
                 floor_key=self._current_floor_key(),
             )
 
@@ -1063,6 +1149,8 @@ class EditorPage(QWidget):
                 position=Point2D(x=0, y=0),
                 rotation=0,
                 display_mode=OperatorDisplayMode.ICON,
+                show_icon=True,
+                show_name=False,
                 floor_key=self._current_floor_key(),
             )
 
@@ -1265,11 +1353,27 @@ class EditorPage(QWidget):
 
         if 0 <= row < len(self.operator_order):
             operator_id = self.operator_order[row]
+            self._activate_property_section("operator", context=("operator", operator_id), force=True)
             scene = self._map_scene()
             operator = scene.find_operator(operator_id) if scene is not None else None
             if operator is not None:
                 scene.select_operator(operator)
 
+        self._refresh_property_panel()
+        self._refresh_timeline()
+
+    def _select_keyframe_column(self, column: int) -> None:
+        if not (0 <= column < len(self.keyframe_columns)):
+            return
+        scene = self._map_scene()
+        if scene is not None:
+            scene.clearSelection()
+        self.current_timeline_row = -1
+        self.current_surface_id = ""
+        self.current_keyframe_index = column
+        self._pause_column_playback()
+        self._apply_column_with_focus_floor(self.current_keyframe_index)
+        self._activate_property_section("keyframe", context=("keyframe", str(column)), force=True)
         self._refresh_property_panel()
         self._refresh_timeline()
 
@@ -1429,13 +1533,52 @@ class EditorPage(QWidget):
         if operator is not None:
             self.current_timeline_row = self._operator_row(operator.operator_id)
             self.current_surface_id = ""
+            self._activate_property_section(
+                "operator",
+                context=("operator", operator.operator_id),
+            )
         elif surface is not None:
             self.current_surface_id = surface.surface.id
+            self._activate_property_section(
+                "surface",
+                context=("surface", surface.surface.id),
+            )
         self._refresh_property_panel()
         self._refresh_timeline()
 
     def _on_surface_selected(self, surface_id: str) -> None:
         self.current_surface_id = surface_id
+        self._activate_property_section("surface", context=("surface", surface_id), force=True)
+
+    def _on_property_section_changed(self, index: int) -> None:
+        section = {
+            0: "operator",
+            1: "surface",
+            2: "keyframe",
+        }.get(index, "operator")
+        self.property_panel._active_section = section
+        if self._syncing_property_section:
+            return
+        self._preferred_property_section = section
+
+    def _activate_property_section(
+        self,
+        section: str,
+        *,
+        context: tuple[str, str] | None = None,
+        force: bool = False,
+    ) -> None:
+        if not force and context is not None and self._last_property_auto_context == context:
+            return
+        if context is not None:
+            self._last_property_auto_context = context
+        if self.property_panel.active_section() == section:
+            return
+        self._syncing_property_section = True
+        try:
+            self.property_panel.set_active_section(section)
+        finally:
+            self._syncing_property_section = False
 
     def _on_operator_transform_started(self) -> None:
         if self._applying_timeline:
@@ -1627,6 +1770,8 @@ class EditorPage(QWidget):
         rotation_delta = ((end_state.rotation - start_state.rotation + 180) % 360) - 180
         route_state.rotation = start_state.rotation + rotation_delta * progress
         route_state.display_mode = end_state.display_mode
+        route_state.show_icon = end_state.show_icon
+        route_state.show_name = end_state.show_name
         route_state.custom_name = end_state.custom_name
         route_state.operator_key = end_state.operator_key
         route_state.side = end_state.side
@@ -1740,9 +1885,43 @@ class EditorPage(QWidget):
         )
 
     def _route_total_duration_ms(self, route: list[PlaybackRouteSegment]) -> float:
-        return float(self._transition_duration_ms) + (
-            self._route_floor_change_count(route) * self._overview_extra_vertical_duration_ms()
+        return float(self._transition_duration_ms) + sum(
+            self._transition_duration_for_segment(route, segment)
+            for segment in route
+            if segment.result_floor_key and segment.result_floor_key != segment.floor_key
         )
+
+    def _transition_duration_for_segment(
+        self,
+        route: list[PlaybackRouteSegment],
+        segment: PlaybackRouteSegment,
+    ) -> float:
+        if not segment.result_floor_key or segment.result_floor_key == segment.floor_key:
+            return 0.0
+
+        extra_total = self._route_floor_change_count(route) * self._overview_extra_vertical_duration_ms()
+        if extra_total <= 0.0:
+            return 0.0
+
+        weighted_segments = [
+            candidate
+            for candidate in route
+            if candidate.result_floor_key and candidate.result_floor_key != candidate.floor_key
+        ]
+        if not weighted_segments:
+            return 0.0
+
+        total_weight = sum(max(self._transition_segment_weight(candidate), 1.0) for candidate in weighted_segments)
+        if total_weight <= 0.001:
+            return extra_total / len(weighted_segments)
+        return extra_total * (max(self._transition_segment_weight(segment), 1.0) / total_weight)
+
+    def _transition_segment_weight(self, segment: PlaybackRouteSegment) -> float:
+        planner = self._route_planner()
+        length = planner.transition_path_length(segment)
+        if length > 0.001:
+            return length
+        return 1.0
 
     def _route_phase_at_elapsed(
         self,
@@ -1753,7 +1932,6 @@ class EditorPage(QWidget):
             return ("final", None, 1.0)
 
         base_duration = float(self._transition_duration_ms)
-        extra_vertical_ms = self._overview_extra_vertical_duration_ms()
         total_horizontal = sum(self._route_planner().route_segment_length(segment) for segment in route)
         horizontal_fallback_ms = base_duration / max(len(route), 1)
         consumed = 0.0
@@ -1780,6 +1958,7 @@ class EditorPage(QWidget):
             consumed += horizontal_ms
 
             if segment.result_floor_key and segment.result_floor_key != segment.floor_key:
+                extra_vertical_ms = self._transition_duration_for_segment(route, segment)
                 if elapsed_ms <= consumed + extra_vertical_ms:
                     local_progress = (
                         max(0.0, min(1.0, (elapsed_ms - consumed) / extra_vertical_ms))
@@ -1813,12 +1992,14 @@ class EditorPage(QWidget):
             )
             return self._route_planner().copy_state_with_position(end_state, position, segment.floor_key)
 
+        planner = self._route_planner()
+        transition_position = planner.transition_point_at_progress(segment, local_progress)
         floor_key = (
             segment.floor_key
             if local_progress < 0.5 or not segment.result_floor_key
             else segment.result_floor_key
         )
-        return self._route_planner().copy_state_with_position(end_state, segment.end, floor_key)
+        return planner.copy_state_with_position(end_state, transition_position, floor_key)
 
     def _set_transition_duration(self, value: int) -> None:
         self._transition_duration_ms = value
@@ -2053,6 +2234,8 @@ class EditorPage(QWidget):
                     position=Point2D(x=0, y=0),
                     rotation=0,
                     display_mode=OperatorDisplayMode.ICON,
+                    show_icon=True,
+                    show_name=False,
                     floor_key=self._current_floor_key(),
                 ),
             )
@@ -2206,9 +2389,9 @@ class EditorPage(QWidget):
 
     def _frame_state_from_operator(self, operator: OperatorItem) -> OperatorFrameState | None:
         display_mode = (
-            OperatorDisplayMode.ICON
-            if operator.display_mode == OperatorItem.ICON
-            else OperatorDisplayMode.CUSTOM_NAME
+            OperatorDisplayMode.CUSTOM_NAME
+            if operator.show_name and not operator.show_icon
+            else OperatorDisplayMode.ICON
         )
         current_frame = self._current_transition_frame(operator.operator_id)
         return OperatorFrameState(
@@ -2216,6 +2399,8 @@ class EditorPage(QWidget):
             position=Point2D(x=operator.pos().x(), y=operator.pos().y()),
             rotation=operator.rotation(),
             display_mode=display_mode,
+            show_icon=operator.show_icon,
+            show_name=operator.show_name,
             floor_key=self._current_floor_key(),
             transition_mode=(
                 current_frame.transition_mode
@@ -2276,8 +2461,10 @@ class EditorPage(QWidget):
             keyframe_columns=self.keyframe_columns,
             keyframe_names=self.keyframe_names,
             keyframe_notes=self.keyframe_notes,
+            surface_states=self.surface_states,
             current_keyframe_index=self.current_keyframe_index,
             transition_duration_ms=self._transition_duration_ms,
+            operator_scale=self._operator_scale,
         )
 
     def _apply_project(self, project: TacticProject) -> None:
@@ -2329,10 +2516,19 @@ class EditorPage(QWidget):
         ] or [{}]
         self.keyframe_names = [keyframe.name for keyframe in project.timeline.keyframes] or [""]
         self.keyframe_notes = [keyframe.note for keyframe in project.timeline.keyframes] or [""]
+        self.surface_states = {
+            state.surface_id: self._normalized_surface_state(state.surface_id, deepcopy(state))
+            for state in project.surface_states
+            if self._normalized_surface_state(state.surface_id, deepcopy(state)) != self._default_surface_state(state.surface_id)
+        }
         self.current_keyframe_index = min(project.current_keyframe_index, len(self.keyframe_columns) - 1)
         self.current_timeline_row = -1
+        self.current_surface_id = ""
         self._transition_duration_ms = project.transition_duration_ms
+        self._operator_scale = project.operator_scale
         self.playback_duration_slider.setValue(self._transition_duration_ms)
+        self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
+        self._apply_operator_scale_to_views()
         self._update_view_mode_availability()
 
         for operator_id in self.operator_definitions:
@@ -2354,8 +2550,12 @@ class EditorPage(QWidget):
         self.keyframe_notes = [""]
         self.current_keyframe_index = 0
         self.current_timeline_row = -1
+        self.current_surface_id = ""
         self._transition_duration_ms = 700
+        self._operator_scale = 1.0
         self.playback_duration_slider.setValue(self._transition_duration_ms)
+        self.operator_size_slider.setValue(100)
+        self._apply_operator_scale_to_views()
 
     def _capture_project_state(self) -> EditorProjectState:
         scene = self._map_scene()
@@ -2369,7 +2569,9 @@ class EditorPage(QWidget):
             keyframe_columns=deepcopy(self.keyframe_columns),
             keyframe_names=list(self.keyframe_names),
             keyframe_notes=list(self.keyframe_notes),
+            surface_states=deepcopy(self.surface_states),
             transition_duration_ms=self._transition_duration_ms,
+            operator_scale=self._operator_scale,
         )
 
     def _capture_history_state(self) -> EditorHistoryState:
@@ -2388,7 +2590,10 @@ class EditorPage(QWidget):
             keyframe_notes=list(self.keyframe_notes),
             current_keyframe_index=self.current_keyframe_index,
             current_timeline_row=self.current_timeline_row,
+            selected_surface_id=self.current_surface_id,
+            surface_states=deepcopy(self.surface_states),
             transition_duration_ms=self._transition_duration_ms,
+            operator_scale=self._operator_scale,
         )
 
     def _commit_history(self, before: EditorHistoryState) -> None:
@@ -2460,10 +2665,16 @@ class EditorPage(QWidget):
         self.keyframe_notes = list(snapshot.keyframe_notes)
         self.current_keyframe_index = snapshot.current_keyframe_index
         self.current_timeline_row = snapshot.current_timeline_row
+        self.current_surface_id = snapshot.selected_surface_id
+        self.surface_states = deepcopy(snapshot.surface_states)
         self._transition_duration_ms = snapshot.transition_duration_ms
+        self._operator_scale = snapshot.operator_scale
         self.playback_duration_slider.setValue(self._transition_duration_ms)
+        self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
+        self._apply_operator_scale_to_views()
 
         scene.sync_operator_states(deepcopy(snapshot.scene_states), snapshot.selected_operator_id or None)
+        self._sync_scene_surface_overlays()
         for operator in scene.operator_items():
             self._update_operator_icon(operator)
         self._sync_overview_scene_states(
@@ -2507,6 +2718,12 @@ class EditorPage(QWidget):
     def _clear_overview_asset(self) -> None:
         self._overview_visible_floor_keys = set()
         self.overview_view.clear_map()
+
+    def _apply_operator_scale_to_views(self) -> None:
+        scene = self._map_scene()
+        if scene is not None:
+            scene.set_operator_scale(self._operator_scale)
+        self.overview_view.set_operator_scale(self._operator_scale)
 
     def _sync_overview_scene_states(self, states: list[OperatorState]) -> None:
         scene = self._overview_scene()
@@ -2591,16 +2808,37 @@ class EditorPage(QWidget):
             y = segment.start.y + (segment.end.y - segment.start.y) * local_progress
             return scene.world_point(segment.floor_key, x, y, z_offset=8.0)
 
-        start_world = scene.world_point(
-            segment.floor_key,
-            segment.end.x,
-            segment.end.y,
-            z_offset=8.0,
-        )
+        planner = self._route_planner()
+        transition_points = segment.transition_points
+        if segment.interaction_kind == MapInteractionType.STAIRS and len(transition_points) >= 2:
+            point_progress = max(0.0, min(1.0, local_progress))
+            transition_position = planner.transition_point_at_progress(segment, point_progress)
+            start_world = scene.world_point(segment.floor_key, transition_points[0].x, transition_points[0].y, z_offset=8.0)
+            end_anchor = segment.result_position or transition_points[-1]
+            end_world = scene.world_point(
+                segment.result_floor_key,
+                end_anchor.x,
+                end_anchor.y,
+                z_offset=8.0,
+            )
+            if start_world is None or end_world is None:
+                return None
+            current_world = scene.world_point(segment.floor_key, transition_position.x, transition_position.y, z_offset=8.0)
+            if current_world is None:
+                return None
+            z_progress = point_progress
+            return (
+                current_world[0],
+                current_world[1],
+                start_world[2] + (end_world[2] - start_world[2]) * z_progress,
+            )
+
+        start_world = scene.world_point(segment.floor_key, segment.end.x, segment.end.y, z_offset=8.0)
+        result_position = segment.result_position or segment.end
         end_world = scene.world_point(
             segment.result_floor_key,
-            segment.end.x,
-            segment.end.y,
+            result_position.x,
+            result_position.y,
             z_offset=8.0,
         )
         if start_world is None or end_world is None:
@@ -2767,7 +3005,9 @@ class EditorPage(QWidget):
         self.current_timeline_row = -1
         self.current_surface_id = ""
         self._transition_duration_ms = 700
+        self._operator_scale = 1.0
         self.playback_duration_slider.setValue(self._transition_duration_ms)
+        self.operator_size_slider.setValue(100)
 
     def _refresh_property_panel(self) -> None:
         if self.manual_interaction_combo.view().isVisible():
@@ -2792,8 +3032,11 @@ class EditorPage(QWidget):
             self._refresh_operator_combo("attack")
             self.rotation_slider.setValue(0)
             self.rotation_value_label.setText("0°")
+            self.show_icon_box.setChecked(True)
+            self.show_name_box.setChecked(False)
+            self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
+            self.operator_size_value_label.setText(f"{int(round(self._operator_scale * 100))}%")
             self.floor_value_label.setText(self._current_floor_key())
-            self.display_mode_combo.setCurrentIndex(0)
             self._set_combo_value(self.transition_mode_combo, OperatorTransitionMode.AUTO.value)
             self._refresh_manual_interaction_controls([])
             self._set_property_enabled(False)
@@ -2814,10 +3057,11 @@ class EditorPage(QWidget):
             floor_key = operator.floor_key if operator is not None else (
                 target_frame.floor_key if target_frame is not None and target_frame.floor_key else self._current_floor_key()
             )
-            display_mode = operator.display_mode if operator is not None else (
-                OperatorItem.ICON
-                if target_frame is None or target_frame.display_mode == OperatorDisplayMode.ICON
-                else OperatorItem.CUSTOM_NAME
+            show_icon = operator.show_icon if operator is not None else (
+                target_frame.show_icon if target_frame is not None else True
+            )
+            show_name = operator.show_name if operator is not None else (
+                target_frame.show_name if target_frame is not None else False
             )
             transition_mode = target_frame.transition_mode.value if target_frame is not None else OperatorTransitionMode.AUTO.value
             manual_interaction_ids = list(target_frame.manual_interaction_ids) if target_frame is not None else []
@@ -2825,18 +3069,17 @@ class EditorPage(QWidget):
                 transition_mode = OperatorTransitionMode.AUTO.value
                 manual_interaction_ids = []
 
-            self.selection_label.setText(
-                f"当前选中：干员 {operator_id}"
-                if operator is not None
-                else f"当前目标：干员 {operator_id}（时间轴）"
-            )
+            self.selection_label.setText(f"当前选中：{custom_name}")
             self.name_edit.setText(custom_name)
             self.side_combo.setCurrentIndex(0 if side == "attack" else 1)
             self._refresh_operator_combo(side, operator_key)
             self.rotation_slider.setValue(rotation)
             self.rotation_value_label.setText(f"{rotation}°")
+            self.show_icon_box.setChecked(show_icon)
+            self.show_name_box.setChecked(show_name)
+            self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
+            self.operator_size_value_label.setText(f"{int(round(self._operator_scale * 100))}%")
             self.floor_value_label.setText(floor_key or self._current_floor_key())
-            self.display_mode_combo.setCurrentIndex(0 if display_mode == OperatorItem.ICON else 1)
             self._set_combo_value(self.transition_mode_combo, transition_mode)
             self._refresh_manual_interaction_controls(manual_interaction_ids)
             self._set_property_enabled(True)
@@ -2847,6 +3090,7 @@ class EditorPage(QWidget):
         self._syncing_keyframe_panel = True
         self.keyframe_name_edit.setText(self._current_keyframe_name())
         self.keyframe_note_edit.setText(self._current_keyframe_note())
+        self.keyframe_hint.setText(f"当前关键帧：{self._keyframe_label(self.current_keyframe_index)}")
         has_keyframe = 0 <= self.current_keyframe_index < len(self.keyframe_columns)
         self.keyframe_name_edit.setEnabled(has_keyframe)
         self.keyframe_note_edit.setEnabled(has_keyframe)
@@ -2857,7 +3101,9 @@ class EditorPage(QWidget):
         self.side_combo.setEnabled(enabled)
         self.operator_combo.setEnabled(enabled)
         self.rotation_slider.setEnabled(enabled)
-        self.display_mode_combo.setEnabled(enabled)
+        self.show_icon_box.setEnabled(enabled)
+        self.show_name_box.setEnabled(enabled)
+        self.operator_size_slider.setEnabled(True)
         transition_editable = enabled and not self._is_transition_mode_locked(self._target_operator_id())
         self.transition_mode_combo.setEnabled(transition_editable)
         manual_enabled = (
@@ -2867,11 +3113,14 @@ class EditorPage(QWidget):
         )
         self.manual_interaction_combo.setEnabled(manual_enabled)
         self.delete_operator_button.setEnabled(enabled)
+        self.delete_operator_button.setVisible(enabled)
 
     def _refresh_manual_interaction_controls(self, selected_ids: list[str]) -> None:
         operator_id = self._target_operator_id()
         interactions = self._available_manual_interactions(operator_id, selected_ids)
         transition_locked = self._is_transition_mode_locked(operator_id)
+        has_next_target = self._has_next_transition_target(operator_id)
+        manual_mode_active = self.transition_mode_combo.currentData() == OperatorTransitionMode.MANUAL.value
         self.manual_interaction_combo.blockSignals(True)
         self.manual_interaction_combo.clear()
         if interactions and not transition_locked:
@@ -2890,14 +3139,16 @@ class EditorPage(QWidget):
         self.manual_interaction_combo.blockSignals(False)
         if not interactions:
             self._hovered_manual_interaction_id = ""
-        if transition_locked:
-            self.manual_interactions_hint.setText("当前关键帧与下一关键帧在同一楼层，路径模式固定为自动。")
-        elif not self._has_next_transition_target(operator_id):
-            self.manual_interactions_hint.setText("当前关键帧没有下一步目标。")
-        elif not interactions:
-            self.manual_interactions_hint.setText("当前楼层没有可通往下一关键帧楼层的互动点。")
-        else:
-            self.manual_interactions_hint.setText("手动模式下可从下拉中切换当前使用的互动点。")
+        show_manual_controls = bool(operator_id) and not transition_locked and has_next_target and manual_mode_active
+        self.manual_interaction_label.setVisible(show_manual_controls)
+        self.manual_interaction_combo.setVisible(show_manual_controls)
+        self.manual_interactions_hint.setVisible(show_manual_controls)
+        if show_manual_controls:
+            if not interactions:
+                self.manual_interactions_hint.setText("当前步骤无可选互动点。")
+                self.manual_interaction_combo.setEnabled(False)
+            else:
+                self.manual_interactions_hint.setText("选择当前步骤的互动点。")
         self._sync_scene_interaction_overlays(selected_ids)
 
     def _surface_state(self, surface_id: str) -> TacticalSurfaceState | None:
@@ -2948,6 +3199,10 @@ class EditorPage(QWidget):
     def _refresh_surface_property_panel(self, surface: MapSurface | None) -> None:
         state = self._surface_state(surface.id) if surface is not None else None
         self.surface_count_label.setText(f"加固数量：{self._reinforced_surface_count()} / 10")
+        self.surface_opening_label.setVisible(True)
+        self.opening_combo.setVisible(True)
+        self.foot_hole_box.setVisible(True)
+        self.gun_hole_box.setVisible(True)
         if surface is None:
             current_floor = self._current_floor_key()
             floor_surface_count = 0
@@ -2956,9 +3211,9 @@ class EditorPage(QWidget):
                     1 for item in self._current_map_asset.surfaces if item.floor_key == current_floor
                 )
             if floor_surface_count > 0:
-                self.surface_selection_label.setText(f"当前战术面：未选中（本层 {floor_surface_count} 个）")
+                self.surface_selection_label.setText(f"当前装修：未选中（{floor_surface_count}）")
             else:
-                self.surface_selection_label.setText("当前战术面：无")
+                self.surface_selection_label.setText("当前装修：无")
             self.reinforce_button.setText("加固")
             self.reinforce_button.setEnabled(False)
             self._set_combo_value(self.opening_combo, "")
@@ -2973,13 +3228,17 @@ class EditorPage(QWidget):
             self.gun_hole_box.setEnabled(False)
             return
 
-        self.surface_selection_label.setText(f"当前战术面：{surface.id} ({surface.kind.value})")
+        self.surface_selection_label.setText(f"当前装修：{surface.id}")
         reinforced = bool(state and state.reinforced)
         supports_openings = self._surface_supports_openings(surface.id)
         self.reinforce_button.setText("取消加固" if reinforced else "加固")
         self.reinforce_button.setEnabled(True)
         opening_value = state.opening_type.value if state and state.opening_type is not None else ""
         self._set_combo_value(self.opening_combo, opening_value)
+        self.surface_opening_label.setVisible(supports_openings)
+        self.opening_combo.setVisible(supports_openings)
+        self.foot_hole_box.setVisible(supports_openings)
+        self.gun_hole_box.setVisible(supports_openings)
         self.opening_combo.setEnabled(supports_openings and not reinforced)
         self.foot_hole_box.blockSignals(True)
         self.gun_hole_box.blockSignals(True)
@@ -3062,6 +3321,7 @@ class EditorPage(QWidget):
             surface_states=self.surface_states,
             current_keyframe_index=self.current_keyframe_index,
             transition_duration_ms=self._transition_duration_ms,
+            operator_scale=self._operator_scale,
         )
 
     def _apply_project(self, project: TacticProject) -> None:
@@ -3109,7 +3369,10 @@ class EditorPage(QWidget):
         self.current_timeline_row = -1
         self.current_surface_id = ""
         self._transition_duration_ms = project.transition_duration_ms
+        self._operator_scale = project.operator_scale
         self.playback_duration_slider.setValue(self._transition_duration_ms)
+        self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
+        self._apply_operator_scale_to_views()
         self._update_view_mode_availability()
 
         for operator_id in self.operator_definitions:
@@ -3137,6 +3400,7 @@ class EditorPage(QWidget):
             keyframe_notes=list(self.keyframe_notes),
             surface_states=deepcopy(self.surface_states),
             transition_duration_ms=self._transition_duration_ms,
+            operator_scale=self._operator_scale,
         )
 
     def _capture_history_state(self) -> EditorHistoryState:
@@ -3158,6 +3422,7 @@ class EditorPage(QWidget):
             selected_surface_id=self.current_surface_id,
             surface_states=deepcopy(self.surface_states),
             transition_duration_ms=self._transition_duration_ms,
+            operator_scale=self._operator_scale,
         )
 
     def _restore_history_state(self, snapshot: EditorHistoryState) -> None:
@@ -3195,7 +3460,10 @@ class EditorPage(QWidget):
         self.current_surface_id = snapshot.selected_surface_id
         self.surface_states = deepcopy(snapshot.surface_states)
         self._transition_duration_ms = snapshot.transition_duration_ms
+        self._operator_scale = snapshot.operator_scale
         self.playback_duration_slider.setValue(self._transition_duration_ms)
+        self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
+        self._apply_operator_scale_to_views()
 
         scene.sync_operator_states(deepcopy(snapshot.scene_states), snapshot.selected_operator_id or None)
         self._sync_scene_surface_overlays()

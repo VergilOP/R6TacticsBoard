@@ -169,6 +169,38 @@ def floating_panel_stylesheet(object_name: str) -> str:
     )
 
 
+def section_switcher_stylesheet(object_name: str) -> str:
+    tokens = theme_tokens()
+    checked_fg = tokens["text_primary"]
+    return f"""
+#{object_name} {{
+    background: transparent;
+}}
+#{object_name} QPushButton {{
+    background-color: transparent;
+    color: {tokens['text_secondary']};
+    border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding: 7px 12px 9px 12px;
+    min-height: 32px;
+    font-weight: 600;
+}}
+#{object_name} QPushButton:hover {{
+    background-color: {tokens['popup_selection']};
+    color: {tokens['text_primary']};
+    border-bottom-color: {tokens['card_border']};
+}}
+#{object_name} QPushButton:checked {{
+    background-color: {tokens['card_bg_alt']};
+    color: {checked_fg};
+    border-color: {tokens['card_border']};
+    border-bottom: 2px solid {tokens['accent']};
+}}
+"""
+
+
 def popup_combo_stylesheet() -> str:
     tokens = theme_tokens()
     disabled_fg = "rgba(243, 244, 246, 0.45)" if isDarkTheme() else "rgba(15, 23, 42, 0.40)"
@@ -371,6 +403,35 @@ QTabBar::tab:selected {{
 }}
 QTabBar::tab:hover {{
     color: {tokens['text_primary']};
+}}
+"""
+
+
+def subtle_danger_button_stylesheet() -> str:
+    tokens = theme_tokens()
+    danger = "#F87171" if isDarkTheme() else "#DC2626"
+    danger_hover_bg = "rgba(248, 113, 113, 0.12)" if isDarkTheme() else "rgba(220, 38, 38, 0.10)"
+    danger_pressed_bg = "rgba(248, 113, 113, 0.18)" if isDarkTheme() else "rgba(220, 38, 38, 0.16)"
+    danger_border = "rgba(248, 113, 113, 0.32)" if isDarkTheme() else "rgba(220, 38, 38, 0.22)"
+    return f"""
+QPushButton {{
+    color: {danger};
+    background: transparent;
+    border: 1px solid {danger_border};
+    border-radius: 8px;
+    padding: 6px 10px;
+}}
+QPushButton:hover {{
+    background: {danger_hover_bg};
+    border: 1px solid {danger};
+}}
+QPushButton:pressed {{
+    background: {danger_pressed_bg};
+}}
+QPushButton:disabled {{
+    color: {tokens['text_muted']};
+    border: 1px solid {tokens['card_border']};
+    background: transparent;
 }}
 """
 

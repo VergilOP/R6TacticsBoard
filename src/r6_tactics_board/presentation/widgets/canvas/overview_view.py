@@ -44,6 +44,9 @@ class OverviewView(GLViewWidget):
     def sync_operator_states(self, states, *, selected_operator_id: str = "") -> None:
         self._overview_scene.sync_operator_states(states, selected_operator_id=selected_operator_id)
 
+    def set_operator_scale(self, scale: float) -> None:
+        self._overview_scene.set_operator_scale(scale)
+
     def set_preview_routes(self, routes) -> None:
         self._overview_scene.set_preview_routes(routes)
 
@@ -107,16 +110,17 @@ class OverviewView(GLViewWidget):
             forward = self._project_world(*overlay.world_forward)
             if center is None or forward is None:
                 continue
-            if overlay.display_mode == "custom_name":
-                self._paint_name_overlay(painter, center, forward, overlay.custom_name, overlay.selected)
-            else:
+            if overlay.show_icon or overlay.show_name:
                 self._paint_icon_overlay(
                     painter,
                     center,
                     forward,
                     overlay.icon_pixmap,
                     overlay.operator_key,
+                    overlay.show_icon,
+                    overlay.show_name,
                     overlay.selected,
+                    overlay.operator_scale,
                 )
 
     def _project_world(self, x: float, y: float, z: float) -> QPointF | None:
@@ -141,8 +145,12 @@ class OverviewView(GLViewWidget):
         forward: QPointF,
         icon_pixmap,
         operator_key: str,
+        show_icon: bool,
+        show_name: bool,
         selected: bool,
+        operator_scale: float,
     ) -> None:
+        scale = operator_scale
         pen = QPen(operator_pen_color(selected), 2)
         fill = operator_icon_fill_color(selected)
         if selected:
@@ -155,19 +163,21 @@ class OverviewView(GLViewWidget):
         px = -uy
         py = ux
 
-        arrow_tip = QPointF(center.x() + ux * 18.0, center.y() + uy * 18.0)
-        arrow_left = QPointF(center.x() + px * 4.0 + ux * 8.0, center.y() + py * 4.0 + uy * 8.0)
-        arrow_right = QPointF(center.x() - px * 4.0 + ux * 8.0, center.y() - py * 4.0 + uy * 8.0)
+        arrow_tip = QPointF(center.x() + ux * (18.0 * scale), center.y() + uy * (18.0 * scale))
+        arrow_left = QPointF(center.x() + px * (4.0 * scale) + ux * (8.0 * scale), center.y() + py * (4.0 * scale) + uy * (8.0 * scale))
+        arrow_right = QPointF(center.x() - px * (4.0 * scale) + ux * (8.0 * scale), center.y() - py * (4.0 * scale) + uy * (8.0 * scale))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(operator_arrow_color())
         painter.drawPolygon(QPolygonF([arrow_tip, arrow_left, arrow_right]))
 
-        icon_rect = QRectF(center.x() - 12.0, center.y() - 12.0, 24.0, 24.0)
+        icon_rect = QRectF(center.x() - (12.0 * scale), center.y() - (12.0 * scale), 24.0 * scale, 24.0 * scale)
         painter.setPen(pen)
-        if icon_pixmap.isNull():
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(icon_rect)
+        if show_icon and icon_pixmap.isNull():
             painter.setBrush(fill)
             painter.drawEllipse(icon_rect)
-        else:
+        elif show_icon:
             painter.setBrush(operator_icon_background_color())
             painter.drawEllipse(icon_rect)
             clip_path = QPainterPath()
@@ -177,48 +187,14 @@ class OverviewView(GLViewWidget):
             painter.drawPixmap(icon_rect.toRect(), icon_pixmap)
             painter.restore()
 
-        painter.setPen(operator_text_color())
-        painter.setFont(QFont("Microsoft YaHei UI", 6))
-        painter.drawText(
-            QRectF(center.x() - 10.0, center.y() - 7.0, 20.0, 14.0),
-            int(Qt.AlignmentFlag.AlignCenter),
-            operator_key[:2].upper() if operator_key else "",
-        )
-
-    @staticmethod
-    def _paint_name_overlay(
-        painter: QPainter,
-        center: QPointF,
-        forward: QPointF,
-        custom_name: str,
-        selected: bool,
-    ) -> None:
-        pen = QPen(operator_pen_color(selected), 2)
-        fill = operator_name_fill_color(selected)
-        if selected:
-            pen.setWidth(3)
-
-        direction = forward - center
-        length = max((direction.x() ** 2 + direction.y() ** 2) ** 0.5, 1.0)
-        ux = direction.x() / length
-        uy = direction.y() / length
-        px = -uy
-        py = ux
-
-        arrow_tip = QPointF(center.x() + ux * 26.0, center.y() + uy * 26.0)
-        arrow_left = QPointF(center.x() + px * 6.0 + ux * 10.0, center.y() + py * 6.0 + uy * 10.0)
-        arrow_right = QPointF(center.x() - px * 6.0 + ux * 10.0, center.y() - py * 6.0 + uy * 10.0)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(operator_arrow_color())
-        painter.drawPolygon(QPolygonF([arrow_tip, arrow_left, arrow_right]))
-
-        rect = QRectF(center.x() - 52.0, center.y() - 18.0, 104.0, 36.0)
-        painter.setPen(pen)
-        painter.setBrush(fill)
-        painter.drawRoundedRect(rect, 10.0, 10.0)
-        painter.setPen(operator_name_text_color())
-        painter.setFont(QFont("Microsoft YaHei UI", 9))
-        painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), custom_name)
+        if show_name:
+            painter.setPen(operator_text_color())
+            painter.setFont(QFont("Microsoft YaHei UI", max(6, round(6 * scale))))
+            painter.drawText(
+                QRectF(center.x() - (10.0 * scale), center.y() - (7.0 * scale), 20.0 * scale, 14.0 * scale),
+                int(Qt.AlignmentFlag.AlignCenter),
+                operator_key[:2].upper() if operator_key else "",
+            )
 
     def refresh_theme(self) -> None:
         self._pending_theme_refresh = True
