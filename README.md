@@ -42,6 +42,15 @@ R6 Tactics Board 面向单机桌面编辑场景，目标是把静态摆点升级
 - `主题排查`：集中检查深浅主题切换后的控件颜色与样式状态
 - `设置`：主题风格切换，默认深色主题
 
+## 开发文档入口
+
+如果要读代码或继续改功能，建议先看：
+
+- [docs/README.md](docs/README.md)
+- [docs/architecture/codebase_map.md](docs/architecture/codebase_map.md)
+- [docs/architecture/editor_workflow.md](docs/architecture/editor_workflow.md)
+- [src/r6_tactics_board/README.md](src/r6_tactics_board/README.md)
+
 ## 资源目录
 
 项目默认读取以下资源目录：

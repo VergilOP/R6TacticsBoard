@@ -1,23 +1,36 @@
-# Assets Page
+# Assets Pages
 
-这里放资源浏览与快速导入页面。
+这里放资源浏览和资源配置相关页面。
 
-## 当前文件
+## 文件说明
 
-- `assets_page.py`: 地图与干员资源总览页。
+- [assets_page.py](assets_page.py)
+  地图、干员资源浏览和快速导入入口。
+- [gadget_counts_page.py](gadget_counts_page.py)
+  通用道具和技能道具数量/保留类型配置页。
 
-## 适合放这里的内容
+## 数据写回位置
 
-- 资源列表展示、筛选、预览。
-- 资源导入入口和页面级交互反馈。
+### 通用道具
 
-## 不要放这里的内容
+写回：
+- [src/assets/gadgets/index.json](../../../../../src/assets/gadgets/index.json)
 
-- 资源目录扫描实现。
-- 资源文件格式解析。
-- 可复用的画布图元。
+负责：
+- 默认上限
+- 阵营归属
+- 是否保留在地图上
 
-## 落点规则
+### 技能道具
 
-- 如果新增的是资源浏览页专属交互，放这里。
-- 如果新增的是所有页面都要用的资源选择控件，提到 `presentation/widgets/`。
+写回：
+- [src/assets/operators/index.json](../../../../../src/assets/operators/index.json)
+
+负责：
+- 每个干员技能上限
+- 每个干员技能是否保留在地图上
+
+## 修改建议
+
+- 资源配置页只负责“资源定义”，不要直接承担时间轴逻辑。
+- 编辑器里的显示和限制，应通过 [asset_registry.py](../../../infrastructure/assets/asset_registry.py) 统一读取。

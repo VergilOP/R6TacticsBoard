@@ -1,22 +1,31 @@
 # Architecture Docs
 
-这里存放项目的架构与设计说明。
+这里放“项目为什么这样组织”和“核心流程怎么走”。
 
-## 当前文档
+## 推荐入口
 
-- `overview.md`: 当前项目的分层结构、核心对象、数据流和设计边界
-- `overview_2_5d_plan.md`: 2.5D 总览模式的方案、现状和后续计划
-- `roadmap.md`: 当前版本之后的功能与结构推进路线
-- `theme.md`: Fluent 全局主题、本地主题令牌、刷新机制与颜色表
+- [overview.md](overview.md)
+  分层结构和依赖边界。
+- [codebase_map.md](codebase_map.md)
+  功能到文件的快速索引。
+- [editor_workflow.md](editor_workflow.md)
+  战术编辑页的状态流和修改入口。
+- [overview_2_5d_plan.md](overview_2_5d_plan.md)
+  2.5D 相关规划与现状。
+- [roadmap.md](roadmap.md)
+  后续阶段任务。
+- [theme.md](theme.md)
+  主题系统和颜色令牌。
 
 ## 适合放在这里的内容
 
-- 分层边界和依赖方向
-- 核心编辑流程和数据流
-- 设计取舍、风险点和后续重构方向
+- 分层职责和依赖约束
+- 核心编辑流程和状态来源
+- 功能线拆分方式
+- 重构方向和风险点
 
 ## 不适合放在这里的内容
 
-- 资源目录命名细节
-- 打包命令和发布步骤
-- 只服务临时调试的零散记录
+- 资源命名细节
+- 打包命令
+- 临时调试记录

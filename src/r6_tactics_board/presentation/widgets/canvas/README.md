@@ -1,31 +1,36 @@
 # Canvas Widgets
 
-这里放地图画布及其图元，是编辑和调试页面共用的图形层。
+这里放编辑器相关的场景、视图和图元。
 
-## 当前文件
+## 文件分工
 
-- `map_view.py`: 缩放与平移视图容器。
-- `map_scene.py`: 主编辑场景。
-- `overview_projection.py`: 2.5D/3D 总览的楼层布局和坐标换算。
-- `overview_scene.py`: 基于 OpenGL 的总览内容控制器，负责楼层贴图、干员覆盖层、可见楼层和路线。
-- `overview_view.py`: 基于 `pyqtgraph.opengl.GLViewWidget` 的总览视图，负责 orbit / pan / zoom 交互和屏幕覆盖层绘制。
-- `map_debug_scene.py`: 地图互动点调试场景。
-- `map_interaction_item.py`: 地图互动点图元。
-- `operator_item.py`: 干员图元。
+- [map_view.py](map_view.py)
+  2D 视图层，负责缩放和平移。
+- [map_scene.py](map_scene.py)
+  2D 战术画布总控。
+- [map_debug_scene.py](map_debug_scene.py)
+  地图 Debug 编辑场景。
+- [operator_item.py](operator_item.py)
+  干员图元。
+- [map_gadget_item.py](map_gadget_item.py)
+  通用道具和技能道具图元。
+- [map_surface_item.py](map_surface_item.py)
+  软墙和 Hatch 面图元。
+- [map_interaction_item.py](map_interaction_item.py)
+  楼梯等互动点图元。
+- [overview_scene.py](overview_scene.py)
+  2.5D 数据驱动。
+- [overview_view.py](overview_view.py)
+  2.5D 视图。
 
-## 适合放这里的内容
+## 修改约定
 
-- 画布缩放、平移、拖拽、选中等视图交互。
-- 图元绘制、命中、拖动和视觉反馈。
-- 编辑场景和调试场景的图形对象管理。
+- 继承语义不要在图元层处理，图元层只吃“已解析好的状态”。
+- 点击范围如果与显示范围有关，优先检查 `boundingRect()` 和 `shape()` 是否一致。
+- 任何“拖动后写回关键帧”的逻辑，优先放在 `map_scene.py` 和页面层之间处理，不要让图元自己改时间轴。
 
-## 不要放这里的内容
+## 当前最关键的边界
 
-- 工程读写。
-- 路径插值和关键帧变更算法。
-- 页面级菜单、提示框、导航。
-
-## 落点规则
-
-- 如果新功能核心是“画布上怎么显示或怎么交互”，放这里。
-- 如果新功能核心是“数据应该如何变化”，先考虑 `application/`。
+- `map_scene.py` 负责用户交互和图元同步。
+- `editor_page.py` 负责时间轴状态解析和写回。
+- `overview_scene.py` 负责把解析后的状态转换成 2.5D 表达。

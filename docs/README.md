@@ -1,22 +1,37 @@
 # Docs
 
-`docs/` 按主题分目录组织，避免架构、资源、发布说明继续平铺在根目录。
+`docs/` 用来放“先看什么、再改什么”的说明，目标是降低阅读和接手成本。
+
+## 建议阅读顺序
+
+1. [架构总览](architecture/overview.md)
+2. [代码地图](architecture/codebase_map.md)
+3. [编辑器主流程](architecture/editor_workflow.md)
+4. [路线图](architecture/roadmap.md)
+5. [资源规范](resources/assets.md)
 
 ## 目录说明
 
-- `architecture/`: 架构设计、分层说明、主题系统与核心数据流
-- `resources/`: 资源目录、素材规范、`map.json` 元数据约定
-- `distribution/`: 打包、发布、构建相关说明
+- `architecture/`
+  说明代码分层、主流程、关键模块入口和后续重构方向。
+- `resources/`
+  说明地图、干员、道具等资源结构与元数据约定。
+- `distribution/`
+  说明打包和发布流程。
 
-## 当前重点文档
+## 当前最重要的文档
 
-- `architecture/overview.md`: 当前代码架构总览
-- `architecture/overview_2_5d_plan.md`: 2.5D 总览规划与现状
-- `architecture/roadmap.md`: `v0.6.x` 之后的结构与功能路线
-- `architecture/theme.md`: Fluent 主题、本地主题令牌与颜色记录
+- [overview.md](architecture/overview.md)
+  说明当前项目的分层结构和职责边界。
+- [codebase_map.md](architecture/codebase_map.md)
+  说明“哪个功能改哪个文件”。
+- [editor_workflow.md](architecture/editor_workflow.md)
+  说明战术编辑页的数据流、状态来源和时间轴语义。
+- [theme.md](architecture/theme.md)
+  说明主题切换和颜色令牌。
 
 ## 维护规则
 
-- 文档路径变化时，优先同步根目录 `README.md`
-- 文档内容以当前仓库真实结构为准
-- 文本文档统一使用 `UTF-8 + LF`
+- 文档内容要以当前仓库真实代码为准。
+- 新增模块时，优先先补所在目录的 `README.md`。
+- 文本文件统一使用 `UTF-8 + LF`。
