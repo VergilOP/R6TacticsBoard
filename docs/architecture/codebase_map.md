@@ -31,6 +31,8 @@
 
 - [editor_page.py](../../src/r6_tactics_board/presentation/pages/editor/editor_page.py)
   编辑器总编排。这里负责把时间轴、画布、属性面板、播放、工程保存串起来。
+- [editor_tokens.py](../../src/r6_tactics_board/presentation/pages/editor/editor_tokens.py)
+  道具 / 技能的页面级工作流。把放置、清空和数量继承相关逻辑从总控页拆出来。
 - [editor_models.py](../../src/r6_tactics_board/presentation/pages/editor/editor_models.py)
   编辑页局部状态和结构化数据。
 - [editor_panels.py](../../src/r6_tactics_board/presentation/widgets/editor/editor_panels.py)
@@ -112,6 +114,7 @@
 - [gadget_counts_page.py](../../src/r6_tactics_board/presentation/pages/assets/gadget_counts_page.py)
 - [asset_registry.py](../../src/r6_tactics_board/infrastructure/assets/asset_registry.py)
 - [editor_page.py](../../src/r6_tactics_board/presentation/pages/editor/editor_page.py)
+- [editor_tokens.py](../../src/r6_tactics_board/presentation/pages/editor/editor_tokens.py)
 - [map_gadget_item.py](../../src/r6_tactics_board/presentation/widgets/canvas/map_gadget_item.py)
 
 ### 改 2.5D 显示或路径表现

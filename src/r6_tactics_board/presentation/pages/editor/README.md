@@ -11,7 +11,14 @@
   - 2D / 2.5D 视图切换
   - 播放控制
   - 工程保存/读取
-  - 道具、技能、战术面和互动点的页面级编排
+  - 干员、战术面、关键帧三条主流程的页面级编排
+- [editor_tokens.py](editor_tokens.py)
+  道具 / 技能工作流拆分模块。负责：
+  - 放置模式切换
+  - 当前帧道具 / 技能落点写入
+  - 已使用数量读取
+  - 当前帧清空
+  - 全工程同干员道具 / 技能部署清空
 - [editor_models.py](editor_models.py)
   编辑页本地状态和辅助结构。
 
@@ -39,10 +46,9 @@
 ### 改道具 / 技能的继承语义
 
 先看：
+- [editor_tokens.py](editor_tokens.py)
 - `_resolved_frame_state(...)`
 - `_resolved_state(...)`
-- `_on_gadget_placed(...)`
-- `_on_ability_placed(...)`
 
 ## 当前风险
 
