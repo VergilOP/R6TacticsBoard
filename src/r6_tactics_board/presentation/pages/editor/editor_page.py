@@ -69,6 +69,7 @@ class EditorPage(QWidget):
         self._rotation_history_snapshot: EditorHistoryState | None = None
         self._operator_transform_history_snapshot: EditorHistoryState | None = None
         self._operator_size_history_snapshot: EditorHistoryState | None = None
+        self._gadget_transform_history_snapshot: EditorHistoryState | None = None
         self._playback_from_column = -1
         self._playback_to_column = -1
         self._playback_elapsed_ms = 0.0
@@ -84,6 +85,8 @@ class EditorPage(QWidget):
         self._playback_start_states: dict[str, OperatorState] = {}
         self._playback_end_states: dict[str, OperatorState] = {}
         self._playback_routes: dict[str, list[PlaybackRouteSegment]] = {}
+        self._placing_gadget = False
+        self._placing_ability = False
         self._history = UndoRedoHistory[EditorHistoryState](limit=100)
 
         self.operator_order: list[str] = []
@@ -141,6 +144,16 @@ class EditorPage(QWidget):
         self.rotation_slider = self.property_panel.rotation_slider
         self.rotation_value_label = self.property_panel.rotation_value_label
         self.floor_value_label = self.property_panel.floor_value_label
+        self.gadget_label = self.property_panel.gadget_label
+        self.gadget_combo = self.property_panel.gadget_combo
+        self.gadget_count_label = self.property_panel.gadget_count_label
+        self.place_gadget_button = self.property_panel.place_gadget_button
+        self.clear_gadget_button = self.property_panel.clear_gadget_button
+        self.ability_label = self.property_panel.ability_label
+        self.ability_name_label = self.property_panel.ability_name_label
+        self.ability_count_label = self.property_panel.ability_count_label
+        self.place_ability_button = self.property_panel.place_ability_button
+        self.clear_ability_button = self.property_panel.clear_ability_button
         self.transition_mode_label = self.property_panel.transition_mode_label
         self.manual_interaction_label = self.property_panel.manual_interaction_label
         self.show_icon_box = self.property_panel.show_icon_box
@@ -178,6 +191,7 @@ class EditorPage(QWidget):
 
         self._init_ui()
         self._init_signals()
+        self._sync_gadget_catalog()
         self._sync_operator_registry()
         self._refresh_property_panel()
         self._refresh_timeline()
@@ -227,6 +241,11 @@ class EditorPage(QWidget):
         self.name_edit.editingFinished.connect(self._apply_name_edit)
         self.side_combo.currentIndexChanged.connect(self._update_selected_side)
         self.operator_combo.currentIndexChanged.connect(self._update_selected_operator_asset)
+        self.gadget_combo.currentIndexChanged.connect(self._update_selected_gadget_asset)
+        self.place_gadget_button.toggled.connect(self._toggle_gadget_placement_mode)
+        self.clear_gadget_button.clicked.connect(self._clear_current_frame_gadget_placements)
+        self.place_ability_button.toggled.connect(self._toggle_ability_placement_mode)
+        self.clear_ability_button.clicked.connect(self._clear_current_frame_ability_placements)
         self.rotation_slider.sliderPressed.connect(self._on_rotation_slider_pressed)
         self.rotation_slider.sliderReleased.connect(self._on_rotation_slider_released)
         self.rotation_slider.valueChanged.connect(self._update_selected_rotation)
@@ -280,6 +299,12 @@ class EditorPage(QWidget):
             scene.selectionChanged.connect(self._on_scene_selection_changed)
             scene.operator_transform_started.connect(self._on_operator_transform_started)
             scene.operator_move_finished.connect(self._on_operator_move_finished)
+            scene.gadget_transform_started.connect(self._on_gadget_transform_started)
+            scene.gadget_move_finished.connect(self._on_gadget_move_finished)
+            scene.gadget_placed.connect(self._on_gadget_placed)
+            scene.ability_transform_started.connect(self._on_ability_transform_started)
+            scene.ability_move_finished.connect(self._on_ability_move_finished)
+            scene.ability_placed.connect(self._on_ability_placed)
             scene.surface_selected.connect(self._on_surface_selected)
 
     def _load_map(self) -> None:
@@ -797,14 +822,48 @@ class EditorPage(QWidget):
                 combo.setCurrentIndex(index)
                 return
 
-    def _current_transition_frame(self, operator_id: str) -> OperatorFrameState | None:
+    def _explicit_current_frame(self, operator_id: str) -> OperatorFrameState | None:
         if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
             return None
         frame = self.keyframe_columns[self.current_keyframe_index].get(operator_id)
-        if frame is not None:
-            return deepcopy(frame)
-        frame = self._resolved_frame_state(operator_id, self.current_keyframe_index)
         return deepcopy(frame) if frame is not None else None
+
+    def _current_transition_frame(self, operator_id: str) -> OperatorFrameState | None:
+        frame = self._resolved_frame_state(operator_id, self.current_keyframe_index)
+        if frame is None:
+            return None
+
+        explicit_frame = self._explicit_current_frame(operator_id)
+        definition = self.operator_definitions.get(operator_id)
+        gadget_asset = None
+        ability_entry = None
+        if definition is not None:
+            if definition.gadget_key:
+                gadget_asset = self.session_service.find_operator_gadget_asset(
+                    definition.side.value,
+                    definition.operator_key,
+                    definition.gadget_key,
+                )
+            if definition.operator_key:
+                ability_entry = self.session_service.find_operator_catalog_entry(
+                    definition.operator_key,
+                    definition.side.value,
+                )
+
+        editable_frame = deepcopy(frame)
+        if gadget_asset is not None and not gadget_asset.persists_on_map:
+            editable_frame.gadget_positions = (
+                [Point2D(x=item.x, y=item.y) for item in (explicit_frame.gadget_positions or [])]
+                if explicit_frame is not None and explicit_frame.gadget_positions is not None
+                else []
+            )
+        if ability_entry is not None and not ability_entry.ability_persists_on_map:
+            editable_frame.ability_positions = (
+                [Point2D(x=item.x, y=item.y) for item in (explicit_frame.ability_positions or [])]
+                if explicit_frame is not None and explicit_frame.ability_positions is not None
+                else []
+            )
+        return editable_frame
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
@@ -849,10 +908,28 @@ class EditorPage(QWidget):
             return
 
         before = self._capture_history_state()
-        self._apply_global_operator_metadata(operator_id, side=side)
+        current_definition = self.operator_definitions.get(operator_id)
+        next_gadget_key = ""
+        if current_definition is not None and current_definition.gadget_key:
+            candidate = self.session_service.find_operator_gadget_asset(
+                side,
+                current_definition.operator_key,
+                current_definition.gadget_key,
+            )
+            next_gadget_key = candidate.key if candidate is not None else ""
+        self._apply_global_operator_metadata(operator_id, side=side, gadget_key=next_gadget_key)
+        if not next_gadget_key:
+            self._clear_operator_gadget_deployments(operator_id)
+            self._placing_gadget = False
+        if self.session_service.find_operator_catalog_entry(
+            self.operator_definitions.get(operator_id).operator_key if operator_id in self.operator_definitions else "",
+            side,
+        ) is None:
+            self._clear_operator_ability_deployments(operator_id)
+            self._placing_ability = False
         self._refresh_operator_combo(side)
-        self._refresh_property_panel()
-        self._refresh_timeline()
+        self._refresh_gadget_combo(side, next_gadget_key)
+        self._apply_timeline_column(self.current_keyframe_index)
         self._commit_history(before)
 
     def _update_selected_operator_asset(self, index: int) -> None:
@@ -873,8 +950,29 @@ class EditorPage(QWidget):
             return
         before = self._capture_history_state()
         self._apply_global_operator_metadata(operator_id, operator_key=operator_key)
+        self._clear_operator_ability_deployments(operator_id)
+        self._placing_ability = False
         self._refresh_property_panel()
         self._refresh_timeline()
+        self._commit_history(before)
+
+    def _update_selected_gadget_asset(self, index: int) -> None:
+        if self._syncing_panel:
+            return
+        operator = self._current_operator()
+        operator_id = operator.operator_id if operator is not None else self._target_operator_id()
+        if operator_id is None:
+            return
+        definition = self.operator_definitions.get(operator_id)
+        current_key = definition.gadget_key if definition is not None else ""
+        gadget_key = self.gadget_combo.itemData(index) or ""
+        if gadget_key == current_key:
+            return
+        before = self._capture_history_state()
+        self._apply_global_operator_metadata(operator_id, gadget_key=gadget_key)
+        self._clear_operator_gadget_deployments(operator_id)
+        self._placing_gadget = False
+        self._refresh_current_column_visuals(refresh_overview=False)
         self._commit_history(before)
 
     def _on_rotation_slider_pressed(self) -> None:
@@ -1383,7 +1481,8 @@ class EditorPage(QWidget):
             return
 
         self._applying_timeline = True
-        scene.sync_operator_states(self._resolved_states(column))
+        resolved_current_floor = self._resolved_states(column)
+        scene.sync_operator_states(resolved_current_floor)
         for operator in scene.operator_items():
             self._update_operator_icon(operator)
         self._sync_scene_surface_overlays()
@@ -1394,19 +1493,93 @@ class EditorPage(QWidget):
         self._applying_timeline = False
         self._refresh_timeline()
 
+    def _refresh_current_column_visuals(
+        self,
+        *,
+        refresh_overview: bool = True,
+        refresh_timeline: bool = True,
+        refresh_property: bool = True,
+    ) -> None:
+        scene = self._map_scene()
+        if scene is None:
+            return
+
+        self._applying_timeline = True
+        resolved_current_floor = self._resolved_states(self.current_keyframe_index)
+        scene.sync_operator_states(resolved_current_floor)
+        for operator in scene.operator_items():
+            self._update_operator_icon(operator)
+        self._sync_scene_surface_overlays()
+        if refresh_overview:
+            self._sync_overview_scene_states(
+                self._resolved_states(self.current_keyframe_index, include_all_floors=True)
+            )
+        self._sync_operator_registry()
+        if refresh_property:
+            self._refresh_property_panel()
+        self._applying_timeline = False
+        if refresh_timeline:
+            self._refresh_timeline()
+
     def _resolved_frame_state(self, operator_id: str, column: int) -> OperatorFrameState | None:
-        for current in range(column, -1, -1):
+        resolved: OperatorFrameState | None = None
+        for current in range(0, column + 1):
             state = self.keyframe_columns[current].get(operator_id)
             if state is not None:
-                return state
-        return None
+                state = deepcopy(state)
+                if resolved is None:
+                    if state.gadget_positions is None:
+                        state.gadget_positions = []
+                    if state.ability_positions is None:
+                        state.ability_positions = []
+                    if state.gadget_used_count is None:
+                        state.gadget_used_count = len(state.gadget_positions)
+                    if state.ability_used_count is None:
+                        state.ability_used_count = len(state.ability_positions)
+                    resolved = state
+                    continue
+                if state.gadget_used_count is None:
+                    state.gadget_used_count = resolved.gadget_used_count
+                if state.ability_used_count is None:
+                    state.ability_used_count = resolved.ability_used_count
+                if state.gadget_positions is None:
+                    state.gadget_positions = [Point2D(x=item.x, y=item.y) for item in (resolved.gadget_positions or [])]
+                if state.ability_positions is None:
+                    state.ability_positions = [Point2D(x=item.x, y=item.y) for item in (resolved.ability_positions or [])]
+                resolved = state
+        return resolved
 
     def _resolved_state(self, operator_id: str, column: int) -> OperatorState | None:
         definition = self.operator_definitions.get(operator_id)
         frame = self._resolved_frame_state(operator_id, column)
         if definition is None or frame is None:
             return None
-        return resolve_operator_state(definition, frame)
+        state = resolve_operator_state(definition, frame)
+        ability_entry = self._current_ability_entry(operator_id)
+        gadget_asset = None
+        if definition.gadget_key:
+            gadget_asset = self.session_service.find_operator_gadget_asset(
+                definition.side.value,
+                definition.operator_key,
+                definition.gadget_key,
+            )
+        if gadget_asset is not None and not gadget_asset.persists_on_map:
+            explicit_frame = None
+            if 0 <= column < len(self.keyframe_columns):
+                explicit_frame = self.keyframe_columns[column].get(operator_id)
+            state.gadget_positions = [
+                Point2D(x=item.x, y=item.y)
+                for item in ((explicit_frame.gadget_positions or []) if explicit_frame is not None else [])
+            ]
+        if ability_entry is not None and not ability_entry.ability_persists_on_map:
+            explicit_frame = None
+            if 0 <= column < len(self.keyframe_columns):
+                explicit_frame = self.keyframe_columns[column].get(operator_id)
+            state.ability_positions = [
+                Point2D(x=item.x, y=item.y)
+                for item in ((explicit_frame.ability_positions or []) if explicit_frame is not None else [])
+            ]
+        return state
 
     def _resolved_state_map(self, column: int) -> dict[str, OperatorState]:
         result: dict[str, OperatorState] = {}
@@ -1522,6 +1695,10 @@ class EditorPage(QWidget):
         return max(0, min(target_column, len(self.keyframe_columns) - 1))
 
     def _on_scene_selection_changed(self) -> None:
+        if self._placing_gadget or self._placing_ability:
+            self._refresh_property_panel()
+            self._refresh_timeline()
+            return
         scene = self._map_scene()
         operator = self._current_operator()
         surface = self._current_surface()
@@ -1595,6 +1772,118 @@ class EditorPage(QWidget):
             self._update_operator_icon(operator)
             self._refresh_property_panel()
         self._capture_selected_operator_to_current_cell(refresh_history=False)
+        self._commit_history(before)
+
+    def _on_gadget_transform_started(self) -> None:
+        if self._applying_timeline:
+            return
+        self._pause_column_playback()
+        self._gadget_transform_history_snapshot = self._capture_history_state()
+
+    def _on_gadget_move_finished(
+        self,
+        operator_id: str,
+        gadget_key: str,
+        from_x: float,
+        from_y: float,
+        to_x: float,
+        to_y: float,
+        deleted: bool,
+    ) -> None:
+        before = self._gadget_transform_history_snapshot or self._capture_history_state()
+        self._gadget_transform_history_snapshot = None
+        if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+            return
+
+        frame = self._current_transition_frame(operator_id)
+        if frame is None:
+            return
+
+        updated_positions: list[Point2D] = []
+        replaced = False
+        for point in (frame.gadget_positions or []):
+            if (
+                not replaced
+                and abs(point.x - from_x) < 0.1
+                and abs(point.y - from_y) < 0.1
+            ):
+                replaced = True
+                if not deleted:
+                    updated_positions.append(Point2D(x=to_x, y=to_y))
+                continue
+            updated_positions.append(Point2D(x=point.x, y=point.y))
+
+        if not replaced:
+            if deleted:
+                updated_positions = [
+                    Point2D(x=point.x, y=point.y)
+                    for point in (frame.gadget_positions or [])
+                    if abs(point.x - to_x) >= 0.1 or abs(point.y - to_y) >= 0.1
+                ]
+            else:
+                updated_positions.append(Point2D(x=to_x, y=to_y))
+
+        new_frame = deepcopy(frame)
+        new_frame.gadget_positions = updated_positions
+        self.keyframe_columns[self.current_keyframe_index][operator_id] = new_frame
+        self.current_timeline_row = self._operator_row(operator_id)
+        self._apply_timeline_column(self.current_keyframe_index)
+        self._commit_history(before)
+
+    def _on_ability_transform_started(self) -> None:
+        if self._applying_timeline:
+            return
+        self._pause_column_playback()
+        self._gadget_transform_history_snapshot = self._capture_history_state()
+
+    def _on_ability_move_finished(
+        self,
+        operator_id: str,
+        ability_key: str,
+        from_x: float,
+        from_y: float,
+        to_x: float,
+        to_y: float,
+        deleted: bool,
+    ) -> None:
+        before = self._gadget_transform_history_snapshot or self._capture_history_state()
+        self._gadget_transform_history_snapshot = None
+        if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+            return
+
+        frame = self._current_transition_frame(operator_id)
+        if frame is None:
+            return
+
+        updated_positions: list[Point2D] = []
+        replaced = False
+        for point in (frame.ability_positions or []):
+            if (
+                not replaced
+                and abs(point.x - from_x) < 0.1
+                and abs(point.y - from_y) < 0.1
+            ):
+                replaced = True
+                if not deleted:
+                    updated_positions.append(Point2D(x=to_x, y=to_y))
+                continue
+            updated_positions.append(Point2D(x=point.x, y=point.y))
+
+        if not replaced:
+            if deleted:
+                updated_positions = [
+                    Point2D(x=point.x, y=point.y)
+                    for point in (frame.ability_positions or [])
+                    if abs(point.x - to_x) >= 0.1 or abs(point.y - to_y) >= 0.1
+                ]
+            else:
+                updated_positions.append(Point2D(x=to_x, y=to_y))
+
+        new_frame = deepcopy(frame)
+        new_frame.ability_positions = updated_positions
+        self.keyframe_columns[self.current_keyframe_index][operator_id] = new_frame
+        self.current_timeline_row = self._operator_row(operator_id)
+        self._apply_timeline_column(self.current_keyframe_index)
         self._commit_history(before)
 
     def _go_to_previous_column(self) -> None:
@@ -2093,7 +2382,27 @@ class EditorPage(QWidget):
         scene = self._map_scene()
         if scene is None:
             return
-        scene.set_placement_state(self._current_placement_state())
+        token_mode_active = self._placing_gadget or self._placing_ability
+        scene.set_placement_state(None if token_mode_active else self._current_placement_state())
+        gadget_asset = self._current_gadget_asset()
+        gadget_positions = self._current_gadget_positions()
+        scene.set_gadget_placement(
+            operator_id=self._target_operator_id() or "",
+            gadget_key=gadget_asset.key if gadget_asset is not None else "",
+            icon_path=gadget_asset.path if gadget_asset is not None else "",
+            max_count=gadget_asset.max_count if gadget_asset is not None else 0,
+            active=self._placing_gadget and gadget_asset is not None,
+            positions=gadget_positions,
+        )
+        ability_entry = self._current_ability_entry()
+        ability_positions = self._current_ability_positions()
+        scene.set_ability_placement(
+            operator_id=self._target_operator_id() or "",
+            ability_key=ability_entry.key if ability_entry is not None else "",
+            icon_path=ability_entry.ability_icon_path if ability_entry is not None else "",
+            active=self._placing_ability and ability_entry is not None and bool(ability_entry.ability_icon_path),
+            positions=ability_positions,
+        )
 
     def _sync_scene_preview_paths(self) -> None:
         scene = self._map_scene()
@@ -2249,6 +2558,154 @@ class EditorPage(QWidget):
             and abs(first.position.y - second.position.y) < 0.1
         )
 
+    def _toggle_gadget_placement_mode(self, checked: bool) -> None:
+        if self._syncing_panel:
+            return
+        gadget_asset = self._current_gadget_asset()
+        if checked and gadget_asset is None:
+            self._placing_gadget = False
+            self.place_gadget_button.blockSignals(True)
+            self.place_gadget_button.setChecked(False)
+            self.place_gadget_button.blockSignals(False)
+            self.place_gadget_button.setText("放置道具")
+            self._sync_scene_placement_target()
+            return
+        if checked and self._placing_ability:
+            self._placing_ability = False
+            self.place_ability_button.blockSignals(True)
+            self.place_ability_button.setChecked(False)
+            self.place_ability_button.blockSignals(False)
+            self.place_ability_button.setText("放置技能")
+        self._placing_gadget = checked
+        if checked:
+            self.current_surface_id = ""
+            scene = self._map_scene()
+            if scene is not None and scene.selected_surface() is not None:
+                scene.clearSelection()
+            operator_id = self._target_operator_id()
+            if operator_id is not None:
+                self._activate_property_section("operator", context=("operator", operator_id), force=True)
+        self.place_gadget_button.setText("停止放置" if checked else "放置道具")
+        self._sync_scene_placement_target()
+        self._refresh_property_panel()
+        self._refresh_timeline()
+
+    def _toggle_ability_placement_mode(self, checked: bool) -> None:
+        if self._syncing_panel:
+            return
+        ability_entry = self._current_ability_entry()
+        if checked and (ability_entry is None or not ability_entry.ability_icon_path):
+            self._placing_ability = False
+            self.place_ability_button.blockSignals(True)
+            self.place_ability_button.setChecked(False)
+            self.place_ability_button.blockSignals(False)
+            self.place_ability_button.setText("放置技能")
+            self._sync_scene_placement_target()
+            return
+        if checked and self._placing_gadget:
+            self._placing_gadget = False
+            self.place_gadget_button.blockSignals(True)
+            self.place_gadget_button.setChecked(False)
+            self.place_gadget_button.blockSignals(False)
+            self.place_gadget_button.setText("放置道具")
+        self._placing_ability = checked
+        if checked:
+            self.current_surface_id = ""
+            scene = self._map_scene()
+            if scene is not None and scene.selected_surface() is not None:
+                scene.clearSelection()
+            operator_id = self._target_operator_id()
+            if operator_id is not None:
+                self._activate_property_section("operator", context=("operator", operator_id), force=True)
+        self.place_ability_button.setText("停止放置" if checked else "放置技能")
+        self._sync_scene_placement_target()
+        self._refresh_property_panel()
+        self._refresh_timeline()
+
+    def _on_gadget_placed(self, operator_id: str, x: float, y: float) -> None:
+        if not self._placing_gadget or operator_id != (self._target_operator_id() or ""):
+            return
+        if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+            return
+        gadget_asset = self._current_gadget_asset(operator_id)
+        if gadget_asset is None:
+            return
+
+        before = self._capture_history_state()
+        frame = self._current_transition_frame(operator_id)
+        if frame is None:
+            frame = OperatorFrameState(
+                id=operator_id,
+                position=Point2D(x=0, y=0),
+                floor_key=self._current_floor_key(),
+            )
+        frame = deepcopy(frame)
+        frame.floor_key = self._current_floor_key()
+        used_count = (
+            int(frame.gadget_used_count)
+            if frame.gadget_used_count is not None
+            else len(frame.gadget_positions or [])
+        )
+        if used_count >= gadget_asset.max_count:
+            return
+        positions = [
+            Point2D(x=item.x, y=item.y)
+            for item in (frame.gadget_positions or [])
+            if abs(item.x - x) >= 0.1 or abs(item.y - y) >= 0.1
+        ]
+        used_count += 1
+        frame.gadget_used_count = used_count
+        if gadget_asset.persists_on_map:
+            positions.append(Point2D(x=x, y=y))
+            frame.gadget_positions = positions
+        else:
+            frame.gadget_positions = positions + [Point2D(x=x, y=y)]
+        self.keyframe_columns[self.current_keyframe_index][operator_id] = frame
+        self._apply_timeline_column(self.current_keyframe_index)
+        self._commit_history(before)
+
+    def _on_ability_placed(self, operator_id: str, x: float, y: float) -> None:
+        if not self._placing_ability or operator_id != (self._target_operator_id() or ""):
+            return
+        if not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+            return
+        ability_entry = self._current_ability_entry(operator_id)
+        if ability_entry is None or not ability_entry.ability_icon_path:
+            return
+
+        before = self._capture_history_state()
+        frame = self._current_transition_frame(operator_id)
+        if frame is None:
+            frame = OperatorFrameState(
+                id=operator_id,
+                position=Point2D(x=0, y=0),
+                floor_key=self._current_floor_key(),
+            )
+        frame = deepcopy(frame)
+        frame.floor_key = self._current_floor_key()
+        used_count = (
+            int(frame.ability_used_count)
+            if frame.ability_used_count is not None
+            else len(frame.ability_positions or [])
+        )
+        if ability_entry.ability_max_count > 0 and used_count >= ability_entry.ability_max_count:
+            return
+        positions = [
+            Point2D(x=item.x, y=item.y)
+            for item in (frame.ability_positions or [])
+            if abs(item.x - x) >= 0.1 or abs(item.y - y) >= 0.1
+        ]
+        used_count += 1
+        frame.ability_used_count = used_count
+        if ability_entry.ability_persists_on_map:
+            positions.append(Point2D(x=x, y=y))
+            frame.ability_positions = positions
+        else:
+            frame.ability_positions = positions + [Point2D(x=x, y=y)]
+        self.keyframe_columns[self.current_keyframe_index][operator_id] = frame
+        self._apply_timeline_column(self.current_keyframe_index)
+        self._commit_history(before)
+
     def _current_floor_key(self) -> str:
         return self.current_map_floor_key or "default"
 
@@ -2324,6 +2781,156 @@ class EditorPage(QWidget):
         self.operator_combo.setCurrentIndex(current_index)
         self.operator_combo.blockSignals(False)
 
+    def _refresh_gadget_combo(self, side: str, selected_key: str = "") -> None:
+        operator_id = self._target_operator_id()
+        definition = self.operator_definitions.get(operator_id) if operator_id is not None else None
+        if definition is not None and definition.operator_key:
+            assets = self.session_service.list_operator_gadget_assets(side, definition.operator_key)
+        else:
+            assets = self.session_service.list_gadget_assets(side)
+        self.gadget_combo.blockSignals(True)
+        self.gadget_combo.clear()
+        self.gadget_combo.addItem("(未指定)")
+        self.gadget_combo.setItemData(0, "")
+
+        current_index = 0
+        for index, asset in enumerate(assets, start=1):
+            self.gadget_combo.addItem(asset.name)
+            self.gadget_combo.setItemData(index, asset.key)
+            if asset.key == selected_key:
+                current_index = index
+
+        self.gadget_combo.setCurrentIndex(current_index)
+        self.gadget_combo.blockSignals(False)
+
+    def _current_ability_entry(self, operator_id: str | None = None):
+        if operator_id is None:
+            operator_id = self._target_operator_id()
+        if operator_id is None:
+            return None
+        definition = self.operator_definitions.get(operator_id)
+        if definition is None or not definition.operator_key:
+            return None
+        return self.session_service.find_operator_catalog_entry(definition.operator_key, definition.side.value)
+
+    def _current_gadget_asset(self, operator_id: str | None = None):
+        if operator_id is None:
+            operator_id = self._target_operator_id()
+        if operator_id is None:
+            return None
+        definition = self.operator_definitions.get(operator_id)
+        if definition is None or not definition.gadget_key:
+            return None
+        return self.session_service.find_operator_gadget_asset(
+            definition.side.value,
+            definition.operator_key,
+            definition.gadget_key,
+        )
+
+    def _current_gadget_positions(self, operator_id: str | None = None) -> list[Point2D]:
+        if operator_id is None:
+            operator_id = self._target_operator_id()
+        if operator_id is None:
+            return []
+        state = self._resolved_state(operator_id, self.current_keyframe_index)
+        if state is None:
+            return []
+        return [Point2D(x=item.x, y=item.y) for item in state.gadget_positions]
+
+    def _current_gadget_used_count(self, operator_id: str | None = None) -> int:
+        if operator_id is None:
+            operator_id = self._target_operator_id()
+        if operator_id is None:
+            return 0
+        state = self._resolved_state(operator_id, self.current_keyframe_index)
+        if state is None:
+            return 0
+        return max(0, int(state.gadget_used_count))
+
+    def _current_ability_positions(self, operator_id: str | None = None) -> list[Point2D]:
+        if operator_id is None:
+            operator_id = self._target_operator_id()
+        if operator_id is None:
+            return []
+        state = self._resolved_state(operator_id, self.current_keyframe_index)
+        if state is None:
+            return []
+        return [Point2D(x=item.x, y=item.y) for item in state.ability_positions]
+
+    def _current_ability_used_count(self, operator_id: str | None = None) -> int:
+        if operator_id is None:
+            operator_id = self._target_operator_id()
+        if operator_id is None:
+            return 0
+        state = self._resolved_state(operator_id, self.current_keyframe_index)
+        if state is None:
+            return 0
+        return max(0, int(state.ability_used_count))
+
+    def _clear_current_frame_gadget_placements(self) -> None:
+        operator_id = self._target_operator_id()
+        if operator_id is None or not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+            return
+        before = self._capture_history_state()
+        frame = self._current_transition_frame(operator_id)
+        if frame is None:
+            return
+        explicit_frame = self._explicit_current_frame(operator_id)
+        removed_count = len(explicit_frame.gadget_positions or []) if explicit_frame is not None else 0
+        if removed_count == 0 and not frame.gadget_positions:
+            return
+        frame.gadget_positions = []
+        inherited_count = self._resolved_frame_state(operator_id, self.current_keyframe_index - 1).gadget_used_count if self.current_keyframe_index > 0 and self._resolved_frame_state(operator_id, self.current_keyframe_index - 1) is not None else 0
+        current_count = int(frame.gadget_used_count or 0)
+        if removed_count > 0:
+            frame.gadget_used_count = max(inherited_count, current_count - removed_count)
+        self.keyframe_columns[self.current_keyframe_index][operator_id] = frame
+        self._apply_timeline_column(self.current_keyframe_index)
+        self._commit_history(before)
+
+    def _clear_current_frame_ability_placements(self) -> None:
+        operator_id = self._target_operator_id()
+        if operator_id is None or not (0 <= self.current_keyframe_index < len(self.keyframe_columns)):
+            return
+        before = self._capture_history_state()
+        frame = self._current_transition_frame(operator_id)
+        if frame is None:
+            return
+        explicit_frame = self._explicit_current_frame(operator_id)
+        removed_count = len(explicit_frame.ability_positions or []) if explicit_frame is not None else 0
+        if removed_count == 0 and not frame.ability_positions:
+            return
+        frame.ability_positions = []
+        inherited_count = self._resolved_frame_state(operator_id, self.current_keyframe_index - 1).ability_used_count if self.current_keyframe_index > 0 and self._resolved_frame_state(operator_id, self.current_keyframe_index - 1) is not None else 0
+        current_count = int(frame.ability_used_count or 0)
+        if removed_count > 0:
+            frame.ability_used_count = max(inherited_count, current_count - removed_count)
+        self.keyframe_columns[self.current_keyframe_index][operator_id] = frame
+        self._apply_timeline_column(self.current_keyframe_index)
+        self._commit_history(before)
+
+    def _clear_operator_gadget_deployments(self, operator_id: str) -> None:
+        for column in self.keyframe_columns:
+            frame = column.get(operator_id)
+            if frame is None:
+                continue
+            if frame.gadget_positions or frame.gadget_used_count is not None:
+                frame = deepcopy(frame)
+                frame.gadget_positions = []
+                frame.gadget_used_count = 0
+                column[operator_id] = frame
+
+    def _clear_operator_ability_deployments(self, operator_id: str) -> None:
+        for column in self.keyframe_columns:
+            frame = column.get(operator_id)
+            if frame is None:
+                continue
+            if frame.ability_positions or frame.ability_used_count is not None:
+                frame = deepcopy(frame)
+                frame.ability_positions = []
+                frame.ability_used_count = 0
+                column[operator_id] = frame
+
     def _update_operator_icon(self, operator: OperatorItem) -> None:
         asset = self.session_service.find_operator_asset(operator.side, operator.operator_key)
         operator.set_icon_path(asset.path if asset else "")
@@ -2339,6 +2946,11 @@ class EditorPage(QWidget):
                     custom_name=operator.custom_name,
                     side=TeamSide(operator.side),
                     operator_key=operator.operator_key,
+                    gadget_key=(
+                        self.operator_definitions[operator.operator_id].gadget_key
+                        if operator.operator_id in self.operator_definitions
+                        else ""
+                    ),
                 )
 
         state_ids = {
@@ -2355,6 +2967,22 @@ class EditorPage(QWidget):
         for operator_id in list(self.operator_definitions):
             if operator_id not in all_ids:
                 del self.operator_definitions[operator_id]
+
+    def _sync_gadget_catalog(self) -> None:
+        scene = self._map_scene()
+        if scene is None:
+            return
+        catalog: dict[tuple[str, str], str] = {}
+        for side in ("attack", "defense"):
+            for asset in self.session_service.list_gadget_assets(side):
+                catalog[(asset.side, asset.key)] = asset.path
+        scene.set_gadget_catalog(catalog)
+        ability_catalog: dict[tuple[str, str], str] = {}
+        for side in ("attack", "defense"):
+            for entry in self.session_service.list_operator_catalog(side):
+                if entry.ability_icon_path:
+                    ability_catalog[(entry.side, entry.key)] = entry.ability_icon_path
+        scene.set_ability_catalog(ability_catalog)
 
     def _remove_operator_from_timeline(self, operator_id: str) -> None:
         self.keyframe_columns, self.operator_definitions = TimelineEditorController.remove_operator_from_timeline(
@@ -2412,6 +3040,16 @@ class EditorPage(QWidget):
                 if current_frame is not None
                 else []
             ),
+            gadget_positions=(
+                [Point2D(x=item.x, y=item.y) for item in (current_frame.gadget_positions or [])]
+                if current_frame is not None
+                else None
+            ),
+            ability_positions=(
+                [Point2D(x=item.x, y=item.y) for item in (current_frame.ability_positions or [])]
+                if current_frame is not None
+                else None
+            ),
         )
 
     def _apply_global_operator_metadata(
@@ -2421,6 +3059,7 @@ class EditorPage(QWidget):
         custom_name: str | None = None,
         side: str | None = None,
         operator_key: str | None = None,
+        gadget_key: str | None = None,
     ) -> None:
         scene = self._map_scene()
         operator = scene.find_operator(operator_id) if scene is not None else None
@@ -2431,6 +3070,7 @@ class EditorPage(QWidget):
                 custom_name=operator.custom_name if operator is not None else f"干员 {operator_id}",
                 side=TeamSide(operator.side) if operator is not None else TeamSide.ATTACK,
                 operator_key=operator.operator_key if operator is not None else "",
+                gadget_key="",
             )
 
         if custom_name is not None:
@@ -2439,6 +3079,8 @@ class EditorPage(QWidget):
             definition.side = TeamSide(side)
         if operator_key is not None:
             definition.operator_key = operator_key
+        if gadget_key is not None:
+            definition.gadget_key = gadget_key
 
         self.operator_definitions[operator_id] = definition
 
@@ -2524,6 +3166,7 @@ class EditorPage(QWidget):
         self.current_keyframe_index = min(project.current_keyframe_index, len(self.keyframe_columns) - 1)
         self.current_timeline_row = -1
         self.current_surface_id = ""
+        self._placing_gadget = False
         self._transition_duration_ms = project.transition_duration_ms
         self._operator_scale = project.operator_scale
         self.playback_duration_slider.setValue(self._transition_duration_ms)
@@ -2551,6 +3194,7 @@ class EditorPage(QWidget):
         self.current_keyframe_index = 0
         self.current_timeline_row = -1
         self.current_surface_id = ""
+        self._placing_gadget = False
         self._transition_duration_ms = 700
         self._operator_scale = 1.0
         self.playback_duration_slider.setValue(self._transition_duration_ms)
@@ -3006,6 +3650,8 @@ class EditorPage(QWidget):
         self.current_surface_id = ""
         self._transition_duration_ms = 700
         self._operator_scale = 1.0
+        self._placing_gadget = False
+        self._placing_ability = False
         self.playback_duration_slider.setValue(self._transition_duration_ms)
         self.operator_size_slider.setValue(100)
 
@@ -3030,8 +3676,16 @@ class EditorPage(QWidget):
             self.name_edit.setText("")
             self.side_combo.setCurrentIndex(0)
             self._refresh_operator_combo("attack")
+            self._refresh_gadget_combo("attack")
             self.rotation_slider.setValue(0)
             self.rotation_value_label.setText("0°")
+            self.gadget_count_label.setText("-")
+            self.ability_name_label.setText("-")
+            self.ability_count_label.setText("-")
+            self.place_gadget_button.setChecked(False)
+            self.place_gadget_button.setText("放置道具")
+            self.place_ability_button.setChecked(False)
+            self.place_ability_button.setText("放置技能")
             self.show_icon_box.setChecked(True)
             self.show_name_box.setChecked(False)
             self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
@@ -3051,6 +3705,7 @@ class EditorPage(QWidget):
             operator_key = operator.operator_key if operator is not None else (
                 target_definition.operator_key if target_definition is not None else ""
             )
+            gadget_key = target_definition.gadget_key if target_definition is not None else ""
             rotation = int(operator.rotation()) % 360 if operator is not None else (
                 int(target_frame.rotation) % 360 if target_frame is not None else 0
             )
@@ -3073,8 +3728,35 @@ class EditorPage(QWidget):
             self.name_edit.setText(custom_name)
             self.side_combo.setCurrentIndex(0 if side == "attack" else 1)
             self._refresh_operator_combo(side, operator_key)
+            self._refresh_gadget_combo(side, gadget_key)
             self.rotation_slider.setValue(rotation)
             self.rotation_value_label.setText(f"{rotation}°")
+            gadget_asset = self._current_gadget_asset(operator_id)
+            ability_entry = self._current_ability_entry(operator_id)
+            gadget_count = self._current_gadget_used_count(operator_id)
+            gadget_limit = gadget_asset.max_count if gadget_asset is not None else 0
+            self.gadget_count_label.setText(
+                f"已使用 {gadget_count} / {gadget_limit}" if gadget_asset is not None else "未选择"
+            )
+            self.place_gadget_button.setText("停止放置" if self._placing_gadget else "放置道具")
+            self.place_gadget_button.setChecked(self._placing_gadget)
+            self.ability_name_label.setText(
+                (ability_entry.ability_name or ability_entry.key)
+                if ability_entry is not None
+                else "未配置"
+            )
+            ability_count = self._current_ability_used_count(operator_id)
+            self.ability_count_label.setText(
+                (
+                    f"已使用 {ability_count} / {ability_entry.ability_max_count}"
+                    if ability_entry is not None and ability_entry.ability_max_count > 0
+                    else f"已使用 {ability_count} / 未配置"
+                )
+                if ability_entry is not None
+                else "未配置"
+            )
+            self.place_ability_button.setText("停止放置" if self._placing_ability else "放置技能")
+            self.place_ability_button.setChecked(self._placing_ability)
             self.show_icon_box.setChecked(show_icon)
             self.show_name_box.setChecked(show_name)
             self.operator_size_slider.setValue(int(round(self._operator_scale * 100)))
@@ -3100,6 +3782,7 @@ class EditorPage(QWidget):
         self.name_edit.setEnabled(enabled)
         self.side_combo.setEnabled(enabled)
         self.operator_combo.setEnabled(enabled)
+        self.gadget_combo.setEnabled(enabled)
         self.rotation_slider.setEnabled(enabled)
         self.show_icon_box.setEnabled(enabled)
         self.show_name_box.setEnabled(enabled)
@@ -3114,6 +3797,37 @@ class EditorPage(QWidget):
         self.manual_interaction_combo.setEnabled(manual_enabled)
         self.delete_operator_button.setEnabled(enabled)
         self.delete_operator_button.setVisible(enabled)
+        self.gadget_label.setVisible(enabled)
+        self.gadget_combo.setVisible(enabled)
+        self.gadget_count_label.setVisible(enabled)
+        self.place_gadget_button.setVisible(enabled)
+        self.clear_gadget_button.setVisible(enabled)
+        self.ability_label.setVisible(enabled)
+        self.ability_name_label.setVisible(enabled)
+        self.ability_count_label.setVisible(enabled)
+        self.place_ability_button.setVisible(enabled)
+        self.clear_ability_button.setVisible(enabled)
+        gadget_asset = self._current_gadget_asset()
+        can_place_gadget = enabled and gadget_asset is not None and 0 <= self.current_keyframe_index < len(self.keyframe_columns)
+        self.place_gadget_button.setEnabled(can_place_gadget)
+        self.clear_gadget_button.setEnabled(can_place_gadget and bool(self._current_gadget_positions()))
+        ability_entry = self._current_ability_entry()
+        can_place_ability = (
+            enabled
+            and ability_entry is not None
+            and bool(ability_entry.ability_icon_path)
+            and 0 <= self.current_keyframe_index < len(self.keyframe_columns)
+        )
+        self.place_ability_button.setEnabled(can_place_ability)
+        self.clear_ability_button.setEnabled(can_place_ability and bool(self._current_ability_positions()))
+        if not can_place_gadget and self._placing_gadget:
+            self._placing_gadget = False
+            self.place_gadget_button.setChecked(False)
+            self.place_gadget_button.setText("放置道具")
+        if not can_place_ability and self._placing_ability:
+            self._placing_ability = False
+            self.place_ability_button.setChecked(False)
+            self.place_ability_button.setText("放置技能")
 
     def _refresh_manual_interaction_controls(self, selected_ids: list[str]) -> None:
         operator_id = self._target_operator_id()

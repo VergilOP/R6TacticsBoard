@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "generated_for": "R6TacticsBoard",
+  "updated_at": "2026-04-15",
+  "groups": {
+    "attack": [
+      {
+        "key": "breach-charge",
+        "name": "爆破炸药",
+        "side": "attack",
+        "icon_path": "attack/breach-charge.png",
+        "max_count": 3
+      },
+      {
+        "key": "claymore",
+        "name": "阔剑地雷",
+        "side": "attack",
+        "icon_path": "attack/claymore.png",
+        "max_count": 2
+      },
+      {
+        "key": "emp-impact-grenade",
+        "name": "冲击电磁脉冲手榴弹",
+        "side": "attack",
+        "icon_path": "attack/emp-impact-grenade.png",
+        "max_count": 2
+      },
+      {
+        "key": "frag-grenade",
+        "name": "破片手榴弹",
+        "side": "attack",
+        "icon_path": "attack/frag-grenade.png",
+        "max_count": 2
+      },
+      {
+        "key": "secondary-breacher",
+        "name": "次级硬突破装置",
+        "side": "attack",
+        "icon_path": "attack/secondary-breacher.png",
+        "max_count": 2
+      },
+      {
+        "key": "smoke-grenade",
+        "name": "烟雾手榴弹",
+        "side": "attack",
+        "icon_path": "attack/smoke-grenade.png",
+        "max_count": 2
+      },
+      {
+        "key": "stun-grenade",
+        "name": "闪光手榴弹",
+        "side": "attack",
+        "icon_path": "attack/stun-grenade.png",
+        "max_count": 2
+      }
+    ],
+    "defense": [
+      {
+        "key": "barbed-wire",
+        "name": "倒刺铁丝网",
+        "side": "defense",
+        "icon_path": "defense/barbed-wire.png",
+        "max_count": 2
+      },
+      {
+        "key": "bulletproof-camera",
+        "name": "防弹摄像头",
+        "side": "defense",
+        "icon_path": "defense/bulletproof-camera.png",
+        "max_count": 1
+      },
+      {
+        "key": "deployable-shield",
+        "name": "机动护盾",
+        "side": "defense",
+        "icon_path": "defense/deployable-shield.png",
+        "max_count": 1
+      },
+      {
+        "key": "impact-grenade",
+        "name": "冲击手榴弹",
+        "side": "defense",
+        "icon_path": "defense/impact-grenade.png",
+        "max_count": 2
+      },
+      {
+        "key": "nitro-cell",
+        "name": "遥控炸药",
+        "side": "defense",
+        "icon_path": "defense/nitro-cell.png",
+        "max_count": 1
+      },
+      {
+        "key": "observation-blocker",
+        "name": "观察阻挡器",
+        "side": "defense",
+        "icon_path": "defense/observation-blocker.png",
+        "max_count": 3
+      },
+      {
+        "key": "proximity-alarm",
+        "name": "感应警报器",
+        "side": "defense",
+        "icon_path": "defense/proximity-alarm.png",
+        "max_count": 2
+      }
+    ]
+  }
+}

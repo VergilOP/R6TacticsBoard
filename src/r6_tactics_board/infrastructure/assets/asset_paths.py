@@ -17,6 +17,9 @@ MAPS_DIR = ASSETS_DIR / "maps"
 OPERATORS_DIR = ASSETS_DIR / "operators"
 ATTACK_OPERATORS_DIR = OPERATORS_DIR / "attack"
 DEFENSE_OPERATORS_DIR = OPERATORS_DIR / "defense"
+GADGETS_DIR = ASSETS_DIR / "gadgets"
+ATTACK_GADGETS_DIR = GADGETS_DIR / "attack"
+DEFENSE_GADGETS_DIR = GADGETS_DIR / "defense"
 
 
 def ensure_asset_directories() -> None:
@@ -26,5 +29,8 @@ def ensure_asset_directories() -> None:
         OPERATORS_DIR,
         ATTACK_OPERATORS_DIR,
         DEFENSE_OPERATORS_DIR,
+        GADGETS_DIR,
+        ATTACK_GADGETS_DIR,
+        DEFENSE_GADGETS_DIR,
     ):
         path.mkdir(parents=True, exist_ok=True)

@@ -7,7 +7,14 @@
     "portrait_path": "assets/operators/attack/portraits/ace.png",
     "ability_icon_path": "assets/operators/attack/abilities/ace/icon.png",
     "ability_name": "S.E.L.M.A. 水力攻坚器",
-    "ability_description": "有了 S.E.L.M.A. 水力攻坚器后，水将会成为关键要素。这项武器利用液压来突破可破坏与强化的表面。 Ace 只要把这个圆筒丢到任何想破坏的地方，它就会打开并发挥完整效用。它在地板、天花板和出入口上能爆炸一次，但如果空间允许，圆筒就会向下滚动，发挥最多二次效用。作用到的每个地方都会留下一个清楚的长方形缺口，结合起来会形成一个足够大的洞，让特勤干员可以轻松通过。"
+    "ability_description": "有了 S.E.L.M.A. 水力攻坚器后，水将会成为关键要素。这项武器利用液压来突破可破坏与强化的表面。 Ace 只要把这个圆筒丢到任何想破坏的地方，它就会打开并发挥完整效用。它在地板、天花板和出入口上能爆炸一次，但如果空间允许，圆筒就会向下滚动，发挥最多二次效用。作用到的每个地方都会留下一个清楚的长方形缺口，结合起来会形成一个足够大的洞，让特勤干员可以轻松通过。",
+    "gadgets": [
+      {
+        "key": "frag-grenade",
+        "max_count": 2
+      }
+    ],
+    "ability_persists_on_map": true
   },
   {
     "key": "amaru",
@@ -27,7 +34,10 @@
     "portrait_path": "assets/operators/attack/portraits/ash.png",
     "ability_icon_path": "assets/operators/attack/abilities/ash/icon.png",
     "ability_name": "爆破弹",
-    "ability_description": "Ash 是快步调的前锋，能够在数秒内正面突破、侧翼突击并分散防守方的注意力。多亏了Ash的改造M120 CREM爆破弹，让她能够远距离破坏未强化的墙面。"
+    "ability_description": "Ash 是快步调的前锋，能够在数秒内正面突破、侧翼突击并分散防守方的注意力。多亏了Ash的改造M120 CREM爆破弹，让她能够远距离破坏未强化的墙面。",
+    "gadgets": [],
+    "ability_max_count": 2,
+    "ability_persists_on_map": false
   },
   {
     "key": "blackbeard",

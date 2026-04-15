@@ -20,6 +20,7 @@ from r6_tactics_board.presentation.styles.theme import (
     preview_path_color,
     preview_route_color,
 )
+from r6_tactics_board.presentation.widgets.canvas.map_gadget_item import MapGadgetItem
 from r6_tactics_board.presentation.widgets.canvas.map_interaction_item import MapInteractionItem
 from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
 from r6_tactics_board.presentation.widgets.canvas.map_surface_item import MapSurfaceItem
@@ -28,6 +29,12 @@ from r6_tactics_board.presentation.widgets.canvas.map_surface_item import MapSur
 class MapScene(QGraphicsScene):
     operator_transform_started = pyqtSignal()
     operator_move_finished = pyqtSignal(str)
+    gadget_transform_started = pyqtSignal()
+    gadget_move_finished = pyqtSignal(str, str, float, float, float, float, bool)
+    gadget_placed = pyqtSignal(str, float, float)
+    ability_transform_started = pyqtSignal()
+    ability_move_finished = pyqtSignal(str, str, float, float, float, float, bool)
+    ability_placed = pyqtSignal(str, float, float)
     surface_selected = pyqtSignal(str)
 
     def __init__(self) -> None:
@@ -52,6 +59,24 @@ class MapScene(QGraphicsScene):
         self._surfaces: list[MapSurface] = []
         self._surface_states: dict[str, TacticalSurfaceState] = {}
         self._surface_items: dict[str, MapSurfaceItem] = {}
+        self._gadget_items: list[MapGadgetItem] = []
+        self._gadget_icon_paths: dict[tuple[str, str], str] = {}
+        self._gadget_placement_operator_id = ""
+        self._gadget_placement_key = ""
+        self._gadget_placement_icon_path = ""
+        self._gadget_placement_max_count = 0
+        self._gadget_placement_positions: list[Point2D] = []
+        self._gadget_placement_active = False
+        self._ability_items: list[MapGadgetItem] = []
+        self._ability_icon_paths: dict[tuple[str, str], str] = {}
+        self._ability_placement_operator_id = ""
+        self._ability_placement_key = ""
+        self._ability_placement_icon_path = ""
+        self._ability_placement_positions: list[Point2D] = []
+        self._ability_placement_active = False
+        self._dragging_gadget_item: MapGadgetItem | None = None
+        self._dragging_gadget_start = QPointF()
+        self._dragging_gadget_offset = QPointF()
         self._surface_floor_key = ""
         self._operator_scale = 1.0
 
@@ -100,6 +125,44 @@ class MapScene(QGraphicsScene):
 
     def set_placement_state(self, state: OperatorState | None) -> None:
         self._placement_state = deepcopy(state) if state is not None else None
+
+    def set_gadget_catalog(self, icon_paths: dict[tuple[str, str], str]) -> None:
+        self._gadget_icon_paths = dict(icon_paths)
+
+    def set_ability_catalog(self, icon_paths: dict[tuple[str, str], str]) -> None:
+        self._ability_icon_paths = dict(icon_paths)
+
+    def set_gadget_placement(
+        self,
+        *,
+        operator_id: str,
+        gadget_key: str,
+        icon_path: str,
+        max_count: int,
+        active: bool,
+        positions: list[Point2D],
+    ) -> None:
+        self._gadget_placement_operator_id = operator_id
+        self._gadget_placement_key = gadget_key
+        self._gadget_placement_icon_path = icon_path
+        self._gadget_placement_max_count = max(0, int(max_count))
+        self._gadget_placement_active = bool(active and operator_id and gadget_key and icon_path)
+        self._gadget_placement_positions = [Point2D(x=item.x, y=item.y) for item in positions]
+
+    def set_ability_placement(
+        self,
+        *,
+        operator_id: str,
+        ability_key: str,
+        icon_path: str,
+        active: bool,
+        positions: list[Point2D],
+    ) -> None:
+        self._ability_placement_operator_id = operator_id
+        self._ability_placement_key = ability_key
+        self._ability_placement_icon_path = icon_path
+        self._ability_placement_active = bool(active and operator_id and ability_key and icon_path)
+        self._ability_placement_positions = [Point2D(x=item.x, y=item.y) for item in positions]
 
     def set_interaction_overlays(
         self,
@@ -186,6 +249,7 @@ class MapScene(QGraphicsScene):
                     custom_name=item.custom_name,
                     side=TeamSide(item.side),
                     position=Point2D(x=item.pos().x(), y=item.pos().y()),
+                    gadget_key="",
                     rotation=item.rotation(),
                     display_mode=display_mode,
                     show_icon=item.show_icon,
@@ -242,6 +306,8 @@ class MapScene(QGraphicsScene):
             self.clearSelection()
 
         self._operator_count = max_id
+        self._rebuild_gadget_items(states)
+        self._rebuild_ability_items(states)
 
     def operator_items(self) -> list[OperatorItem]:
         items = [item for item in self.items() if isinstance(item, OperatorItem)]
@@ -270,6 +336,44 @@ class MapScene(QGraphicsScene):
                 self.operator_move_finished.emit(operator_id)
             return
 
+        if event.button() == Qt.MouseButton.LeftButton and self._dragging_gadget_item is not None:
+            item = self._dragging_gadget_item
+            start = QPointF(self._dragging_gadget_start)
+            end = QPointF(item.pos())
+            self._dragging_gadget_item = None
+            self._dragging_gadget_offset = QPointF()
+            item.setCursor(Qt.CursorShape.OpenHandCursor)
+            delete_item = not self._token_drop_bounds().contains(end)
+            if delete_item:
+                self.removeItem(item)
+                if item in self._gadget_items:
+                    self._gadget_items.remove(item)
+                if item in self._ability_items:
+                    self._ability_items.remove(item)
+            if delete_item or (start - end).manhattanLength() >= 0.1:
+                if item.item_kind == "ability":
+                    self.ability_move_finished.emit(
+                        item.operator_id,
+                        item.gadget_key,
+                        start.x(),
+                        start.y(),
+                        end.x(),
+                        end.y(),
+                        delete_item,
+                    )
+                else:
+                    self.gadget_move_finished.emit(
+                        item.operator_id,
+                        item.gadget_key,
+                        start.x(),
+                        start.y(),
+                        end.x(),
+                        end.y(),
+                        delete_item,
+                    )
+            event.accept()
+            return
+
         super().mouseReleaseEvent(event)
         if event.button() == Qt.MouseButton.LeftButton:
             operator = self.selected_operator()
@@ -277,6 +381,67 @@ class MapScene(QGraphicsScene):
                 self.operator_move_finished.emit(operator.operator_id)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton and self._gadget_placement_active:
+            item = self._token_item_at(
+                event.scenePos(),
+                operator_id=self._gadget_placement_operator_id,
+                token_key=self._gadget_placement_key,
+                item_kind="gadget",
+            )
+            if (
+                isinstance(item, MapGadgetItem)
+                and item.item_kind == "gadget"
+                and item.operator_id == self._gadget_placement_operator_id
+                and item.gadget_key == self._gadget_placement_key
+            ):
+                self.clearSelection()
+                self.gadget_transform_started.emit()
+                self._dragging_gadget_item = item
+                self._dragging_gadget_start = QPointF(item.pos())
+                self._dragging_gadget_offset = item.pos() - event.scenePos()
+                item.setCursor(Qt.CursorShape.ClosedHandCursor)
+                event.accept()
+                return
+
+            if len(self._gadget_placement_positions) < self._gadget_placement_max_count:
+                self.gadget_placed.emit(
+                    self._gadget_placement_operator_id,
+                    event.scenePos().x(),
+                    event.scenePos().y(),
+                )
+            event.accept()
+            return
+
+        if event.button() == Qt.MouseButton.LeftButton and self._ability_placement_active:
+            item = self._token_item_at(
+                event.scenePos(),
+                operator_id=self._ability_placement_operator_id,
+                token_key=self._ability_placement_key,
+                item_kind="ability",
+            )
+            if (
+                isinstance(item, MapGadgetItem)
+                and item.item_kind == "ability"
+                and item.operator_id == self._ability_placement_operator_id
+                and item.gadget_key == self._ability_placement_key
+            ):
+                self.clearSelection()
+                self.ability_transform_started.emit()
+                self._dragging_gadget_item = item
+                self._dragging_gadget_start = QPointF(item.pos())
+                self._dragging_gadget_offset = item.pos() - event.scenePos()
+                item.setCursor(Qt.CursorShape.ClosedHandCursor)
+                event.accept()
+                return
+
+            self.ability_placed.emit(
+                self._ability_placement_operator_id,
+                event.scenePos().x(),
+                event.scenePos().y(),
+            )
+            event.accept()
+            return
+
         if event.button() == Qt.MouseButton.LeftButton and self._placement_state is not None:
             self.operator_transform_started.emit()
             self._is_placing = True
@@ -290,12 +455,21 @@ class MapScene(QGraphicsScene):
 
         if event.button() == Qt.MouseButton.LeftButton:
             item = self.itemAt(event.scenePos(), QTransform())
+            if isinstance(item, MapGadgetItem):
+                self.gadget_transform_started.emit()
+                self._dragging_gadget_item = item
+                self._dragging_gadget_start = QPointF(item.pos())
             if isinstance(item, OperatorItem):
                 self.operator_transform_started.emit()
 
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        if self._dragging_gadget_item is not None:
+            self._dragging_gadget_item.setPos(event.scenePos() + self._dragging_gadget_offset)
+            event.accept()
+            return
+
         if self._is_placing:
             self._update_placement_operator(event.scenePos())
             event.accept()
@@ -328,6 +502,8 @@ class MapScene(QGraphicsScene):
         self._path_items = {}
         self._grid_items = []
         self._surface_items = {}
+        self._gadget_items = []
+        self._ability_items = []
         self._interaction_items = {}
         self._interaction_link_items = []
         self.setSceneRect(QRectF(0, 0, width, height))
@@ -478,6 +654,76 @@ class MapScene(QGraphicsScene):
             self._surface_items[surface.id] = item
             if surface.id == selected_id:
                 item.setSelected(True)
+
+    def _rebuild_gadget_items(self, states: list[OperatorState]) -> None:
+        for item in self._gadget_items:
+            self.removeItem(item)
+        self._gadget_items.clear()
+
+        current_floor = self._surface_floor_key or self._interaction_floor_key
+        for state in states:
+            if not state.gadget_key or not state.gadget_positions:
+                continue
+            if current_floor and state.floor_key and state.floor_key != current_floor:
+                continue
+            icon_path = self._gadget_icon_paths.get((state.side.value, state.gadget_key), "")
+            if not icon_path:
+                continue
+            for point in state.gadget_positions:
+                item = MapGadgetItem(state.id, state.gadget_key, icon_path, item_kind="gadget")
+                item.set_center(point.x, point.y)
+                item.setZValue(30)
+                self.addItem(item)
+                self._gadget_items.append(item)
+
+    def _rebuild_ability_items(self, states: list[OperatorState]) -> None:
+        for item in self._ability_items:
+            self.removeItem(item)
+        self._ability_items.clear()
+
+        current_floor = self._surface_floor_key or self._interaction_floor_key
+        for state in states:
+            if not state.operator_key or not state.ability_positions:
+                continue
+            if current_floor and state.floor_key and state.floor_key != current_floor:
+                continue
+            icon_path = self._ability_icon_paths.get((state.side.value, state.operator_key), "")
+            if not icon_path:
+                continue
+            for point in state.ability_positions:
+                item = MapGadgetItem(state.id, state.operator_key, icon_path, item_kind="ability")
+                item.set_center(point.x, point.y)
+                item.setZValue(30)
+                self.addItem(item)
+                self._ability_items.append(item)
+
+    def _token_drop_bounds(self) -> QRectF:
+        if self._map_item is not None:
+            return self._map_item.sceneBoundingRect()
+        return self.sceneRect()
+
+    def _token_item_at(
+        self,
+        scene_pos: QPointF,
+        *,
+        operator_id: str,
+        token_key: str,
+        item_kind: str,
+    ) -> MapGadgetItem | None:
+        if not operator_id or not token_key:
+            return None
+
+        for item in self.items(scene_pos):
+            if not isinstance(item, MapGadgetItem):
+                continue
+            if item.item_kind != item_kind:
+                continue
+            if item.operator_id != operator_id or item.gadget_key != token_key:
+                continue
+            local_pos = item.mapFromScene(scene_pos)
+            if item.shape().contains(local_pos):
+                return item
+        return None
 
     def _interaction_visible(self, interaction: MapInteractionPoint) -> bool:
         if not self._interaction_floor_key:

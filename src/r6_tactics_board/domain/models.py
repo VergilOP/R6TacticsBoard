@@ -90,6 +90,7 @@ class OperatorDefinition:
     custom_name: str
     side: TeamSide
     operator_key: str = ""
+    gadget_key: str = ""
 
 
 @dataclass(slots=True)
@@ -103,6 +104,10 @@ class OperatorFrameState:
     floor_key: str = ""
     transition_mode: OperatorTransitionMode = OperatorTransitionMode.AUTO
     manual_interaction_ids: list[str] = field(default_factory=list)
+    gadget_used_count: int | None = None
+    ability_used_count: int | None = None
+    gadget_positions: list[Point2D] | None = None
+    ability_positions: list[Point2D] | None = None
 
 
 @dataclass(slots=True)
@@ -112,6 +117,7 @@ class OperatorState:
     custom_name: str
     side: TeamSide
     position: Point2D
+    gadget_key: str = ""
     rotation: float = 0.0
     display_mode: OperatorDisplayMode = OperatorDisplayMode.ICON
     show_icon: bool = True
@@ -119,6 +125,10 @@ class OperatorState:
     floor_key: str = ""
     transition_mode: OperatorTransitionMode = OperatorTransitionMode.AUTO
     manual_interaction_ids: list[str] = field(default_factory=list)
+    gadget_used_count: int = 0
+    ability_used_count: int = 0
+    gadget_positions: list[Point2D] = field(default_factory=list)
+    ability_positions: list[Point2D] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -163,6 +173,7 @@ def resolve_operator_state(
     return OperatorState(
         id=definition.id,
         operator_key=definition.operator_key,
+        gadget_key=definition.gadget_key,
         custom_name=definition.custom_name,
         side=definition.side,
         position=Point2D(x=frame.position.x, y=frame.position.y),
@@ -173,4 +184,16 @@ def resolve_operator_state(
         floor_key=frame.floor_key,
         transition_mode=frame.transition_mode,
         manual_interaction_ids=list(frame.manual_interaction_ids),
+        gadget_used_count=(
+            int(frame.gadget_used_count)
+            if frame.gadget_used_count is not None
+            else len(frame.gadget_positions or [])
+        ),
+        ability_used_count=(
+            int(frame.ability_used_count)
+            if frame.ability_used_count is not None
+            else len(frame.ability_positions or [])
+        ),
+        gadget_positions=[Point2D(x=item.x, y=item.y) for item in (frame.gadget_positions or [])],
+        ability_positions=[Point2D(x=item.x, y=item.y) for item in (frame.ability_positions or [])],
     )

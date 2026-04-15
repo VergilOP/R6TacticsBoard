@@ -4,6 +4,7 @@ from qfluentwidgets import FluentIcon, FluentWindow, NavigationItemPosition, qco
 
 from r6_tactics_board.infrastructure.diagnostics.debug_logging import debug_log
 from r6_tactics_board.presentation.pages.assets.assets_page import AssetsPage
+from r6_tactics_board.presentation.pages.assets.gadget_counts_page import GadgetCountsPage
 from r6_tactics_board.presentation.pages.debug.debug_page import DebugPage
 from r6_tactics_board.presentation.pages.debug.theme_audit_page import ThemeAuditPage
 from r6_tactics_board.presentation.pages.editor.editor_page import EditorPage
@@ -20,6 +21,7 @@ class MainWindow(FluentWindow):
 
         self.editor_page = EditorPage()
         self.assets_page = AssetsPage()
+        self.gadget_counts_page = GadgetCountsPage()
         self.esports_page = EsportsPage()
         self.debug_page = DebugPage()
         self.theme_audit_page = ThemeAuditPage()
@@ -27,6 +29,7 @@ class MainWindow(FluentWindow):
 
         self.editor_page.setObjectName("editor-page")
         self.assets_page.setObjectName("assets-page")
+        self.gadget_counts_page.setObjectName("gadget-counts-page")
         self.esports_page.setObjectName("esports-page")
         self.debug_page.setObjectName("debug-page")
         self.theme_audit_page.setObjectName("theme-audit-page")
@@ -37,6 +40,7 @@ class MainWindow(FluentWindow):
 
         self.addSubInterface(self.editor_page, FluentIcon.EDIT, "战术编辑")
         self.addSubInterface(self.assets_page, FluentIcon.FOLDER, "资源管理")
+        self.addSubInterface(self.gadget_counts_page, FluentIcon.FOLDER, "道具数量")
         self.addSubInterface(self.esports_page, FluentIcon.HISTORY, "电竞历史")
         self.addSubInterface(self.debug_page, FluentIcon.DEVELOPER_TOOLS, "测试调试")
         self.addSubInterface(self.theme_audit_page, FluentIcon.PALETTE, "主题排查")
@@ -77,6 +81,7 @@ class MainWindow(FluentWindow):
         self.setStyleSheet(main_window_stylesheet(self.objectName(), self.stackedWidget.objectName()))
         self.editor_page.refresh_theme()
         self.assets_page.refresh_theme()
+        self.gadget_counts_page.refresh_theme()
         self.esports_page.refresh_theme()
         self.debug_page.refresh_theme()
         self.theme_audit_page.refresh_theme()

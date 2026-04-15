@@ -116,6 +116,7 @@ class ProjectStore:
                     "custom_name": operator.custom_name,
                     "side": operator.side.value,
                     "operator_key": operator.operator_key,
+                    "gadget_key": operator.gadget_key,
                 }
                 for operator in project.operators
             ],
@@ -126,20 +127,7 @@ class ProjectStore:
                         "name": keyframe.name,
                         "note": keyframe.note,
                         "operator_frames": [
-                            {
-                                "id": state.id,
-                                "position": {
-                                    "x": state.position.x,
-                                    "y": state.position.y,
-                                },
-                                "rotation": state.rotation,
-                                "display_mode": self._display_mode_from_flags(state.show_icon, state.show_name).value,
-                                "show_icon": state.show_icon,
-                                "show_name": state.show_name,
-                                "floor_key": state.floor_key,
-                                "transition_mode": state.transition_mode.value,
-                                "manual_interaction_ids": list(state.manual_interaction_ids),
-                            }
+                            self._serialize_operator_frame_state(state)
                             for state in keyframe.operator_frames
                         ],
                     }
@@ -198,6 +186,7 @@ class ProjectStore:
                     custom_name=item.get("custom_name", ""),
                     side=TeamSide(item.get("side", TeamSide.ATTACK.value)),
                     operator_key=item.get("operator_key", ""),
+                    gadget_key=item.get("gadget_key", ""),
                 )
                 for item in data.get("operators", [])
             ]
@@ -213,12 +202,15 @@ class ProjectStore:
                     custom_name=state.get("custom_name", ""),
                     side=TeamSide(state.get("side", TeamSide.ATTACK.value)),
                     operator_key=state.get("operator_key", ""),
+                    gadget_key=state.get("gadget_key", ""),
                 )
 
         return list(inferred.values())
 
     def _load_operator_frame_state(self, state: dict) -> OperatorFrameState:
         show_icon, show_name = self._display_flags(state)
+        gadget_positions = self._load_optional_points(state, "gadget_positions", "gadget_positions_explicit")
+        ability_positions = self._load_optional_points(state, "ability_positions", "ability_positions_explicit")
         return OperatorFrameState(
             id=state["id"],
             position=Point2D(
@@ -238,4 +230,71 @@ class ProjectStore:
                 for item in state.get("manual_interaction_ids", [])
                 if str(item)
             ],
+            gadget_used_count=(
+                int(state["gadget_used_count"])
+                if state.get("gadget_used_count") is not None
+                else None
+            ),
+            ability_used_count=(
+                int(state["ability_used_count"])
+                if state.get("ability_used_count") is not None
+                else None
+            ),
+            gadget_positions=gadget_positions,
+            ability_positions=ability_positions,
         )
+
+    @staticmethod
+    def _serialize_points(points: list[Point2D]) -> list[dict[str, float]]:
+        return [
+            {
+                "x": point.x,
+                "y": point.y,
+            }
+            for point in points
+        ]
+
+    def _serialize_operator_frame_state(self, state: OperatorFrameState) -> dict:
+        payload = {
+            "id": state.id,
+            "position": {
+                "x": state.position.x,
+                "y": state.position.y,
+            },
+            "rotation": state.rotation,
+            "display_mode": self._display_mode_from_flags(state.show_icon, state.show_name).value,
+            "show_icon": state.show_icon,
+            "show_name": state.show_name,
+            "floor_key": state.floor_key,
+            "transition_mode": state.transition_mode.value,
+            "manual_interaction_ids": list(state.manual_interaction_ids),
+            "gadget_used_count": state.gadget_used_count,
+            "ability_used_count": state.ability_used_count,
+            "gadget_positions_explicit": state.gadget_positions is not None,
+            "ability_positions_explicit": state.ability_positions is not None,
+        }
+        if state.gadget_positions is not None:
+            payload["gadget_positions"] = self._serialize_points(state.gadget_positions)
+        if state.ability_positions is not None:
+            payload["ability_positions"] = self._serialize_points(state.ability_positions)
+        return payload
+
+    @staticmethod
+    def _load_optional_points(state: dict, key: str, explicit_key: str) -> list[Point2D] | None:
+        if explicit_key in state:
+            if not bool(state.get(explicit_key, False)):
+                return None
+            raw_points = state.get(key, [])
+        else:
+            raw_points = state.get(key)
+            if not raw_points:
+                return None
+
+        return [
+            Point2D(
+                x=float(point.get("x", 0)),
+                y=float(point.get("y", 0)),
+            )
+            for point in raw_points
+            if isinstance(point, dict)
+        ]

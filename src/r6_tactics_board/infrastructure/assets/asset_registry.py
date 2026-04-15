@@ -12,8 +12,11 @@ from r6_tactics_board.domain.models import (
     Point2D,
 )
 from r6_tactics_board.infrastructure.assets.asset_paths import (
+    ATTACK_GADGETS_DIR,
     ATTACK_OPERATORS_DIR,
+    DEFENSE_GADGETS_DIR,
     DEFENSE_OPERATORS_DIR,
+    GADGETS_DIR,
     MAPS_DIR,
     OPERATORS_DIR,
     PROJECT_ROOT,
@@ -39,6 +42,27 @@ class OperatorCatalogEntry:
     icon_path: str
     portrait_path: str = ""
     ability_icon_path: str = ""
+    ability_name: str = ""
+    ability_description: str = ""
+    ability_max_count: int = 0
+    ability_persists_on_map: bool = True
+    gadgets: list["OperatorGadgetOption"] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class OperatorGadgetOption:
+    key: str
+    max_count: int = 1
+
+
+@dataclass(slots=True)
+class GadgetAsset:
+    key: str
+    side: str
+    name: str
+    path: str
+    max_count: int = 1
+    persists_on_map: bool = True
 
 
 @dataclass(slots=True)
@@ -74,6 +98,8 @@ class MapAsset:
 class AssetRegistry:
     def __init__(self) -> None:
         ensure_asset_directories()
+        self._operator_catalog_cache: dict[str | None, list[OperatorCatalogEntry]] = {}
+        self._gadget_assets_cache: dict[str | None, list[GadgetAsset]] = {}
 
     def list_map_assets(self) -> list[MapAsset]:
         index_path = MAPS_DIR / "index.json"
@@ -223,6 +249,9 @@ class AssetRegistry:
         return None
 
     def list_operator_catalog(self, side: str | None = None) -> list[OperatorCatalogEntry]:
+        if side in self._operator_catalog_cache:
+            return list(self._operator_catalog_cache[side])
+
         index_path = OPERATORS_DIR / "index.json"
         if index_path.is_file():
             try:
@@ -252,12 +281,26 @@ class AssetRegistry:
                                 str(item.get("ability_icon_path", "")),
                             )
                         ),
+                        ability_name=str(item.get("ability_name", "")),
+                        ability_description=str(item.get("ability_description", "")),
+                        ability_max_count=max(0, int(item.get("ability_max_count", 0))),
+                        ability_persists_on_map=bool(item.get("ability_persists_on_map", True)),
+                        gadgets=[
+                            OperatorGadgetOption(
+                                key=str(gadget.get("key", "")),
+                                max_count=max(0, int(gadget.get("max_count", 0))),
+                            )
+                            for gadget in item.get("gadgets", [])
+                            if str(gadget.get("key", ""))
+                        ],
                     )
                 )
             if entries:
-                return sorted(entries, key=lambda item: (item.side, item.key))
+                sorted_entries = sorted(entries, key=lambda item: (item.side, item.key))
+                self._operator_catalog_cache[side] = sorted_entries
+                return list(sorted_entries)
 
-        return [
+        fallback_entries = [
             OperatorCatalogEntry(
                 key=asset.key,
                 side=asset.side,
@@ -266,6 +309,8 @@ class AssetRegistry:
             )
             for asset in self.list_operator_assets(side)
         ]
+        self._operator_catalog_cache[side] = fallback_entries
+        return list(fallback_entries)
 
     def find_operator_catalog_entry(
         self,
@@ -284,6 +329,250 @@ class AssetRegistry:
                 return entry
         return None
 
+    def list_gadget_assets(self, side: str | None = None) -> list[GadgetAsset]:
+        if side in self._gadget_assets_cache:
+            return list(self._gadget_assets_cache[side])
+
+        index_path = GADGETS_DIR / "index.json"
+        if index_path.is_file():
+            try:
+                data = json.loads(index_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                data = {}
+
+            entries: list[GadgetAsset] = []
+            groups = data.get("groups", {})
+            for group_side, items in groups.items():
+                if side is not None and group_side != side:
+                    continue
+                for item in items:
+                    entries.append(
+                        GadgetAsset(
+                            key=str(item.get("key", "")),
+                            side=str(item.get("side", group_side)),
+                            name=str(item.get("name", item.get("key", ""))),
+                            path=str(
+                                self._resolve_asset_path(
+                                    index_path.parent,
+                                    str(item.get("icon_path", "")),
+                                )
+                            ),
+                            max_count=max(1, int(item.get("max_count", 1))),
+                            persists_on_map=bool(
+                                item.get(
+                                    "persists_on_map",
+                                    self._default_gadget_persistence(str(item.get("key", ""))),
+                                )
+                            ),
+                        )
+                    )
+            if entries:
+                sorted_entries = sorted(entries, key=lambda item: (item.side, item.key))
+                self._gadget_assets_cache[side] = sorted_entries
+                return list(sorted_entries)
+
+        fallback_entries = self._fallback_gadget_assets(side)
+        self._gadget_assets_cache[side] = fallback_entries
+        return list(fallback_entries)
+
+    def find_gadget_asset(self, side: str, key: str) -> GadgetAsset | None:
+        for asset in self.list_gadget_assets(side):
+            if asset.key == key:
+                return asset
+        return None
+
+    def save_gadget_count(self, side: str, gadget_key: str, count: int) -> None:
+        index_path = GADGETS_DIR / "index.json"
+        if not index_path.is_file():
+            return
+
+        try:
+            data = json.loads(index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+
+        groups = data.setdefault("groups", {})
+        items = groups.get(side, [])
+        updated = False
+        for item in items:
+            if str(item.get("key", "")) != gadget_key:
+                continue
+            item["max_count"] = max(0, int(count))
+            updated = True
+            break
+        if not updated:
+            return
+
+        index_path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+        self._invalidate_gadget_cache()
+
+    def save_gadget_persistence(self, side: str, gadget_key: str, persists_on_map: bool) -> None:
+        index_path = GADGETS_DIR / "index.json"
+        if not index_path.is_file():
+            return
+
+        try:
+            data = json.loads(index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+
+        groups = data.setdefault("groups", {})
+        items = groups.get(side, [])
+        updated = False
+        for item in items:
+            if str(item.get("key", "")) != gadget_key:
+                continue
+            item["persists_on_map"] = bool(persists_on_map)
+            updated = True
+            break
+        if not updated:
+            return
+
+        index_path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+        self._invalidate_gadget_cache()
+
+    def list_operator_gadget_assets(self, side: str, operator_key: str) -> list[GadgetAsset]:
+        entry = self.find_operator_catalog_entry(operator_key, side)
+        global_assets = {asset.key: asset for asset in self.list_gadget_assets(side)}
+        if entry is None or not entry.gadgets:
+            return sorted(global_assets.values(), key=lambda item: (item.side, item.key))
+
+        assets: list[GadgetAsset] = []
+        for option in entry.gadgets:
+            if option.max_count <= 0:
+                continue
+            global_asset = global_assets.get(option.key)
+            if global_asset is None:
+                continue
+            assets.append(
+                GadgetAsset(
+                    key=global_asset.key,
+                    side=global_asset.side,
+                    name=global_asset.name,
+                    path=global_asset.path,
+                    max_count=option.max_count,
+                    persists_on_map=global_asset.persists_on_map,
+                )
+            )
+        return sorted(assets, key=lambda item: (item.side, item.key))
+
+    def find_operator_gadget_asset(self, side: str, operator_key: str, gadget_key: str) -> GadgetAsset | None:
+        for asset in self.list_operator_gadget_assets(side, operator_key):
+            if asset.key == gadget_key:
+                return asset
+        return None
+
+    def save_operator_gadget_count(self, side: str, operator_key: str, gadget_key: str, count: int) -> None:
+        index_path = OPERATORS_DIR / "index.json"
+        if not index_path.is_file():
+            return
+
+        try:
+            raw_items = json.loads(index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+
+        updated = False
+        for item in raw_items:
+            if str(item.get("side", "")) != side or str(item.get("key", "")) != operator_key:
+                continue
+
+            gadgets = [
+                {
+                    "key": str(gadget.get("key", "")),
+                    "max_count": max(0, int(gadget.get("max_count", 0))),
+                }
+                for gadget in item.get("gadgets", [])
+                if str(gadget.get("key", ""))
+            ]
+            gadgets = [gadget for gadget in gadgets if gadget["key"] != gadget_key]
+            if count > 0:
+                gadgets.append({"key": gadget_key, "max_count": int(count)})
+            gadgets.sort(key=lambda gadget: gadget["key"])
+            item["gadgets"] = gadgets
+            updated = True
+            break
+
+        if not updated:
+            return
+
+        index_path.write_text(
+            json.dumps(raw_items, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+        self._invalidate_operator_catalog_cache()
+
+    def save_operator_ability_count(self, side: str, operator_key: str, count: int) -> None:
+        index_path = OPERATORS_DIR / "index.json"
+        if not index_path.is_file():
+            return
+
+        try:
+            raw_items = json.loads(index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+
+        updated = False
+        for item in raw_items:
+            if str(item.get("side", "")) != side or str(item.get("key", "")) != operator_key:
+                continue
+            item["ability_max_count"] = max(0, int(count))
+            updated = True
+            break
+
+        if not updated:
+            return
+
+        index_path.write_text(
+            json.dumps(raw_items, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+        self._invalidate_operator_catalog_cache()
+
+    def save_operator_ability_persistence(self, side: str, operator_key: str, persists_on_map: bool) -> None:
+        index_path = OPERATORS_DIR / "index.json"
+        if not index_path.is_file():
+            return
+
+        try:
+            raw_items = json.loads(index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+
+        updated = False
+        for item in raw_items:
+            if str(item.get("side", "")) != side or str(item.get("key", "")) != operator_key:
+                continue
+            item["ability_persists_on_map"] = bool(persists_on_map)
+            updated = True
+            break
+
+        if not updated:
+            return
+
+        index_path.write_text(
+            json.dumps(raw_items, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
+        self._invalidate_operator_catalog_cache()
+
+    def _invalidate_operator_catalog_cache(self) -> None:
+        self._operator_catalog_cache.clear()
+
+    def _invalidate_gadget_cache(self) -> None:
+        self._gadget_assets_cache.clear()
+
     def _fallback_map_assets(self) -> list[MapAsset]:
         assets: list[MapAsset] = []
         for item in sorted(MAPS_DIR.iterdir()):
@@ -300,6 +589,39 @@ class AssetRegistry:
             OperatorAsset(key=file.stem, side=side, path=str(file))
             for file in self._list_image_files(directory)
         ]
+
+    def _fallback_gadget_assets(self, side: str | None = None) -> list[GadgetAsset]:
+        entries: list[GadgetAsset] = []
+        if side in (None, "attack"):
+            entries.extend(self._gadget_assets_from_dir(ATTACK_GADGETS_DIR, "attack"))
+        if side in (None, "defense"):
+            entries.extend(self._gadget_assets_from_dir(DEFENSE_GADGETS_DIR, "defense"))
+        return sorted(entries, key=lambda item: (item.side, item.key))
+
+    def _gadget_assets_from_dir(self, directory: Path, side: str) -> list[GadgetAsset]:
+        return [
+            GadgetAsset(
+                key=file.stem,
+                side=side,
+                name=file.stem.replace("-", " ").title(),
+                path=str(file),
+                max_count=1,
+                persists_on_map=self._default_gadget_persistence(file.stem),
+            )
+            for file in self._list_image_files(directory)
+        ]
+
+    @staticmethod
+    def _default_gadget_persistence(gadget_key: str) -> bool:
+        persistent = {
+            "barbed-wire",
+            "bulletproof-camera",
+            "claymore",
+            "deployable-shield",
+            "observation-blocker",
+            "proximity-alarm",
+        }
+        return gadget_key in persistent
 
     @staticmethod
     def _load_interactions(data: dict) -> list[MapInteractionPoint]:

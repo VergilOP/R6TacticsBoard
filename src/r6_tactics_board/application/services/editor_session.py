@@ -12,7 +12,13 @@ from r6_tactics_board.domain.models import (
     TacticProject,
     Timeline,
 )
-from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry, MapAsset, MapFloorAsset, OperatorAsset
+from r6_tactics_board.infrastructure.assets.asset_registry import (
+    AssetRegistry,
+    GadgetAsset,
+    MapAsset,
+    MapFloorAsset,
+    OperatorAsset,
+)
 from r6_tactics_board.infrastructure.persistence.project_store import ProjectStore
 
 
@@ -66,6 +72,39 @@ class EditorSessionService:
 
     def find_operator_asset(self, side: str, operator_key: str) -> OperatorAsset | None:
         return self._asset_registry.find_operator_asset(side, operator_key)
+
+    def find_operator_catalog_entry(self, value: str, side: str | None = None):
+        return self._asset_registry.find_operator_catalog_entry(value, side)
+
+    def list_operator_catalog(self, side: str | None = None):
+        return self._asset_registry.list_operator_catalog(side)
+
+    def list_gadget_assets(self, side: str) -> list[GadgetAsset]:
+        return self._asset_registry.list_gadget_assets(side)
+
+    def find_gadget_asset(self, side: str, gadget_key: str) -> GadgetAsset | None:
+        return self._asset_registry.find_gadget_asset(side, gadget_key)
+
+    def save_gadget_count(self, side: str, gadget_key: str, count: int) -> None:
+        self._asset_registry.save_gadget_count(side, gadget_key, count)
+
+    def save_gadget_persistence(self, side: str, gadget_key: str, persists_on_map: bool) -> None:
+        self._asset_registry.save_gadget_persistence(side, gadget_key, persists_on_map)
+
+    def list_operator_gadget_assets(self, side: str, operator_key: str) -> list[GadgetAsset]:
+        return self._asset_registry.list_operator_gadget_assets(side, operator_key)
+
+    def find_operator_gadget_asset(self, side: str, operator_key: str, gadget_key: str) -> GadgetAsset | None:
+        return self._asset_registry.find_operator_gadget_asset(side, operator_key, gadget_key)
+
+    def save_operator_gadget_count(self, side: str, operator_key: str, gadget_key: str, count: int) -> None:
+        self._asset_registry.save_operator_gadget_count(side, operator_key, gadget_key, count)
+
+    def save_operator_ability_count(self, side: str, operator_key: str, count: int) -> None:
+        self._asset_registry.save_operator_ability_count(side, operator_key, count)
+
+    def save_operator_ability_persistence(self, side: str, operator_key: str, persists_on_map: bool) -> None:
+        self._asset_registry.save_operator_ability_persistence(side, operator_key, persists_on_map)
 
     def build_project(
         self,
