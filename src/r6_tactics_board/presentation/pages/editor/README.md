@@ -6,12 +6,22 @@
 
 - [editor_page.py](editor_page.py)
   编辑器总控。负责：
-  - 时间轴列切换
-  - 右侧属性栏刷新
   - 2D / 2.5D 视图切换
   - 播放控制
   - 工程保存/读取
   - 干员、战术面、关键帧三条主流程的页面级编排
+- [editor_properties.py](editor_properties.py)
+  右侧属性面板工作流。负责：
+  - 属性面板刷新
+  - 控件可用性分层
+  - 手动互动点候选与上下文可见性
+  - 右侧页签自动切换的面板侧逻辑
+- [editor_timeline.py](editor_timeline.py)
+  时间轴与当前上下文同步工作流。负责：
+  - 单元格 / 列头点击后的上下文切换
+  - 当前列应用与当前楼层跟随
+  - 时间轴与底部播放栏刷新
+  - 画布选中态与右侧页签的同步
 - [editor_tokens.py](editor_tokens.py)
   道具 / 技能工作流拆分模块。负责：
   - 放置模式切换
@@ -33,13 +43,13 @@
 ### 改右侧属性栏行为
 
 先看：
-- [editor_page.py](editor_page.py) 的 `_refresh_property_panel()`
+- [editor_properties.py](editor_properties.py)
 - [editor_panels.py](../../widgets/editor/editor_panels.py)
 
 ### 改时间轴切换后的画布效果
 
 先看：
-- `_apply_timeline_column(...)`
+- [editor_timeline.py](editor_timeline.py)
 - `_resolved_state(...)`
 - `_sync_scene_placement_target(...)`
 

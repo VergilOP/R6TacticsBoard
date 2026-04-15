@@ -30,7 +30,11 @@
 ### 战术编辑页
 
 - [editor_page.py](../../src/r6_tactics_board/presentation/pages/editor/editor_page.py)
-  编辑器总编排。这里负责把时间轴、画布、属性面板、播放、工程保存串起来。
+  编辑器总编排。这里负责把时间轴、画布、播放、工程保存和跨模块调度串起来。
+- [editor_properties.py](../../src/r6_tactics_board/presentation/pages/editor/editor_properties.py)
+  右侧属性面板刷新、控件显隐和手动互动点候选逻辑。
+- [editor_timeline.py](../../src/r6_tactics_board/presentation/pages/editor/editor_timeline.py)
+  时间轴列切换、当前上下文同步、播放栏刷新和楼层跟随。
 - [editor_tokens.py](../../src/r6_tactics_board/presentation/pages/editor/editor_tokens.py)
   道具 / 技能的页面级工作流。把放置、清空和数量继承相关逻辑从总控页拆出来。
 - [editor_models.py](../../src/r6_tactics_board/presentation/pages/editor/editor_models.py)
@@ -98,6 +102,8 @@
 先看：
 - [models.py](../../src/r6_tactics_board/domain/models.py)
 - [editor_page.py](../../src/r6_tactics_board/presentation/pages/editor/editor_page.py)
+- [editor_properties.py](../../src/r6_tactics_board/presentation/pages/editor/editor_properties.py)
+- [editor_timeline.py](../../src/r6_tactics_board/presentation/pages/editor/editor_timeline.py)
 - [project_store.py](../../src/r6_tactics_board/infrastructure/persistence/project_store.py)
 
 ### 改地图元数据或战术面
@@ -114,6 +120,8 @@
 - [gadget_counts_page.py](../../src/r6_tactics_board/presentation/pages/assets/gadget_counts_page.py)
 - [asset_registry.py](../../src/r6_tactics_board/infrastructure/assets/asset_registry.py)
 - [editor_page.py](../../src/r6_tactics_board/presentation/pages/editor/editor_page.py)
+- [editor_properties.py](../../src/r6_tactics_board/presentation/pages/editor/editor_properties.py)
+- [editor_timeline.py](../../src/r6_tactics_board/presentation/pages/editor/editor_timeline.py)
 - [editor_tokens.py](../../src/r6_tactics_board/presentation/pages/editor/editor_tokens.py)
 - [map_gadget_item.py](../../src/r6_tactics_board/presentation/widgets/canvas/map_gadget_item.py)
 
