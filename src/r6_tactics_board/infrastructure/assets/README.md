@@ -19,10 +19,22 @@
 ## 当前文件
 
 - `asset_paths.py`: 资源根目录、默认目录与路径辅助函数。
-- `asset_registry.py`: 地图、干员、通用道具资源扫描、读取、缓存、写回与迁移。
+- `asset_models.py`: 资源层 dataclass，包含地图、楼层、干员、通用道具等结构。
+- `asset_utils.py`: 资源路径解析、图片扫描、名称归一化等纯辅助函数。
+- `map_registry.py`: 地图资源读取、地图元数据写回、旧 Hatch 互动点迁移。
+- `operator_registry.py`: 干员图标、干员总索引、技能数量和干员级道具配置写回。
+- `gadget_registry.py`: 通用道具总索引、默认数量和保留类型写回。
+- `asset_registry.py`: 对外兼容门面，组合上述 registry，保持旧 import 路径稳定。
 
 ## 落点规则
 
 - 只要逻辑核心是“从目录里找到什么”和“把资源信息整理成什么”，放这里。
 - 如果逻辑开始依赖编辑器当前工程或 UI 选择状态，应提升到 `application/services/`。
 - 如果逻辑开始涉及关键帧继承、画布显示或放置行为，应放到编辑器页面 helper 或画布层，不要塞回资源索引层。
+
+## 当前边界
+
+- 外部代码优先继续从 `asset_registry.py` 导入，避免全项目 import 分散。
+- 新增地图资源字段时，优先改 `map_registry.py` 和 `asset_models.py`。
+- 新增干员 / 技能资源字段时，优先改 `operator_registry.py` 和 `asset_models.py`。
+- 新增通用道具字段时，优先改 `gadget_registry.py` 和 `asset_models.py`。

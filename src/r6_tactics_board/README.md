@@ -63,7 +63,7 @@
 - [presentation/pages/editor/README.md](presentation/pages/editor/README.md)
   编辑器各 helper 的职责索引。
 - [infrastructure/assets/asset_registry.py](infrastructure/assets/asset_registry.py)
-  资源索引、写回、缓存和兼容迁移集中在这里，是下一批最需要继续拆分的模块。
+  资源索引对外兼容门面。具体地图、干员和通用道具逻辑已拆到同目录 registry。
 - [presentation/widgets/canvas/map_scene.py](presentation/widgets/canvas/map_scene.py)
   2D 画布的核心，负责干员、战术面、互动点、道具和技能图元的同步与交互。
 

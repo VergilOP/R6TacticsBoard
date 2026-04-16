@@ -85,7 +85,17 @@
 ### 资源与工程
 
 - [asset_registry.py](../../src/r6_tactics_board/infrastructure/assets/asset_registry.py)
-  资源索引、查询、数量写回和兼容迁移。
+  资源索引对外兼容门面，组合地图、干员和通用道具 registry。
+- [map_registry.py](../../src/r6_tactics_board/infrastructure/assets/map_registry.py)
+  地图资源读取、地图元数据保存和旧 Hatch 互动点迁移。
+- [operator_registry.py](../../src/r6_tactics_board/infrastructure/assets/operator_registry.py)
+  干员图标、干员总索引、技能数量与干员级道具配置写回。
+- [gadget_registry.py](../../src/r6_tactics_board/infrastructure/assets/gadget_registry.py)
+  通用道具总索引、默认数量和保留类型写回。
+- [asset_models.py](../../src/r6_tactics_board/infrastructure/assets/asset_models.py)
+  资源层 dataclass。
+- [asset_utils.py](../../src/r6_tactics_board/infrastructure/assets/asset_utils.py)
+  路径解析、图片扫描和名称归一化等纯辅助函数。
 - [asset_paths.py](../../src/r6_tactics_board/infrastructure/assets/asset_paths.py)
   资源目录与运行时路径。
 - [project_store.py](../../src/r6_tactics_board/infrastructure/persistence/project_store.py)
@@ -147,9 +157,6 @@
 
 - [editor_page.py](../../src/r6_tactics_board/presentation/pages/editor/editor_page.py)
   现在已经降到页面级总编排，但仍然是编辑器的主入口。
-- [asset_registry.py](../../src/r6_tactics_board/infrastructure/assets/asset_registry.py)
-  仍然同时承担索引、查询、写回和迁移逻辑。
-
 ## 已完成的低风险拆分
 
 - 道具 / 技能工作流
@@ -159,7 +166,7 @@
 - 地图 / 2.5D 双视图同步链
 - 工程读写与页面状态恢复链
 - 画布局部刷新与选中态同步链
+- 资源索引层的地图 / 干员 / 通用道具拆分
 
 下一批如果继续拆，优先看：
-- `asset_registry.py` 的读写与索引分层
 - `map_scene.py` 的 overlay / token / operator 局部刷新分层

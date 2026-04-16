@@ -166,10 +166,8 @@
 
 ## 当前最大的可读性风险
 
-- [asset_registry.py](../../src/r6_tactics_board/infrastructure/assets/asset_registry.py)
 - [map_scene.py](../../src/r6_tactics_board/presentation/widgets/canvas/map_scene.py)
 
-编辑页已经完成一轮低风险拆分；后续主要可读性风险转移到：
+编辑页和资源索引层已经完成一轮低风险拆分；后续主要可读性风险转移到：
 
-- `asset_registry.py`：索引、查询、写回、缓存、兼容迁移仍集中在一个文件。
 - `map_scene.py`：2D 画布 overlay、干员、道具、技能和选中态同步仍较集中。
