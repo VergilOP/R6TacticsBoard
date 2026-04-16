@@ -87,7 +87,9 @@
     "portrait_path": "assets/operators/attack/portraits/capitao.png",
     "ability_icon_path": "assets/operators/attack/abilities/capitao/icon.png",
     "ability_name": "战术十字弓",
-    "ability_description": "玻璃箭弩可以进行无声袭击，不会暴露你所在位置。此玻璃子弹受到冲击后会破碎并释放出气体，可以点燃周遭的氧气。于无声中快速杀敌，不会暴露你所在位置。"
+    "ability_description": "玻璃箭弩可以进行无声袭击，不会暴露你所在位置。此玻璃子弹受到冲击后会破碎并释放出气体，可以点燃周遭的氧气。于无声中快速杀敌，不会暴露你所在位置。",
+    "ability_max_count": 4,
+    "ability_persists_on_map": false
   },
   {
     "key": "deimos",
@@ -167,7 +169,9 @@
     "portrait_path": "assets/operators/attack/portraits/grim.png",
     "ability_icon_path": "assets/operators/attack/abilities/grim/icon.png",
     "ability_name": "蜂巢发射器",
-    "ability_description": "你肯定听见嗡嗡声了，因为“蜂巢发射器”来了！它能发射会释放出一群机器人的投射物，这些机器人会追踪经过它们的敌人位置。别让它们跑进你的眼睛里面就对了。"
+    "ability_description": "你肯定听见嗡嗡声了，因为“蜂巢发射器”来了！它能发射会释放出一群机器人的投射物，这些机器人会追踪经过它们的敌人位置。别让它们跑进你的眼睛里面就对了。",
+    "ability_max_count": 4,
+    "ability_persists_on_map": false
   },
   {
     "key": "hibana",
@@ -337,7 +341,9 @@
     "portrait_path": "assets/operators/attack/portraits/thatcher.png",
     "ability_icon_path": "assets/operators/attack/abilities/thatcher/icon.png",
     "ability_name": "E.G.S.干扰器（电子装备扫描干扰器）",
-    "ability_description": "Thatcher的新装备“E.G.S.干扰器”能够穿透障碍物探测敌方电子设备，并用电磁脉冲将其摧毁。Thatcher应该冲锋在前，侦察敌方防御，为其他进攻方的行动铺平道路。撒切尔的新装备使他的游戏玩法更加精准、更具破坏性，也更加现代化，在保留其独特个性的同时，也更新了他的角色定位。"
+    "ability_description": "Thatcher的新装备“E.G.S.干扰器”能够穿透障碍物探测敌方电子设备，并用电磁脉冲将其摧毁。Thatcher应该冲锋在前，侦察敌方防御，为其他进攻方的行动铺平道路。撒切尔的新装备使他的游戏玩法更加精准、更具破坏性，也更加现代化，在保留其独特个性的同时，也更新了他的角色定位。",
+    "ability_persists_on_map": false,
+    "ability_max_count": 5
   },
   {
     "key": "thermite",
@@ -357,7 +363,8 @@
     "portrait_path": "assets/operators/attack/portraits/twitch.png",
     "ability_icon_path": "assets/operators/attack/abilities/twitch/icon.png",
     "ability_name": "电击无人机",
-    "ability_description": "Twitch擅长停用装置，是个情资特勤干员。她能够利用这些技术作为远端后援或是攻击性十足的突破手。Twitch可以从远距离停用装备，这全仰赖其独特技能：RSD第1型无人攻击机"
+    "ability_description": "Twitch擅长停用装置，是个情资特勤干员。她能够利用这些技术作为远端后援或是攻击性十足的突破手。Twitch可以从远距离停用装备，这全仰赖其独特技能：RSD第1型无人攻击机",
+    "ability_max_count": 2
   },
   {
     "key": "ying",
