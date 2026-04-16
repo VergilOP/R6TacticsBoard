@@ -39,6 +39,7 @@ class EditorPropertyPanelMixin:
             self.rotation_value_label.setText("0°")
             self.gadget_count_label.setText("-")
             self.ability_name_label.setText("-")
+            self.property_panel.set_ability_icon("")
             self.ability_count_label.setText("-")
             self.place_gadget_button.setChecked(False)
             self.place_gadget_button.setText("放置道具")
@@ -103,6 +104,7 @@ class EditorPropertyPanelMixin:
                 if ability_entry is not None
                 else "未配置"
             )
+            self.property_panel.set_ability_icon(ability_entry.ability_icon_path if ability_entry is not None else "")
             ability_count = self._current_ability_used_count(operator_id)
             self.ability_count_label.setText(
                 (

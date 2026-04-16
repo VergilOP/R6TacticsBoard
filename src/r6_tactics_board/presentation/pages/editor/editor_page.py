@@ -53,6 +53,7 @@ from r6_tactics_board.presentation.widgets.editor.editor_panels import (
     FloorOverlayPanel,
     PlaybackOverlayPanel,
 )
+from r6_tactics_board.presentation.widgets.asset_icons import compact_asset_icon
 from r6_tactics_board.presentation.widgets.canvas.map_scene import MapScene
 from r6_tactics_board.presentation.widgets.canvas.map_view import MapView
 from r6_tactics_board.presentation.widgets.canvas.operator_item import OperatorItem
@@ -1322,8 +1323,9 @@ class EditorPage(
         self.operator_combo.setItemData(0, "")
 
         current_index = 0
+        icon_size = self.operator_combo.iconSize()
         for index, asset in enumerate(assets, start=1):
-            self.operator_combo.addItem(asset.key)
+            self.operator_combo.addItem(asset.key, icon=compact_asset_icon(asset.path, icon_size))
             self.operator_combo.setItemData(index, asset.key)
             if asset.key == selected_key:
                 current_index = index
@@ -1344,8 +1346,9 @@ class EditorPage(
         self.gadget_combo.setItemData(0, "")
 
         current_index = 0
+        icon_size = self.gadget_combo.iconSize()
         for index, asset in enumerate(assets, start=1):
-            self.gadget_combo.addItem(asset.name)
+            self.gadget_combo.addItem(asset.name, icon=compact_asset_icon(asset.path, icon_size))
             self.gadget_combo.setItemData(index, asset.key)
             if asset.key == selected_key:
                 current_index = index

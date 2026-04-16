@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, PushButton, SubtitleLabel
 
@@ -10,6 +10,7 @@ from r6_tactics_board.infrastructure.assets.asset_paths import (
 )
 from r6_tactics_board.infrastructure.assets.asset_registry import AssetRegistry
 from r6_tactics_board.presentation.styles.theme import item_view_palette, list_widget_stylesheet, page_stylesheet
+from r6_tactics_board.presentation.widgets.asset_icons import compact_asset_icon
 
 
 class AssetsPage(QWidget):
@@ -32,6 +33,7 @@ class AssetsPage(QWidget):
         self.maps_list = QListWidget()
         self.attack_list = QListWidget()
         self.defense_list = QListWidget()
+        self._asset_icon_size = QSize(22, 22)
 
         self.setObjectName("assets-page")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -132,6 +134,7 @@ class AssetsPage(QWidget):
 
         for asset in assets:
             item = QListWidgetItem(asset.key)
+            item.setIcon(compact_asset_icon(asset.path, self._asset_icon_size))
             item.setData(0x0100, asset.key)
             widget.addItem(item)
 
@@ -153,5 +156,6 @@ class AssetsPage(QWidget):
         self.attack_list.setStyleSheet(list_style)
         self.defense_list.setStyleSheet(list_style)
         for widget in (self.maps_list, self.attack_list, self.defense_list):
+            widget.setIconSize(self._asset_icon_size)
             widget.setPalette(palette)
             widget.viewport().setPalette(palette)

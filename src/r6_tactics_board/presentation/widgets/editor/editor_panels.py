@@ -1,7 +1,8 @@
 from collections.abc import Callable
 
-from PyQt6.QtCore import QRect, Qt, pyqtSignal
-from PyQt6.QtWidgets import QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtCore import QSize, QRect, Qt, pyqtSignal
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QLabel, QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QTabWidget, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
     ComboBox,
@@ -20,6 +21,7 @@ from r6_tactics_board.presentation.styles.theme import (
     subtle_danger_button_stylesheet,
     tab_widget_stylesheet,
 )
+from r6_tactics_board.presentation.widgets.asset_icons import compact_asset_pixmap
 
 
 class PopupAwareComboBox(QComboBox):
@@ -38,6 +40,25 @@ class PopupAwareComboBox(QComboBox):
 
     def refresh_theme(self) -> None:
         self._apply_theme()
+
+
+class IconComboBox(ComboBox):
+    """QFluent ComboBox that also shows the current item's icon on the button."""
+
+    def setCurrentIndex(self, index: int) -> None:  # noqa: N802
+        super().setCurrentIndex(index)
+        self._sync_current_icon()
+
+    def clear(self) -> None:
+        super().clear()
+        self.setIcon(QIcon())
+
+    def _sync_current_icon(self) -> None:
+        index = self.currentIndex()
+        if 0 <= index < len(self.items):
+            self.setIcon(self.items[index].icon)
+        else:
+            self.setIcon(QIcon())
 
 
 class EditorPropertyPanel(QWidget):
@@ -61,16 +82,17 @@ class EditorPropertyPanel(QWidget):
         self.keyframe_note_edit = LineEdit()
         self.name_edit = LineEdit()
         self.side_combo = ComboBox()
-        self.operator_combo = ComboBox()
+        self.operator_combo = IconComboBox()
         self.rotation_slider = Slider(Qt.Orientation.Horizontal)
         self.rotation_value_label = BodyLabel("0°")
         self.floor_value_label = BodyLabel("-")
         self.gadget_label = BodyLabel("道具")
-        self.gadget_combo = ComboBox()
+        self.gadget_combo = IconComboBox()
         self.gadget_count_label = BodyLabel("-")
         self.place_gadget_button = PushButton("放置道具")
         self.clear_gadget_button = PushButton("清空当前帧道具")
         self.ability_label = BodyLabel("技能")
+        self.ability_icon_label = QLabel()
         self.ability_name_label = BodyLabel("-")
         self.ability_count_label = BodyLabel("-")
         self.place_ability_button = PushButton("放置技能")
@@ -120,6 +142,11 @@ class EditorPropertyPanel(QWidget):
         self.rotation_slider.setRange(0, 359)
         self.operator_size_slider.setRange(50, 160)
         self.operator_size_slider.setValue(100)
+        self.operator_combo.setIconSize(QSize(18, 18))
+        self.gadget_combo.setIconSize(QSize(18, 18))
+        self.ability_icon_label.setFixedSize(20, 20)
+        self.ability_icon_label.setScaledContents(False)
+        self.ability_icon_label.setVisible(False)
         self.place_gadget_button.setCheckable(True)
         self.place_ability_button.setCheckable(True)
 
@@ -173,6 +200,12 @@ class EditorPropertyPanel(QWidget):
         ability_layout.addWidget(self.place_ability_button)
         ability_layout.addWidget(self.clear_ability_button)
 
+        ability_name_layout = QHBoxLayout()
+        ability_name_layout.setContentsMargins(0, 0, 0, 0)
+        ability_name_layout.setSpacing(6)
+        ability_name_layout.addWidget(self.ability_icon_label)
+        ability_name_layout.addWidget(self.ability_name_label, 1)
+
         property_grid.addWidget(BodyLabel("名称"), 0, 0)
         property_grid.addWidget(self.name_edit, 0, 1)
         property_grid.addWidget(BodyLabel("阵营"), 1, 0)
@@ -188,7 +221,7 @@ class EditorPropertyPanel(QWidget):
         property_grid.addWidget(BodyLabel("数量"), 6, 0)
         property_grid.addWidget(self.gadget_count_label, 6, 1)
         property_grid.addWidget(self.ability_label, 7, 0)
-        property_grid.addWidget(self.ability_name_label, 7, 1)
+        property_grid.addLayout(ability_name_layout, 7, 1)
         property_grid.addWidget(BodyLabel("技能数量"), 8, 0)
         property_grid.addLayout(ability_layout, 8, 1)
         property_grid.addWidget(BodyLabel("显示"), 9, 0)
@@ -259,8 +292,15 @@ class EditorPropertyPanel(QWidget):
 
     def refresh_theme(self) -> None:
         self._apply_theme()
-        self.manual_interaction_combo.refresh_theme()
-        self.delete_operator_button.setStyleSheet(subtle_danger_button_stylesheet())
+
+    def set_ability_icon(self, icon_path: str) -> None:
+        pixmap = compact_asset_pixmap(icon_path, self.ability_icon_label.size())
+        if pixmap.isNull():
+            self.ability_icon_label.clear()
+            self.ability_icon_label.setVisible(False)
+            return
+        self.ability_icon_label.setPixmap(pixmap)
+        self.ability_icon_label.setVisible(True)
 
     def set_active_section(self, section: str) -> None:
         mapping = {
@@ -287,6 +327,7 @@ class EditorPropertyPanel(QWidget):
             "}"
             + tab_widget_stylesheet()
         )
+        self.manual_interaction_combo.refresh_theme()
         self.delete_operator_button.setStyleSheet(subtle_danger_button_stylesheet())
 
 

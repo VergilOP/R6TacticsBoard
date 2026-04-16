@@ -1,8 +1,10 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
     QAbstractItemView,
+    QGridLayout,
     QHBoxLayout,
     QHeaderView,
+    QLabel,
     QSizePolicy,
     QSpinBox,
     QTableWidget,
@@ -18,6 +20,7 @@ from r6_tactics_board.presentation.styles.theme import (
     page_stylesheet,
     timeline_table_stylesheet,
 )
+from r6_tactics_board.presentation.widgets.asset_icons import compact_asset_icon, compact_asset_pixmap
 
 
 class GadgetCountsPage(QWidget):
@@ -29,6 +32,7 @@ class GadgetCountsPage(QWidget):
 
         self.session_service = EditorSessionService()
         self._updating = False
+        self._table_icon_size = QSize(22, 22)
 
         self.refresh_button = PushButton("刷新配置")
         self.attack_gadget_table = QTableWidget()
@@ -102,6 +106,7 @@ class GadgetCountsPage(QWidget):
         table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         table.setWordWrap(False)
         table.setAlternatingRowColors(False)
+        table.setIconSize(self._table_icon_size)
         table.verticalHeader().setDefaultSectionSize(row_height)
 
     def _init_signals(self) -> None:
@@ -121,6 +126,7 @@ class GadgetCountsPage(QWidget):
 
         for row, asset in enumerate(entries):
             name_item = QTableWidgetItem(asset.name)
+            name_item.setIcon(compact_asset_icon(asset.path, self._table_icon_size))
             name_item.setToolTip(asset.key)
             table.setItem(row, 0, name_item)
 
@@ -153,7 +159,13 @@ class GadgetCountsPage(QWidget):
             table.setCellWidget(
                 row,
                 0,
-                self._create_operator_ability_cell(entry.name or entry.key, ability_name, entry.key),
+                self._create_operator_ability_cell(
+                    entry.name or entry.key,
+                    ability_name,
+                    entry.key,
+                    entry.icon_path,
+                    entry.ability_icon_path,
+                ),
             )
 
             persist_combo = self._create_persist_combo(entry.ability_persists_on_map)
@@ -176,21 +188,42 @@ class GadgetCountsPage(QWidget):
             )
             table.setCellWidget(row, 2, spin)
 
-    def _create_operator_ability_cell(self, operator_name: str, ability_name: str, operator_key: str) -> QWidget:
+    def _create_operator_ability_cell(
+        self,
+        operator_name: str,
+        ability_name: str,
+        operator_key: str,
+        operator_icon_path: str,
+        ability_icon_path: str,
+    ) -> QWidget:
         widget = QWidget()
-        layout = QVBoxLayout(widget)
+        layout = QGridLayout(widget)
         layout.setContentsMargins(10, 6, 10, 6)
-        layout.setSpacing(0)
+        layout.setHorizontalSpacing(6)
+        layout.setVerticalSpacing(0)
 
         operator_label = BodyLabel(operator_name)
         operator_label.setToolTip(operator_key)
         ability_label = CaptionLabel(ability_name)
         ability_label.setToolTip(ability_name)
         ability_label.setStyleSheet("color: rgba(140, 140, 140, 0.95);")
+        operator_icon = self._create_icon_label(operator_icon_path)
+        ability_icon = self._create_icon_label(ability_icon_path)
 
-        layout.addWidget(operator_label)
-        layout.addWidget(ability_label)
+        layout.addWidget(operator_icon, 0, 0)
+        layout.addWidget(operator_label, 0, 1)
+        layout.addWidget(ability_icon, 1, 0)
+        layout.addWidget(ability_label, 1, 1)
+        layout.setColumnStretch(1, 1)
         return widget
+
+    def _create_icon_label(self, icon_path: str) -> QLabel:
+        label = QLabel()
+        label.setFixedSize(self._table_icon_size)
+        pixmap = compact_asset_pixmap(icon_path, self._table_icon_size)
+        if not pixmap.isNull():
+            label.setPixmap(pixmap)
+        return label
 
     def _create_count_spinbox(self, value: int, minimum: int, maximum: int) -> QSpinBox:
         spin = QSpinBox()
