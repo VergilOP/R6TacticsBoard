@@ -24,8 +24,10 @@ R6 Tactics Board 面向单机桌面编辑场景，目标是把静态摆点升级
 - 相邻关键帧之间的平滑播放
 - 基于地图互动点的跨楼层自动路径 / 手动路径
 - 2.5D 播放支持额外的上下楼过渡时间与跨层总览
-- 地图 Debug 模式，可编辑楼梯、舱口等互动点元数据
+- 地图 Debug 模式，可编辑楼梯、软墙和 `Hatch` 面元数据
 - 软墙 / `Hatch` 面编辑，支持加固、开洞与楼梯折线路径
+- 通用道具 / 技能道具放置、拖动、清空与时间轴继承
+- 通用道具 / 技能道具数量配置，支持一次性 / 保留型语义
 - 底部悬浮播放栏，支持播放控制、进度拖动与速度调整
 - 工程保存 / 读取
 - 资源页双击加载地图、双击创建干员
@@ -37,6 +39,7 @@ R6 Tactics Board 面向单机桌面编辑场景，目标是把静态摆点升级
 
 - `战术编辑`：地图编辑、2.5D 总览、干员属性、时间轴与播放控制
 - `资源管理`：地图与干员图标资源浏览，支持双击快速载入
+- `道具数量`：配置通用道具上限、技能道具上限以及是否保留在地图上
 - `电竞历史`：按地图查看历史比赛结果、ban 人记录与原始电竞数据
 - `测试调试`：地图 Debug 与开发期调试工具
 - `主题排查`：集中检查深浅主题切换后的控件颜色与样式状态
@@ -49,6 +52,7 @@ R6 Tactics Board 面向单机桌面编辑场景，目标是把静态摆点升级
 - [docs/README.md](docs/README.md)
 - [docs/architecture/codebase_map.md](docs/architecture/codebase_map.md)
 - [docs/architecture/editor_workflow.md](docs/architecture/editor_workflow.md)
+- [src/r6_tactics_board/presentation/pages/editor/README.md](src/r6_tactics_board/presentation/pages/editor/README.md)
 - [src/r6_tactics_board/README.md](src/r6_tactics_board/README.md)
 
 ## 资源目录
@@ -56,6 +60,7 @@ R6 Tactics Board 面向单机桌面编辑场景，目标是把静态摆点升级
 项目默认读取以下资源目录：
 
 - `src/assets/maps/`
+- `src/assets/gadgets/`
 - `src/assets/operators/attack/`
 - `src/assets/operators/defense/`
 
@@ -105,9 +110,21 @@ src/assets/
             └─ description.txt
 ```
 
+当前通用道具资源结构约定为：
+
+```text
+src/assets/gadgets/
+├─ index.json
+├─ attack/
+│  └─ <gadget_key>.png
+└─ defense/
+   └─ <gadget_key>.png
+```
+
 资源命名约定：
 
 - 地图文件放入 `src/assets/maps/`
+- 通用道具图标放入 `src/assets/gadgets/attack/` 与 `src/assets/gadgets/defense/`
 - 地图目录使用 `<map_key>`，当前以英文小写短横线命名
 - 每张地图单独维护 `map.json`
 - `src/assets/maps/index.json` 作为地图资源总索引
@@ -117,6 +134,7 @@ src/assets/
 - 技能目录名与干员 `operator_key` 保持一致
 - `name.txt` 与 `description.txt` 使用 `UTF-8 + LF`
 - `src/assets/operators/index.json` 作为干员资源总索引
+- `src/assets/gadgets/index.json` 作为通用道具定义与默认数量配置
 
 后续如需批量导入、校验或重建资源索引，以上结构视为项目内固定约定。
 
@@ -127,9 +145,11 @@ src/assets/
 - 当前地图路径
 - 干员全局定义（名称、阵营、图标 key）
 - 干员顺序
-- 时间轴显式记录单元格（位置、朝向、显示模式）
+- 时间轴显式记录单元格（位置、朝向、楼层、显示模式、路径模式、道具/技能落点与已使用数量）
+- 软墙 / `Hatch` 面的战术状态
 - 当前关键帧列
 - 播放过渡时长
+- 干员整体显示比例
 
 工程保存时优先使用相对路径，便于在同一工程目录下迁移与共享素材。
 
@@ -192,6 +212,7 @@ R6TacticsBoard/
 ├─ scripts/
 ├─ src/
 │  ├─ assets/
+│  │  ├─ gadgets/
 │  │  ├─ maps/
 │  │  └─ operators/
 │  │     ├─ attack/
@@ -240,6 +261,7 @@ R6TacticsBoard/
 - 继续重建高清地图资源，并同步校准楼层对齐、视图中心和 `2.5D` 参数
 - 暂时隐藏 `电竞历史` 功能入口，等待可靠数据源后再继续扩展
 - 继续优化编辑页体验与操作反馈，重点收口页签、时间轴、选中反馈和控件可用性分层
+- 继续做低风险结构整理，优先拆分 `asset_registry.py` 与 `map_scene.py` 的职责
 - 增加额外调试模式，用于校准画布上的干员图标、名称等显示参数
 - 继续优化 `2.5D` 的互动点高亮、软墙 / `Hatch` 状态与跨层信息可读性
 - 规划统一的战术标记系统，逐步承接人物元素与地图元素的图标放置
@@ -370,28 +392,36 @@ R6TacticsBoard/
 ## 地图 Debug 元数据
 
 当前项目已经开始支持地图级自定义元数据编辑。  
-在 `测试调试` 页中，可以针对当前地图与楼层设置互动点，并写回对应的 `map.json`。
+在 `测试调试` 页中，可以针对当前地图与楼层设置楼梯、软墙和 `Hatch` 面，并写回对应的 `map.json`。
 
-当前互动点数据写入：
+当前地图结构数据主要写入：
+
 - `layers.interactions`
 - `layers.stairs`
-- `layers.hatches`
+- `layers.surfaces`
+- `layers.soft_walls`
+- `layers.hatch_surfaces`
 
-当前支持的互动点类型：
-- `stairs`：可配置为双向联通，适合楼梯
-- `hatch`：默认单向联通，适合舱口
+当前规则：
 
-互动点基础字段包括：
+- `stairs`：保留为互动点，支持起点、终点和折线轨迹，用于楼梯跨层路径
+- `Hatch`：不再作为互动点维护，统一作为 `Hatch` 面承载跨层联通语义
+- `soft_wall`：作为线段/长条战术面，可在战术页进行加固和开洞
+
+楼梯基础字段包括：
+
 - `id`
 - `kind`
 - `position`
+- `target_position`
+- `path_points`
 - `floor_key`
 - `linked_floor_keys`
 - `is_bidirectional`
 - `label`
 - `note`
 
-后续墙体、门窗、舱口、爆破点等地图扩展结构，会沿这套 `map.json` 元数据方案继续扩展。
+后续墙体、门窗、爆破点等地图扩展结构，会沿这套 `map.json` 元数据方案继续扩展。
 
 ## Star History
 

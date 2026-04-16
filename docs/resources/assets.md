@@ -6,6 +6,7 @@
 
 ```text
 src/assets/
+├─ gadgets/
 ├─ maps/
 └─ operators/
    ├─ index.json
@@ -50,7 +51,7 @@ src/assets/maps/
 
 - 地图基础展示
 - 楼层切换
-- 墙体、门窗、舱口等结构标注
+- 软墙、Hatch 面、楼梯等结构标注
 - 自定义战术层和交互层
 
 当前至少应保留“图片路径 + 楼层信息 + 可扩展层数据”的结构。
@@ -85,6 +86,28 @@ src/assets/operators/<side>/
 - `<side>` 取值为 `attack` 或 `defense`
 - `<operator_key>` 使用英文小写
 
+## 通用道具资源结构
+
+通用道具按阵营拆分图标目录，数量和保留类型由总索引维护：
+
+```text
+src/assets/gadgets/
+├─ index.json
+├─ attack/
+│  └─ <gadget_key>.png
+└─ defense/
+   └─ <gadget_key>.png
+```
+
+`src/assets/gadgets/index.json` 负责：
+
+- `key`
+- `name`
+- `side`
+- `icon_path`
+- `max_count`
+- `persists_on_map`
+
 ## 命名与格式约定
 
 - 地图目录使用 `<map_key>`
@@ -117,6 +140,8 @@ src/assets/operators/<side>/
 - `ability_icon_path`
 - `ability_name`
 - `ability_description`
+- `ability_max_count`
+- `ability_persists_on_map`
 
 ## 当前用途
 
@@ -124,17 +149,20 @@ src/assets/operators/<side>/
 
 - `src/assets/maps/` 作为地图资源来源
 - `src/assets/operators/*/icons/` 作为干员图标资源来源
+- `src/assets/gadgets/index.json` 作为通用道具默认上限与保留类型来源
+- `src/assets/operators/index.json` 作为干员技能上限与保留类型来源
 
-后续计划接入：
+当前版本已经接入：
 
 - `map.json` 用于地图元数据、结构层与自定义编辑能力
-- `portraits/` 用于更完整的干员信息展示
-- `abilities/` 用于技能说明与资料展示
-- `index.json` 用于资源总览、筛选与快速读取
+- `abilities/` 用于技能图标、技能名称和技能说明
+- `index.json` 用于资源总览、筛选、数量配置与快速读取
 
 ## 地图互动点结构
 
-当前 `map.json` 里的互动点统一写入 `layers.interactions`，并按类型同步拆分到 `layers.stairs` 与 `layers.hatches`。
+当前 `map.json` 里的互动点主要用于楼梯，统一写入 `layers.interactions`，并同步到 `layers.stairs`。
+
+`Hatch` 不再作为互动点维护，而是作为 `layers.surfaces` 中的 `hatch` 面维护。
 
 推荐结构如下：
 
@@ -146,6 +174,15 @@ src/assets/operators/<side>/
     "x": 1024,
     "y": 768
   },
+  "target_position": {
+    "x": 1124,
+    "y": 868
+  },
+  "path_points": [
+    { "x": 1024, "y": 768 },
+    { "x": 1080, "y": 820 },
+    { "x": 1124, "y": 868 }
+  ],
   "floor_key": "1f",
   "linked_floor_keys": ["2f"],
   "is_bidirectional": true,
@@ -156,8 +193,10 @@ src/assets/operators/<side>/
 
 字段说明：
 - `id`：互动点唯一标识
-- `kind`：当前支持 `stairs`、`hatch`
-- `position`：在地图画布上的坐标
+- `kind`：当前主要支持 `stairs`
+- `position`：当前楼层入口点坐标
+- `target_position`：目标楼层出口点坐标
+- `path_points`：楼梯折线轨迹
 - `floor_key`：源楼层
 - `linked_floor_keys`：目标楼层列表
 - `is_bidirectional`：是否双向联通
@@ -165,10 +204,10 @@ src/assets/operators/<side>/
 - `note`：可选备注
 
 显示规则：
-- `stairs` 适合设置为双向联通，会在源楼层和联通楼层显示同一个互动点
-- `hatch` 默认单向联通，只在源楼层显示
+- `stairs` 使用起点、终点和折线表现楼梯轨迹
+- `hatch` 跨层语义由 Hatch 面负责，不再新增 hatch 互动点
 
-当前地图 Debug 页面已支持对上述互动点进行放置、移动、删除和保存。
+当前地图 Debug 页面已支持对楼梯、软墙和 Hatch 面进行放置、移动、删除和保存。
 
 ## 2.5D 总览预留字段
 

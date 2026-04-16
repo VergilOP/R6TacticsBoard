@@ -59,11 +59,13 @@
 ## 当前最需要先读的文件
 
 - [presentation/pages/editor/editor_page.py](presentation/pages/editor/editor_page.py)
-  编辑器总控，功能最多，也最容易出现联动问题。
+  编辑器页面级总编排。具体功能线已拆到同目录的 `editor_*` helper。
+- [presentation/pages/editor/README.md](presentation/pages/editor/README.md)
+  编辑器各 helper 的职责索引。
 - [infrastructure/assets/asset_registry.py](infrastructure/assets/asset_registry.py)
-  资源索引、写回和迁移集中在这里。
+  资源索引、写回、缓存和兼容迁移集中在这里，是下一批最需要继续拆分的模块。
 - [presentation/widgets/canvas/map_scene.py](presentation/widgets/canvas/map_scene.py)
-  2D 画布的核心。
+  2D 画布的核心，负责干员、战术面、互动点、道具和技能图元的同步与交互。
 
 ## 推荐文档入口
 

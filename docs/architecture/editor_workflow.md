@@ -10,7 +10,17 @@
 
 - [editor_page.py](../../src/r6_tactics_board/presentation/pages/editor/editor_page.py)
 
-这是编辑器总控。大部分“为什么点一下会连锁刷新多个地方”的答案都在这里。
+这是编辑器页面级总控，负责初始化页面和连接各条 helper 工作流。
+
+当前主要工作流已经拆到：
+
+- [editor_properties.py](../../src/r6_tactics_board/presentation/pages/editor/editor_properties.py)
+- [editor_timeline.py](../../src/r6_tactics_board/presentation/pages/editor/editor_timeline.py)
+- [editor_tokens.py](../../src/r6_tactics_board/presentation/pages/editor/editor_tokens.py)
+- [editor_playback.py](../../src/r6_tactics_board/presentation/pages/editor/editor_playback.py)
+- [editor_views.py](../../src/r6_tactics_board/presentation/pages/editor/editor_views.py)
+- [editor_project_state.py](../../src/r6_tactics_board/presentation/pages/editor/editor_project_state.py)
+- [editor_scene_sync.py](../../src/r6_tactics_board/presentation/pages/editor/editor_scene_sync.py)
 
 ## 三层状态
 
@@ -146,24 +156,20 @@
 - `_on_ability_placed()`
 - `_clear_current_frame_gadget_placements()`
 - `_clear_current_frame_ability_placements()`
+这些入口现在位于 [editor_tokens.py](../../src/r6_tactics_board/presentation/pages/editor/editor_tokens.py)。
 
 ### 想改“右侧属性栏”
 
 先看：
 - [editor_panels.py](../../src/r6_tactics_board/presentation/widgets/editor/editor_panels.py)
-- `editor_page.py` 中 `_refresh_property_panel()`
+- [editor_properties.py](../../src/r6_tactics_board/presentation/pages/editor/editor_properties.py)
 
 ## 当前最大的可读性风险
 
-- [editor_page.py](../../src/r6_tactics_board/presentation/pages/editor/editor_page.py)
+- [asset_registry.py](../../src/r6_tactics_board/infrastructure/assets/asset_registry.py)
+- [map_scene.py](../../src/r6_tactics_board/presentation/widgets/canvas/map_scene.py)
 
-这个文件目前承担了：
-- 页面初始化
-- 时间轴状态
-- 画布同步
-- 右侧面板刷新
-- 播放控制
-- 道具/技能逻辑
-- 战术面逻辑
+编辑页已经完成一轮低风险拆分；后续主要可读性风险转移到：
 
-后续如果继续增加功能，优先把它按“功能线”继续拆出去，而不是继续横向堆方法。
+- `asset_registry.py`：索引、查询、写回、缓存、兼容迁移仍集中在一个文件。
+- `map_scene.py`：2D 画布 overlay、干员、道具、技能和选中态同步仍较集中。

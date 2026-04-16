@@ -91,7 +91,7 @@
 
 先看：
 - [editor_playback.py](editor_playback.py)
-- [../../../../application/routing/interaction_routing.py](../../../../application/routing/interaction_routing.py)
+- [../../../application/routing/interaction_routing.py](../../../application/routing/interaction_routing.py)
 
 ### 改地图 / 2.5D 双视图同步
 
@@ -111,7 +111,7 @@
 
 先看：
 - [editor_project_state.py](editor_project_state.py)
-- [../../../../infrastructure/persistence/project_store.py](../../../../infrastructure/persistence/project_store.py)
+- [../../../infrastructure/persistence/project_store.py](../../../infrastructure/persistence/project_store.py)
 
 ## 当前风险
 
