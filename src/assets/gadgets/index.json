@@ -20,7 +20,7 @@
       },
       {
         "key": "emp-impact-grenade",
-        "name": "冲击电磁脉冲手榴弹",
+        "name": "电磁脉冲手榴弹",
         "side": "attack",
         "icon_path": "attack/emp-impact-grenade.png",
         "max_count": 2
